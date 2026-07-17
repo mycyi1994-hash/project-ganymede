@@ -364,7 +364,7 @@ button { color: inherit; font: inherit; }
 .etf-card-hero {
   min-height: 0;
   position: relative;
-  padding: clamp(20px, 2vw, 30px) clamp(190px, 20vw, 300px) 18px clamp(22px, 2vw, 30px);
+  padding: clamp(20px, 2vw, 30px) clamp(255px, 26vw, 410px) 18px clamp(22px, 2vw, 30px);
   display: flex;
   align-items: center;
 }
@@ -463,18 +463,19 @@ button { color: inherit; font: inherit; }
 
 /* ASCII planetary visualizations */
 .ascii-planet {
-  width: clamp(180px, 18vw, 270px);
-  height: clamp(108px, 12vw, 158px);
+  width: clamp(300px, 30.6vw, 459px);
+  height: clamp(184px, 20.4vw, 269px);
   position: absolute;
   z-index: 1;
   top: 50%;
-  right: clamp(10px, 2vw, 34px);
+  right: clamp(-80px, -4vw, -28px);
   display: grid;
   place-items: center;
   overflow: hidden;
   transform: translateY(-50%);
   opacity: 0.9;
   filter: drop-shadow(0 0 10px rgba(238, 237, 232, 0.1));
+  pointer-events: none;
 }
 
 .ascii-planet::before {
@@ -503,6 +504,17 @@ button { color: inherit; font: inherit; }
   position: relative;
   z-index: 2;
   filter: drop-shadow(0 0 8px rgba(238, 237, 232, 0.12));
+}
+
+.celestial-id {
+  position: absolute;
+  z-index: 3;
+  right: 52px;
+  bottom: 12px;
+  color: rgba(238, 237, 232, 0.5);
+  font: 650 7px/1 var(--font-geist-mono), monospace;
+  letter-spacing: 0.2em;
+  text-shadow: 0 0 8px rgba(238, 237, 232, 0.18);
 }
 
 .etf-card.is-selected .mini-ascii-celestial {
@@ -542,7 +554,7 @@ button { color: inherit; font: inherit; }
   letter-spacing: 0.04em;
 }
 .portfolio-strategy { max-width: 430px; margin: 18px 0 0; color: var(--gray); line-height: 1.55; }
-.portfolio-summary .ascii-planet { width: 70%; height: 44%; top: 54%; right: -8%; opacity: 0.58; }
+.portfolio-summary .ascii-planet { width: 84%; height: 56%; top: 53%; right: -14%; opacity: 0.62; }
 
 .portfolio-metrics {
   margin: auto 0 22px;
@@ -619,8 +631,8 @@ button { color: inherit; font: inherit; }
   .app-menu button { min-width: 118px; padding: 0 14px; }
   .app-identity { padding-left: 24px; padding-right: 20px; }
   .app-system-status { padding: 0 22px; }
-  .etf-card-hero { padding-right: 185px; }
-  .ascii-planet { width: 180px; right: 4px; }
+  .etf-card-hero { padding-right: 250px; }
+  .ascii-planet { width: 320px; height: 196px; right: -42px; }
   .etf-card-copy h2 { font-size: 18px; }
   .etf-card-copy p { max-width: 260px; font-size: 11px; }
   .holding-chips { gap: 6px; }
@@ -637,10 +649,10 @@ button { color: inherit; font: inherit; }
   .etf-page-intro { align-items: flex-start; }
   .etf-filters { grid-template-columns: repeat(4, 78px); }
   .etf-filters button { padding: 0 10px; }
-  .etf-card-grid { grid-template-columns: 1fr; grid-template-rows: none; grid-auto-rows: minmax(290px, auto); }
-  .etf-card { min-height: 290px; }
-  .etf-card-hero { padding-right: 250px; }
-  .ascii-planet { width: 230px; right: 18px; }
+  .etf-card-grid { grid-template-columns: 1fr; grid-template-rows: none; grid-auto-rows: minmax(330px, auto); }
+  .etf-card { min-height: 330px; }
+  .etf-card-hero { padding-right: 390px; }
+  .ascii-planet { width: 400px; height: 238px; right: -24px; }
   .portfolio-page { grid-template-columns: 1fr; overflow-y: auto; }
   .portfolio-summary, .portfolio-allocation { min-height: 520px; }
 }
@@ -671,11 +683,12 @@ button { color: inherit; font: inherit; }
   .etf-filters { width: 100%; grid-template-columns: repeat(4, 1fr); }
   .etf-filters button { padding: 0 6px; font-size: 7px; }
   .etf-card-grid { gap: 14px; }
-  .etf-card { min-height: 360px; grid-template-rows: minmax(190px, 1fr) 72px 76px; }
-  .etf-card-hero { padding: 22px 18px 106px; align-items: flex-start; }
+  .etf-card { min-height: 420px; grid-template-rows: minmax(250px, 1fr) 72px 76px; }
+  .etf-card-hero { padding: 22px 18px 166px; align-items: flex-start; }
   .etf-card-copy h2 { font-size: 19px; }
   .etf-card-copy p { max-width: none; font-size: 12px; }
-  .ascii-planet { width: 210px; height: 104px; top: auto; right: 50%; bottom: 2px; transform: translateX(50%); }
+  .ascii-planet { width: min(360px, calc(100vw - 32px)); height: 176px; top: auto; right: 50%; bottom: -4px; transform: translateX(50%); }
+  .celestial-id { right: 22px; bottom: 8px; }
   .etf-card-actions { padding: 10px 14px; align-items: stretch; }
   .holding-chips { flex: 1; }
   .holding-chips span { flex: 1; display: grid; place-items: center; padding: 0 6px; }
