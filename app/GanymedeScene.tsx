@@ -18,7 +18,9 @@ type Particle = {
 };
 
 const GLYPHS = [".", ":", "+", "*", "0", "1", "/", "=", "-", "|"];
-const RING_TILT = 0.31;
+const RING_TILT = 0.36;
+const RING_ROLL = -Math.PI / 4;
+const SPACECRAFT_COUNT = 10;
 const SPACECRAFT = [
   ["  /\\  ", "<|===>", "  \\/  "],
   ["  .  ", "=[+]=", " /_\\ "],
@@ -46,6 +48,17 @@ function rotatePoint(x: number, y: number, z: number, angle: number) {
     x: x1,
     y: y * cosX - z1 * sinX,
     z: y * sinX + z1 * cosX,
+  };
+}
+
+function rollPoint(point: { x: number; y: number; z: number }, angle: number) {
+  const cosine = Math.cos(angle);
+  const sine = Math.sin(angle);
+
+  return {
+    x: point.x * cosine - point.y * sine,
+    y: point.x * sine + point.y * cosine,
+    z: point.z,
   };
 }
 
@@ -86,8 +99,8 @@ function makeParticles(width: number, height: number) {
     const pointCount = Math.ceil((ringCount - ringIndex) / 3);
     const angle = (pointIndex / pointCount) * Math.PI * 2 + ringIndex * 0.17;
     const strand = (pointIndex % 5) - 2;
-    const band = [1.17, 1.29, 1.41][ringIndex]
-      + strand * 0.004
+    const band = [1.3, 1.52, 1.78][ringIndex]
+      + strand * 0.006
       + Math.sin(i * 2.1) * 0.002;
     const x = Math.cos(angle) * band;
     const z = Math.sin(angle) * band;
@@ -238,11 +251,14 @@ export default function GanymedeScene() {
           const orbitRadius = particle.orbitRadius ?? 1.6;
           const ringX = Math.cos(orbitAngle) * orbitRadius;
           const ringZ = Math.sin(orbitAngle) * orbitRadius;
-          rotated = rotatePoint(
-            ringX,
-            -ringZ * Math.sin(RING_TILT),
-            ringZ * Math.cos(RING_TILT),
-            0,
+          rotated = rollPoint(
+            rotatePoint(
+              ringX,
+              -ringZ * Math.sin(RING_TILT),
+              ringZ * Math.cos(RING_TILT),
+              0,
+            ),
+            RING_ROLL,
           );
 
           if (layer === "back" && rotated.z >= 0) return;
@@ -293,22 +309,38 @@ export default function GanymedeScene() {
       moonParticles.forEach((particle, index) => drawParticle(particle, index, "moon"));
       ringParticles.forEach((particle, index) => drawParticle(particle, index, "front"));
 
-      SPACECRAFT.forEach((model, index) => {
-        const direction = index === 1 ? -1 : 1;
-        const speed = [0.00016, 0.000115, 0.000205][index];
-        const phase = [0.2, 2.25, 4.1][index];
-        const orbit = [2.18, 2.62, 1.92][index] * sceneScale;
+      for (let index = 0; index < SPACECRAFT_COUNT; index += 1) {
+        const model = SPACECRAFT[index % SPACECRAFT.length];
+        const direction = index % 2 === 0 ? 1 : -1;
+        const speed = [0.00008, 0.0001, 0.00012, 0.00014, 0.00016][index % 5];
+        const phase = (index / SPACECRAFT_COUNT) * Math.PI * 2 + (index % 3 - 1) * 0.11;
+        const orbit = (2.02 + (index % 5) * 0.18) * sceneScale;
+        const flattening = 0.3 + (index % 4) * 0.04;
+        const orbitRoll = RING_ROLL + (index % 3 - 1) * 0.07;
         const shipAngle = elapsed * speed * direction + phase;
-        const orbitX = centerX + Math.cos(shipAngle) * orbit;
-        const orbitY = centerY + Math.sin(shipAngle) * orbit * (0.34 + index * 0.055);
-        const arrival = reduceMotion ? 1 : easeOutExpo(clamp((elapsed - 1500 - index * 320) / 1900));
-        const startX = index === 0 ? -100 : index === 1 ? width + 100 : width * 0.5;
-        const startY = index === 2 ? -80 : height * (0.25 + index * 0.22);
+        const rawX = Math.cos(shipAngle) * orbit;
+        const rawY = Math.sin(shipAngle) * orbit * flattening;
+        const orbitX = centerX + rawX * Math.cos(orbitRoll) - rawY * Math.sin(orbitRoll);
+        const orbitY = centerY + rawX * Math.sin(orbitRoll) + rawY * Math.cos(orbitRoll);
+        const arrival = reduceMotion ? 1 : easeOutExpo(clamp((elapsed - 1000 - index * 120) / 1800));
+        const entryEdge = index % 4;
+        const startX = entryEdge === 0
+          ? -110
+          : entryEdge === 1
+            ? width + 110
+            : width * (0.18 + (index % 5) * 0.16);
+        const startY = entryEdge === 2
+          ? -80
+          : entryEdge === 3
+            ? height + 80
+            : height * (0.18 + (index % 6) * 0.12);
         const x = startX + (orbitX - startX) * arrival;
         const y = startY + (orbitY - startY) * arrival;
+        const rawDx = -Math.sin(shipAngle) * orbit * direction;
+        const rawDy = Math.cos(shipAngle) * orbit * flattening * direction;
         const tangent = Math.atan2(
-          Math.cos(shipAngle) * orbit * (0.34 + index * 0.055) * direction,
-          -Math.sin(shipAngle) * orbit * direction,
+          rawDx * Math.sin(orbitRoll) + rawDy * Math.cos(orbitRoll),
+          rawDx * Math.cos(orbitRoll) - rawDy * Math.sin(orbitRoll),
         );
         const depth = (Math.sin(shipAngle) + 1) * 0.5;
 
@@ -318,10 +350,10 @@ export default function GanymedeScene() {
           x,
           y,
           tangent,
-          width < 640 ? 0.78 : 0.9 + depth * 0.25,
-          arrival * (0.28 + depth * 0.65),
+          width < 640 ? 0.58 : 0.72 + depth * 0.2,
+          arrival * (0.2 + depth * 0.58),
         );
-      });
+      }
 
       context.globalAlpha = 1;
       if (statusRef.current) {
