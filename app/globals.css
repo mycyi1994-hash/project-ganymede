@@ -79,7 +79,7 @@ a { color: inherit; text-decoration: none; }
 .launch-center {
   position: absolute;
   z-index: 5;
-  top: 50%;
+  top: 67%;
   left: 50%;
   transform: translate(-50%, -50%);
   min-width: 164px;
@@ -157,7 +157,7 @@ a { color: inherit; text-decoration: none; }
 @media (max-width: 700px) {
   .topbar { height: 78px; }
   .mission-code, .object-data, .bottom-bar span:first-child, .bottom-bar span:last-child { display: none; }
-  .launch-center { top: 50%; min-width: 142px; }
+  .launch-center { top: 64%; min-width: 142px; }
   .scene-status { top: 98px; }
   .hero-copy { bottom: 100px; }
   .hero-copy h1 { font-size: clamp(44px, 15vw, 78px); line-height: .85; }

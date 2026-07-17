@@ -12,11 +12,13 @@ type Particle = {
   glyph: number;
   kind: "moon" | "ring";
   surface?: boolean;
+  ringBand?: number;
   orbitAngle?: number;
   orbitRadius?: number;
 };
 
 const GLYPHS = [".", ":", "+", "*", "0", "1", "/", "=", "-", "|"];
+const RING_TILT = 0.31;
 const SPACECRAFT = [
   ["  /\\  ", "<|===>", "  \\/  "],
   ["  .  ", "=[+]=", " /_\\ "],
@@ -83,20 +85,23 @@ function makeParticles(width: number, height: number) {
     const pointIndex = Math.floor(i / 3);
     const pointCount = Math.ceil((ringCount - ringIndex) / 3);
     const angle = (pointIndex / pointCount) * Math.PI * 2 + ringIndex * 0.17;
-    const band = [1.42, 1.6, 1.78][ringIndex] + Math.sin(i * 2.1) * 0.0035;
+    const strand = (pointIndex % 5) - 2;
+    const band = [1.17, 1.29, 1.41][ringIndex]
+      + strand * 0.004
+      + Math.sin(i * 2.1) * 0.002;
     const x = Math.cos(angle) * band;
     const z = Math.sin(angle) * band;
-    const ringTilt = 0.48;
 
     particles.push({
       x,
-      y: -z * Math.sin(ringTilt),
-      z: z * Math.cos(ringTilt),
+      y: -z * Math.sin(RING_TILT),
+      z: z * Math.cos(RING_TILT),
       startX: 0,
       startY: 0,
       delay: 450 + Math.random() * 1250,
       glyph: (i + 3) % GLYPHS.length,
       kind: "ring",
+      ringBand: ringIndex,
       orbitAngle: angle,
       orbitRadius: band,
     });
@@ -219,8 +224,8 @@ export default function GanymedeScene() {
       const elapsed = reduceMotion ? 5000 : now - start;
       const angle = reduceMotion ? 0.38 : elapsed * 0.000095;
       const centerX = width * 0.5;
-      const centerY = height * (width < 640 ? 0.43 : 0.45);
-      const sceneScale = Math.min(width, height) * (width < 640 ? 0.2 : 0.225);
+      const centerY = height * (width < 640 ? 0.4 : 0.41);
+      const sceneScale = Math.min(width, height) * (width < 640 ? 0.18 : 0.195);
 
       context.clearRect(0, 0, width, height);
       context.globalAlpha = 1;
@@ -233,11 +238,10 @@ export default function GanymedeScene() {
           const orbitRadius = particle.orbitRadius ?? 1.6;
           const ringX = Math.cos(orbitAngle) * orbitRadius;
           const ringZ = Math.sin(orbitAngle) * orbitRadius;
-          const ringTilt = 0.48;
           rotated = rotatePoint(
             ringX,
-            -ringZ * Math.sin(ringTilt),
-            ringZ * Math.cos(ringTilt),
+            -ringZ * Math.sin(RING_TILT),
+            ringZ * Math.cos(RING_TILT),
             0,
           );
 
@@ -250,6 +254,11 @@ export default function GanymedeScene() {
         const perspective = 1 / (1.02 - rotated.z * 0.12);
         const targetX = centerX + rotated.x * sceneScale * perspective;
         const targetY = centerY + rotated.y * sceneScale * perspective;
+        if (
+          particle.kind === "ring"
+          && layer === "back"
+          && Math.hypot(targetX - centerX, targetY - centerY) < sceneScale * 1.01
+        ) return;
         const localProgress = reduceMotion
           ? 1
           : clamp((elapsed - particle.delay) / (particle.kind === "ring" ? 2100 : 2500));
@@ -257,8 +266,9 @@ export default function GanymedeScene() {
         const swirl = Math.sin(elapsed * 0.002 + index * 0.37) * 22 * (1 - eased);
         const x = particle.startX + (targetX - particle.startX) * eased + swirl;
         const y = particle.startY + (targetY - particle.startY) * eased + Math.cos(index) * swirl;
+        const ringWeight = [0.68, 1, 0.76][particle.ringBand ?? 0];
         const depthAlpha = particle.kind === "ring"
-          ? (layer === "back" ? 0.18 : 0.5) + (rotated.z + 2) * (layer === "back" ? 0.05 : 0.13)
+          ? ((layer === "back" ? 0.11 : 0.34) + (rotated.z + 2) * (layer === "back" ? 0.035 : 0.095)) * ringWeight
           : (particle.surface ? 0.42 : 0.2) + (rotated.z + 1) * (particle.surface ? 0.27 : 0.3);
 
         const alpha = clamp(localProgress * depthAlpha, 0, 0.96);
