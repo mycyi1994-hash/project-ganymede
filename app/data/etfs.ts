@@ -1,0 +1,198 @@
+export type Filter = "all" | "core" | "growth" | "income";
+export type Risk = "LOW" | "MEDIUM" | "HIGH";
+export type CelestialVisual = "core" | "tech" | "income" | "alpha";
+
+export type BasketAsset = {
+  rank: number;
+  ticker: string;
+  name: string;
+  weight: number;
+  assetClass: string;
+  description: string;
+  iconKey: string;
+};
+
+export type Etf = {
+  id: string;
+  slug: string;
+  ticker: string;
+  name: string;
+  category: Exclude<Filter, "all">;
+  tagline: string;
+  description: string;
+  oneYearReturn: string;
+  fee: string;
+  risk: Risk;
+  assetCount: number;
+  rebalanceFrequency: string;
+  strategyType: string;
+  lastRebalanced: string;
+  factSheetUrl: string;
+  visual: CelestialVisual;
+  basket: BasketAsset[];
+  methodology: {
+    selection: string;
+    weighting: string;
+    rebalance: string;
+    eligibility: string;
+    limits: string;
+    risk: string;
+  };
+};
+
+const asset = (
+  rank: number,
+  ticker: string,
+  name: string,
+  weight: number,
+  assetClass: string,
+  description: string,
+): BasketAsset => ({ rank, ticker, name, weight, assetClass, description, iconKey: ticker.toLowerCase() });
+
+export const etfs: Etf[] = [
+  {
+    id: "core-20",
+    slug: "gmd-core",
+    ticker: "GMD CORE",
+    name: "GANYMEDE CORE 20",
+    category: "core",
+    tagline: "Balanced exposure to leading digital assets.",
+    description: "A diversified core strategy designed to capture long-term growth while reducing single-asset concentration.",
+    oneYearReturn: "18.4%",
+    fee: "0.35%",
+    risk: "MEDIUM",
+    assetCount: 10,
+    rebalanceFrequency: "QUARTERLY",
+    strategyType: "CORE STRATEGY",
+    lastRebalanced: "JUL 2026",
+    factSheetUrl: "#methodology",
+    visual: "core",
+    basket: [
+      asset(1, "BTC", "Bitcoin", 42, "Store of Value", "Primary digital reserve asset and liquidity anchor."),
+      asset(2, "ETH", "Ethereum", 28, "Smart Contract", "Core programmable settlement and application network."),
+      asset(3, "SOL", "Solana", 10, "Smart Contract", "High-throughput network for consumer-scale applications."),
+      asset(4, "LINK", "Chainlink", 8, "Infrastructure", "Decentralized oracle and interoperability infrastructure."),
+      asset(5, "USDC", "USD Coin", 7, "Cash Equivalent", "Liquidity reserve for controlled rebalancing."),
+      asset(6, "OTHER", "Other Assets", 5, "Diversified", "Aggregated allocation across six qualifying assets."),
+    ],
+    methodology: {
+      selection: "Select liquid, institutionally accessible digital assets with durable network usage and transparent supply data.",
+      weighting: "Float-adjusted market-cap weighting with conviction and liquidity modifiers.",
+      rebalance: "Reviewed monthly and reconstituted quarterly using the final business-day reference window.",
+      eligibility: "Assets require minimum liquidity, custody support, pricing history and operational resilience.",
+      limits: "Single assets are capped at 42%; non-core positions are capped at 10% at each rebalance.",
+      risk: "Digital assets can experience significant volatility, liquidity gaps and regulatory change.",
+    },
+  },
+  {
+    id: "tech-leaders",
+    slug: "gmd-tech",
+    ticker: "GMD TECH",
+    name: "TECH LEADERS",
+    category: "growth",
+    tagline: "Growth-focused leaders in blockchain infrastructure.",
+    description: "A concentrated technology strategy focused on networks, middleware and protocols enabling the next generation of onchain applications.",
+    oneYearReturn: "24.7%",
+    fee: "0.48%",
+    risk: "HIGH",
+    assetCount: 12,
+    rebalanceFrequency: "MONTHLY",
+    strategyType: "GROWTH STRATEGY",
+    lastRebalanced: "JUL 2026",
+    factSheetUrl: "#methodology",
+    visual: "tech",
+    basket: [
+      asset(1, "ETH", "Ethereum", 36, "Smart Contract", "Programmable settlement layer and application platform."),
+      asset(2, "SOL", "Solana", 18, "Smart Contract", "High-performance application and payments network."),
+      asset(3, "BNB", "BNB", 14, "Smart Contract", "Exchange-linked utility and smart-contract network."),
+      asset(4, "LINK", "Chainlink", 12, "Infrastructure", "Oracle, data and cross-chain connectivity layer."),
+      asset(5, "HYPE", "Hyperliquid", 10, "Exchange", "Onchain market infrastructure and liquidity protocol."),
+      asset(6, "OTHER", "Other Assets", 10, "Diversified", "Aggregated allocation across seven qualifying assets."),
+    ],
+    methodology: {
+      selection: "Screen for category leadership, developer activity, fee generation, liquidity and infrastructure relevance.",
+      weighting: "Fundamental score weighting blended with liquidity-adjusted market capitalization.",
+      rebalance: "Signals are reviewed weekly and the basket is rebalanced monthly.",
+      eligibility: "Networks require reliable market data, established custody and twelve months of operating history.",
+      limits: "The leading position is capped at 36% and emerging protocols at 12%.",
+      risk: "Growth protocols carry elevated technology, governance and competitive displacement risk.",
+    },
+  },
+  {
+    id: "digital-income",
+    slug: "gmd-yield",
+    ticker: "GMD YIELD",
+    name: "DIGITAL INCOME",
+    category: "income",
+    tagline: "A diversified strategy designed for steady income.",
+    description: "A lower-volatility digital allocation combining reserve assets, productive networks and a dedicated liquidity sleeve.",
+    oneYearReturn: "11.2%",
+    fee: "0.40%",
+    risk: "LOW",
+    assetCount: 8,
+    rebalanceFrequency: "MONTHLY",
+    strategyType: "INCOME STRATEGY",
+    lastRebalanced: "JUL 2026",
+    factSheetUrl: "#methodology",
+    visual: "income",
+    basket: [
+      asset(1, "USDC", "USD Coin", 32, "Cash Equivalent", "Liquidity reserve and volatility buffer."),
+      asset(2, "ETH", "Ethereum", 24, "Smart Contract", "Productive network exposure with staking economics."),
+      asset(3, "BTC", "Bitcoin", 18, "Store of Value", "Core reserve exposure and portfolio ballast."),
+      asset(4, "TRX", "TRON", 12, "Payments", "High-volume settlement and stablecoin transfer network."),
+      asset(5, "BNB", "BNB", 8, "Smart Contract", "Utility network with fee-generation exposure."),
+      asset(6, "OTHER", "Other Assets", 6, "Diversified", "Aggregated allocation across three income assets."),
+    ],
+    methodology: {
+      selection: "Prioritize liquidity, sustainable network economics and observable cash-flow proxies.",
+      weighting: "Risk-budgeted weights balance expected income with realized volatility.",
+      rebalance: "Income and volatility signals are reviewed and rebalanced monthly.",
+      eligibility: "Assets require transparent economics, deep liquidity and supported institutional custody.",
+      limits: "Stable reserves are capped at 35%; any productive network is capped at 24%.",
+      risk: "Income targets are not guaranteed and staking, protocol and stablecoin risks remain.",
+    },
+  },
+  {
+    id: "next-frontier",
+    slug: "gmd-alpha",
+    ticker: "GMD ALPHA",
+    name: "NEXT FRONTIER",
+    category: "growth",
+    tagline: "Emerging networks selected for long-term growth.",
+    description: "A high-conviction basket of rapidly developing networks selected for adoption, capital efficiency and category expansion.",
+    oneYearReturn: "29.1%",
+    fee: "0.55%",
+    risk: "HIGH",
+    assetCount: 14,
+    rebalanceFrequency: "MONTHLY",
+    strategyType: "ALPHA STRATEGY",
+    lastRebalanced: "JUL 2026",
+    factSheetUrl: "#methodology",
+    visual: "alpha",
+    basket: [
+      asset(1, "SOL", "Solana", 26, "Smart Contract", "High-throughput consumer and financial application network."),
+      asset(2, "LINK", "Chainlink", 17, "Infrastructure", "Data, automation and interoperability infrastructure."),
+      asset(3, "HYPE", "Hyperliquid", 15, "Exchange", "Onchain market and liquidity infrastructure."),
+      asset(4, "SUI", "Sui", 13, "Smart Contract", "Object-centric execution platform for consumer applications."),
+      asset(5, "AVAX", "Avalanche", 11, "Smart Contract", "Customizable network infrastructure for institutional use."),
+      asset(6, "OTHER", "Other Assets", 18, "Diversified", "Aggregated allocation across nine frontier assets."),
+    ],
+    methodology: {
+      selection: "Rank emerging networks by adoption velocity, capital efficiency, developer momentum and liquidity.",
+      weighting: "Conviction scores are volatility adjusted and constrained by tradable liquidity.",
+      rebalance: "The opportunity set is reviewed weekly and rebalanced monthly.",
+      eligibility: "Assets require reliable custody, reference pricing, active development and minimum liquidity.",
+      limits: "Single positions are capped at 26%; pre-scale opportunities are capped at 8% individually.",
+      risk: "Frontier networks carry high volatility, execution, governance and adoption risk.",
+    },
+  },
+];
+
+for (const etf of etfs) {
+  const total = etf.basket.reduce((sum, holding) => sum + holding.weight, 0);
+  if (total !== 100) throw new Error(`${etf.ticker} basket must total 100%, received ${total}%`);
+}
+
+export function getEtfBySlug(slug: string) {
+  return etfs.find((etf) => etf.slug === slug);
+}

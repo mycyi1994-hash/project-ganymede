@@ -1,109 +1,11 @@
 "use client";
 
-import { KeyboardEvent, useMemo, useState } from "react";
+import { KeyboardEvent, useEffect, useMemo, useState } from "react";
 import GanymedeScene from "./GanymedeScene";
 import MiniAsciiCelestial from "./MiniAsciiCelestial";
+import { etfs, type Etf, type Filter } from "./data/etfs";
 
-type Filter = "all" | "core" | "growth" | "income";
 type View = "select" | "portfolio";
-type Risk = "LOW" | "MEDIUM" | "HIGH";
-
-type Holding = {
-  symbol: string;
-  weight: number;
-};
-
-type Etf = {
-  id: string;
-  name: string;
-  ticker: string;
-  category: Exclude<Filter, "all">;
-  strategy: string;
-  return1y: string;
-  fee: string;
-  risk: Risk;
-  visual: "core" | "tech" | "income" | "alpha";
-  holdings: Holding[];
-};
-
-const etfs: Etf[] = [
-  {
-    id: "core-20",
-    name: "GANYMEDE CORE 20",
-    ticker: "GMD CORE",
-    category: "core",
-    strategy: "Balanced exposure to leading digital assets.",
-    return1y: "18.4%",
-    fee: "0.35%",
-    risk: "MEDIUM",
-    visual: "core",
-    holdings: [
-      { symbol: "BTC", weight: 42 },
-      { symbol: "ETH", weight: 28 },
-      { symbol: "SOL", weight: 10 },
-      { symbol: "BNB", weight: 8 },
-      { symbol: "XRP", weight: 6 },
-      { symbol: "OTHER", weight: 6 },
-    ],
-  },
-  {
-    id: "tech-leaders",
-    name: "TECH LEADERS",
-    ticker: "GMD TECH",
-    category: "growth",
-    strategy: "Growth-focused leaders in blockchain infrastructure.",
-    return1y: "24.7%",
-    fee: "0.48%",
-    risk: "HIGH",
-    visual: "tech",
-    holdings: [
-      { symbol: "ETH", weight: 36 },
-      { symbol: "SOL", weight: 18 },
-      { symbol: "BNB", weight: 14 },
-      { symbol: "LINK", weight: 12 },
-      { symbol: "HYPE", weight: 10 },
-      { symbol: "OTHER", weight: 10 },
-    ],
-  },
-  {
-    id: "digital-income",
-    name: "DIGITAL INCOME",
-    ticker: "GMD YIELD",
-    category: "income",
-    strategy: "A diversified strategy designed for steady income.",
-    return1y: "11.2%",
-    fee: "0.40%",
-    risk: "LOW",
-    visual: "income",
-    holdings: [
-      { symbol: "USDC", weight: 32 },
-      { symbol: "ETH", weight: 24 },
-      { symbol: "BTC", weight: 18 },
-      { symbol: "TRX", weight: 12 },
-      { symbol: "BNB", weight: 8 },
-      { symbol: "OTHER", weight: 6 },
-    ],
-  },
-  {
-    id: "next-frontier",
-    name: "NEXT FRONTIER",
-    ticker: "GMD ALPHA",
-    category: "growth",
-    strategy: "Emerging networks selected for long-term growth.",
-    return1y: "29.1%",
-    fee: "0.55%",
-    risk: "HIGH",
-    visual: "alpha",
-    holdings: [
-      { symbol: "SOL", weight: 26 },
-      { symbol: "LINK", weight: 17 },
-      { symbol: "HYPE", weight: 15 },
-      { symbol: "SUI", weight: 13 },
-      { symbol: "AVAX", weight: 11 },
-      { symbol: "OTHER", weight: 18 },
-    ],
-  },
-];
 
 const filters: Array<{ id: Filter; label: string }> = [
   { id: "all", label: "ALL" },
@@ -162,21 +64,21 @@ function EtfCard({ etf, selected, onSelect, onNavigate }: EtfCardProps) {
         <div className="etf-card-copy">
           <h2>{etf.name}</h2>
           <span className="etf-ticker">{etf.ticker}</span>
-          <p>{etf.strategy}</p>
+          <p>{etf.tagline}</p>
         </div>
         <AsciiPlanet variant={etf.visual} />
       </div>
 
       <dl className="etf-metrics">
-        <div><dt>1Y RETURN</dt><dd>{etf.return1y}</dd></div>
+        <div><dt>1Y RETURN</dt><dd>{etf.oneYearReturn}</dd></div>
         <div><dt>FEE</dt><dd>{etf.fee}</dd></div>
         <div><dt>RISK</dt><dd>{etf.risk}</dd></div>
       </dl>
 
       <div className="etf-card-actions">
         <div className="holding-chips" aria-label="Top holdings">
-          {etf.holdings.slice(0, 2).map((holding) => (
-            <span key={holding.symbol}>{holding.symbol} <b>{holding.weight}%</b></span>
+          {etf.basket.slice(0, 2).map((holding) => (
+            <span key={holding.ticker}>{holding.ticker} <b>{holding.weight}%</b></span>
           ))}
         </div>
         <button
@@ -241,10 +143,10 @@ function PortfolioView({ etf, onChange }: { etf: Etf; onChange: () => void }) {
       <section className="portfolio-summary">
         <p className="section-kicker">SELECTED ETF / {etf.ticker}</p>
         <h1>{etf.name}</h1>
-        <p className="portfolio-strategy">{etf.strategy}</p>
+        <p className="portfolio-strategy">{etf.tagline}</p>
         <AsciiPlanet variant={etf.visual} />
         <dl className="portfolio-metrics">
-          <div><dt>1Y RETURN</dt><dd>{etf.return1y}</dd></div>
+          <div><dt>1Y RETURN</dt><dd>{etf.oneYearReturn}</dd></div>
           <div><dt>FEE</dt><dd>{etf.fee}</dd></div>
           <div><dt>RISK</dt><dd>{etf.risk}</dd></div>
         </dl>
@@ -260,10 +162,10 @@ function PortfolioView({ etf, onChange }: { etf: Etf; onChange: () => void }) {
           <strong>100.00%</strong>
         </header>
         <ol>
-          {etf.holdings.map((holding, index) => (
-            <li key={holding.symbol}>
+          {etf.basket.map((holding, index) => (
+            <li key={holding.ticker}>
               <span className="allocation-rank">{String(index + 1).padStart(2, "0")}</span>
-              <strong>{holding.symbol}</strong>
+              <strong>{holding.ticker}</strong>
               <span className="allocation-track"><i style={{ width: `${holding.weight}%` }} /></span>
               <b>{holding.weight.toFixed(2)}%</b>
             </li>
@@ -288,12 +190,41 @@ export default function Home() {
 
   const selectedEtf = etfs.find((etf) => etf.id === selectedEtfId) ?? etfs[0];
 
+  useEffect(() => {
+    const query = new URLSearchParams(window.location.search);
+    const returningToSelection = query.get("app") === "select";
+    const savedFilter = sessionStorage.getItem("ganymede-etf-filter") as Filter | null;
+    const savedSelection = sessionStorage.getItem("ganymede-etf-selection");
+
+    if (returningToSelection) setAppOpen(true);
+    if (savedFilter && filters.some((filter) => filter.id === savedFilter)) setActiveFilter(savedFilter);
+    if (savedSelection && etfs.some((etf) => etf.id === savedSelection)) setSelectedEtfId(savedSelection);
+
+    if (returningToSelection) {
+      requestAnimationFrame(() => {
+        const savedScroll = Number(sessionStorage.getItem("ganymede-etf-scroll") ?? 0);
+        document.querySelector<HTMLElement>(".etf-select-page")?.scrollTo({ top: savedScroll });
+      });
+    }
+  }, []);
+
   const changeFilter = (filter: Filter) => {
     setActiveFilter(filter);
+    sessionStorage.setItem("ganymede-etf-filter", filter);
     if (filter !== "all" && selectedEtf.category !== filter) {
       const firstMatch = etfs.find((etf) => etf.category === filter);
       if (firstMatch) setSelectedEtfId(firstMatch.id);
     }
+  };
+
+  const openEtfDetail = (id: string) => {
+    const etf = etfs.find((candidate) => candidate.id === id);
+    if (!etf) return;
+    const selectionPage = document.querySelector<HTMLElement>(".etf-select-page");
+    sessionStorage.setItem("ganymede-etf-filter", activeFilter);
+    sessionStorage.setItem("ganymede-etf-selection", id);
+    sessionStorage.setItem("ganymede-etf-scroll", String(selectionPage?.scrollTop ?? 0));
+    window.location.assign(`/etfs/${etf.slug}`);
   };
 
   const navigateCards = (id: string, direction: number) => {
@@ -342,7 +273,7 @@ export default function Home() {
                   key={etf.id}
                   etf={etf}
                   selected={selectedEtfId === etf.id}
-                  onSelect={setSelectedEtfId}
+                  onSelect={openEtfDetail}
                   onNavigate={navigateCards}
                 />
               ))}
