@@ -14,13 +14,13 @@ export async function generateMetadata(): Promise<Metadata> {
 
   return {
     title: "Project Ganymede",
-    description: "Enter a new orbit. A cinematic new-hire experience built from living ASCII.",
+    description: "An autonomous mission platform for planning humanity's next frontier.",
     openGraph: {
       title: "Project Ganymede",
-      description: "Enter a new orbit.",
+      description: "An autonomous mission platform for planning humanity's next frontier.",
       images: [{ url: imageUrl, width: 1200, height: 630, alt: "Project Ganymede ASCII moon" }],
     },
-    twitter: { card: "summary_large_image", title: "Project Ganymede", description: "Enter a new orbit.", images: [imageUrl] },
+    twitter: { card: "summary_large_image", title: "Project Ganymede", description: "An autonomous mission platform for humanity's next frontier.", images: [imageUrl] },
   };
 }
 

@@ -235,7 +235,7 @@ export default function GanymedeScene() {
       lastFrame = now;
 
       const elapsed = reduceMotion ? 5000 : now - start;
-      const angle = reduceMotion ? 0.38 : elapsed * 0.000095;
+      const angle = reduceMotion ? 0.38 : elapsed * 0.000068;
       const centerX = width * 0.5;
       const centerY = height * (width < 640 ? 0.4 : 0.41);
       const sceneScale = Math.min(width, height) * (width < 640 ? 0.18 : 0.195);
@@ -312,7 +312,7 @@ export default function GanymedeScene() {
       for (let index = 0; index < SPACECRAFT_COUNT; index += 1) {
         const model = SPACECRAFT[index % SPACECRAFT.length];
         const direction = index % 2 === 0 ? 1 : -1;
-        const speed = [0.00008, 0.0001, 0.00012, 0.00014, 0.00016][index % 5];
+        const speed = [0.000055, 0.00007, 0.000085, 0.0001, 0.000115][index % 5];
         const phase = (index / SPACECRAFT_COUNT) * Math.PI * 2 + (index % 3 - 1) * 0.11;
         const orbit = (2.02 + (index % 5) * 0.18) * sceneScale;
         const flattening = 0.3 + (index % 4) * 0.04;
@@ -350,8 +350,8 @@ export default function GanymedeScene() {
           x,
           y,
           tangent,
-          width < 640 ? 0.58 : 0.72 + depth * 0.2,
-          arrival * (0.2 + depth * 0.58),
+          width < 640 ? 0.54 : 0.66 + depth * 0.18,
+          arrival * (0.1 + depth * 0.5),
         );
       }
 
