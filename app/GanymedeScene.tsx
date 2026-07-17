@@ -14,6 +14,11 @@ type Particle = {
 };
 
 const GLYPHS = [".", ":", "+", "*", "0", "1", "/", "=", "-", "·"];
+const SPACECRAFT = [
+  ["  /\\  ", "<|===>", "  \\/  "],
+  ["  .  ", "=[+]=", " /_\\ "],
+  ["<<o>>", " /|\\ "],
+];
 
 function clamp(value: number, min = 0, max = 1) {
   return Math.min(max, Math.max(min, value));
@@ -41,8 +46,8 @@ function rotatePoint(x: number, y: number, z: number, angle: number) {
 
 function makeParticles(width: number, height: number) {
   const particles: Particle[] = [];
-  const moonCount = width < 640 ? 360 : 620;
-  const ringCount = width < 640 ? 190 : 320;
+  const moonCount = width < 640 ? 1080 : 1860;
+  const ringCount = width < 640 ? 570 : 960;
 
   for (let i = 0; i < moonCount; i += 1) {
     const y = 1 - (i / (moonCount - 1)) * 2;
@@ -102,6 +107,30 @@ function makeParticles(width: number, height: number) {
   return particles;
 }
 
+function drawSpacecraft(
+  context: CanvasRenderingContext2D,
+  model: string[],
+  x: number,
+  y: number,
+  rotation: number,
+  scale: number,
+  alpha: number,
+) {
+  context.save();
+  context.translate(x, y);
+  context.rotate(rotation);
+  context.scale(scale, scale);
+  context.globalAlpha = alpha;
+  context.fillStyle = "#f5f5ef";
+  context.font = "9px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace";
+  context.textAlign = "center";
+  context.textBaseline = "middle";
+  model.forEach((line, index) => {
+    context.fillText(line, 0, (index - (model.length - 1) / 2) * 9);
+  });
+  context.restore();
+}
+
 export default function GanymedeScene() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const statusRef = useRef<HTMLSpanElement>(null);
@@ -142,7 +171,7 @@ export default function GanymedeScene() {
       context.clearRect(0, 0, width, height);
       context.textAlign = "center";
       context.textBaseline = "middle";
-      context.font = `${Math.max(8, Math.min(13, width / 115))}px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace`;
+      context.font = `${Math.max(5.5, Math.min(9.5, width / 165))}px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace`;
 
       particles.forEach((particle, index) => {
         const rotated = rotatePoint(particle.x, particle.y, particle.z, angle);
@@ -163,6 +192,36 @@ export default function GanymedeScene() {
         context.globalAlpha = clamp(localProgress * depthAlpha, 0, 0.96);
         context.fillStyle = particle.kind === "ring" ? "#cfcfc8" : "#f2f2ed";
         context.fillText(particle.char, x, y);
+      });
+
+      SPACECRAFT.forEach((model, index) => {
+        const direction = index === 1 ? -1 : 1;
+        const speed = [0.00016, 0.000115, 0.000205][index];
+        const phase = [0.2, 2.25, 4.1][index];
+        const orbit = [2.18, 2.62, 1.92][index] * sceneScale;
+        const shipAngle = elapsed * speed * direction + phase;
+        const orbitX = centerX + Math.cos(shipAngle) * orbit;
+        const orbitY = centerY + Math.sin(shipAngle) * orbit * (0.34 + index * 0.055);
+        const arrival = reduceMotion ? 1 : easeOutExpo(clamp((elapsed - 1500 - index * 320) / 1900));
+        const startX = index === 0 ? -100 : index === 1 ? width + 100 : width * 0.5;
+        const startY = index === 2 ? -80 : height * (0.25 + index * 0.22);
+        const x = startX + (orbitX - startX) * arrival;
+        const y = startY + (orbitY - startY) * arrival;
+        const tangent = Math.atan2(
+          Math.cos(shipAngle) * orbit * (0.34 + index * 0.055) * direction,
+          -Math.sin(shipAngle) * orbit * direction,
+        );
+        const depth = (Math.sin(shipAngle) + 1) * 0.5;
+
+        drawSpacecraft(
+          context,
+          model,
+          x,
+          y,
+          tangent,
+          width < 640 ? 0.78 : 0.9 + depth * 0.25,
+          arrival * (0.28 + depth * 0.65),
+        );
       });
 
       context.globalAlpha = 1;
@@ -188,7 +247,7 @@ export default function GanymedeScene() {
   }, []);
 
   return (
-    <div className="scene" aria-label="ASCII particles assemble into a rotating moon and orbital rings">
+    <div className="scene" aria-label="ASCII particles assemble into a rotating moon with orbital rings and passing spacecraft">
       <canvas ref={canvasRef} className="ascii-canvas" aria-hidden="true" />
       <div className="scene-status" aria-live="polite">
         <i aria-hidden="true" />
