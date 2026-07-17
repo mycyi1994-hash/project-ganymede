@@ -1,12 +1,15 @@
 @import "tailwindcss";
 
 :root {
-  --black: #050505;
-  --panel: #090909;
-  --white: #f1f1ec;
-  --ivory: #e8e5dc;
-  --gray: #9d9c95;
-  --line: rgba(241, 241, 236, 0.2);
+  --black: #070707;
+  --panel: #0b0b0b;
+  --panel-deep: #090909;
+  --white: #eeede8;
+  --ivory: #e9e5d9;
+  --gray: #a2a19b;
+  --muted: #777771;
+  --line: rgba(238, 237, 232, 0.22);
+  --line-soft: rgba(238, 237, 232, 0.11);
 }
 
 * { box-sizing: border-box; }
@@ -23,6 +26,7 @@ html, body {
 
 button { color: inherit; font: inherit; }
 
+/* Landing */
 .ganymede-launch {
   width: 100vw;
   height: 100svh;
@@ -37,14 +41,13 @@ button { color: inherit; font: inherit; }
 }
 
 .ganymede-launch::after,
-.basket-grid::after,
-.fund-detail::after {
+.app-shell::after {
   content: "";
   position: absolute;
   inset: 0;
-  z-index: 20;
+  z-index: 40;
   pointer-events: none;
-  opacity: 0.17;
+  opacity: 0.14;
   background: radial-gradient(rgba(255, 255, 255, 0.2) 0.45px, transparent 0.65px);
   background-size: 4px 4px;
 }
@@ -126,120 +129,106 @@ button { color: inherit; font: inherit; }
   transition: color 180ms ease, background 180ms ease, transform 180ms ease;
 }
 
-.launch-app:hover { color: var(--white); background: rgba(5, 5, 5, 0.78); transform: translateY(-2px); }
-.launch-app:focus-visible,
-.basket-card:focus-visible,
-.back-to-baskets:focus-visible,
-.app-identity:focus-visible,
-.app-menu button:focus-visible { outline: 1px solid var(--white); outline-offset: -7px; }
+.launch-app:hover { color: var(--white); background: rgba(7, 7, 7, 0.78); transform: translateY(-2px); }
 
-/* Application frame */
+/* Application shell */
 .app-shell {
   width: 100vw;
   height: 100svh;
+  position: relative;
   display: grid;
-  grid-template-rows: 68px minmax(0, 1fr) 34px;
+  grid-template-rows: 72px minmax(0, 1fr) 40px;
   overflow: hidden;
-  background: var(--black);
+  isolation: isolate;
+  background:
+    linear-gradient(rgba(238, 237, 232, 0.018) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(238, 237, 232, 0.018) 1px, transparent 1px),
+    var(--black);
+  background-size: 40px 40px, 40px 40px, auto;
 }
 
 .app-topbar {
   min-width: 0;
   position: relative;
-  z-index: 30;
+  z-index: 20;
   display: grid;
-  grid-template-columns: minmax(230px, 1fr) auto minmax(230px, 1fr);
+  grid-template-columns: minmax(260px, 1fr) auto minmax(260px, 1fr);
   align-items: stretch;
   border-bottom: 1px solid var(--line);
-  background: rgba(5, 5, 5, 0.97);
+  background: rgba(7, 7, 7, 0.96);
 }
 
 .app-identity {
-  min-width: 0;
-  padding: 0 clamp(18px, 2.2vw, 36px);
-  display: grid;
-  grid-template-columns: 30px auto;
-  grid-template-rows: 1fr 1fr;
-  column-gap: 12px;
+  width: max-content;
+  padding: 0 clamp(24px, 2.5vw, 42px);
+  display: flex;
   align-items: center;
-  justify-content: start;
+  gap: 15px;
   border: 0;
   color: var(--white);
   background: transparent;
-  text-align: left;
   cursor: pointer;
 }
 
-.app-identity > span {
-  grid-row: 1 / 3;
-  width: 30px;
-  height: 30px;
+.app-identity span {
+  width: 38px;
+  height: 38px;
   display: grid;
   place-items: center;
-  border: 1px solid rgba(241, 241, 236, 0.65);
-  font: 650 12px/1 var(--font-geist-mono), monospace;
+  border: 1px solid rgba(238, 237, 232, 0.68);
+  font: 650 16px/1 var(--font-geist-mono), monospace;
 }
 
 .app-identity strong {
-  align-self: end;
-  padding-bottom: 3px;
-  font: 650 9px/1 var(--font-geist-mono), monospace;
-  letter-spacing: 0.15em;
+  font: 650 11px/1 var(--font-geist-mono), monospace;
+  letter-spacing: 0.17em;
 }
 
-.app-identity small {
-  align-self: start;
-  padding-top: 3px;
-  color: #6f6e68;
-  font: 650 6px/1 var(--font-geist-mono), monospace;
-  letter-spacing: 0.16em;
-}
-
-.app-menu {
-  height: 100%;
-  display: flex;
-  align-items: stretch;
-  border-left: 1px solid rgba(241, 241, 236, 0.12);
-  border-right: 1px solid rgba(241, 241, 236, 0.12);
-}
+.app-menu { height: 100%; display: flex; align-items: stretch; }
 
 .app-menu button {
-  min-width: 132px;
+  min-width: 142px;
   padding: 0 22px;
   position: relative;
   border: 0;
-  border-right: 1px solid rgba(241, 241, 236, 0.12);
-  color: #74736d;
+  color: #8c8b85;
   background: transparent;
-  font: 650 8px/1 var(--font-geist-mono), monospace;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
+  font: 650 9px/1 var(--font-geist-mono), monospace;
+  letter-spacing: 0.17em;
   cursor: pointer;
   transition: color 180ms ease, background 180ms ease;
 }
 
-.app-menu button:last-child { border-right: 0; }
-.app-menu button b { margin-right: 7px; color: #4f4f4a; font-weight: 650; }
-.app-menu button:hover { color: #c8c7c0; background: rgba(241, 241, 236, 0.025); }
+.app-menu button:hover { color: #cccac3; background: rgba(238, 237, 232, 0.025); }
 .app-menu button.is-active { color: var(--white); }
-.app-menu button.is-active::after {
+.app-menu button.is-active::before {
   content: "";
   position: absolute;
-  left: 18px;
-  right: 18px;
+  left: 22px;
+  right: 22px;
   bottom: -1px;
   height: 1px;
   background: var(--white);
-  box-shadow: 0 -2px 9px rgba(255, 255, 255, 0.35);
+  box-shadow: 0 -2px 8px rgba(238, 237, 232, 0.35);
+}
+.app-menu button.is-active::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: 13px;
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: var(--white);
 }
 
 .app-system-status {
-  padding: 0 clamp(18px, 2.2vw, 36px);
+  padding: 0 clamp(24px, 2.5vw, 42px);
   display: flex;
   align-items: center;
   justify-content: flex-end;
   gap: 8px;
-  color: #777771;
+  color: #73726d;
   font: 650 7px/1 var(--font-geist-mono), monospace;
   letter-spacing: 0.16em;
 }
@@ -248,349 +237,455 @@ button { color: inherit; font: inherit; }
   width: 5px;
   height: 5px;
   border-radius: 50%;
-  background: #d9d8d1;
-  box-shadow: 0 0 9px rgba(255, 255, 255, 0.75);
+  background: #d6d5cf;
+  box-shadow: 0 0 8px rgba(238, 237, 232, 0.7);
 }
 
-.app-statusbar {
+.app-disclaimer {
   position: relative;
-  z-index: 30;
-  padding: 0 clamp(18px, 2.2vw, 36px);
+  z-index: 20;
+  padding: 0 clamp(26px, 3.3vw, 58px);
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 24px;
-  border-top: 1px solid var(--line);
-  color: #686862;
-  background: rgba(5, 5, 5, 0.98);
-  font: 650 6px/1 var(--font-geist-mono), monospace;
-  letter-spacing: 0.15em;
+  border-top: 1px solid var(--line-soft);
+  color: #75746e;
+  background: rgba(7, 7, 7, 0.97);
+  font-size: 10px;
+  letter-spacing: 0.01em;
 }
 
-.app-statusbar span { white-space: nowrap; }
-.app-statusbar b { color: #b5b4ad; font-weight: 650; }
-.app-statusbar i {
-  width: 2px;
-  height: 2px;
-  margin: 0 10px 2px;
-  display: inline-block;
-  border-radius: 50%;
-  background: #666660;
-}
-
-/* Four-basket selector */
-.basket-grid {
-  width: 100%;
+/* ETF selection */
+.etf-select-page {
   min-width: 0;
   min-height: 0;
-  position: relative;
+  padding: clamp(22px, 3vh, 38px) clamp(28px, 4vw, 68px) clamp(20px, 2.5vh, 30px);
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  grid-template-rows: repeat(2, minmax(0, 1fr));
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: clamp(18px, 2.3vh, 28px);
   overflow: hidden;
-  isolation: isolate;
-  background: var(--black);
 }
 
-.basket-card {
+.etf-page-intro {
   min-width: 0;
-  min-height: 0;
-  position: relative;
-  padding: clamp(24px, 2.6vw, 44px);
   display: flex;
-  flex-direction: column;
-  align-items: stretch;
+  align-items: flex-end;
   justify-content: space-between;
-  overflow: hidden;
-  border: 0;
-  border-right: 1px solid var(--line);
-  border-bottom: 1px solid var(--line);
-  color: var(--white);
-  background:
-    radial-gradient(circle at 50% 49%, rgba(241, 241, 236, 0.07), transparent 33%),
-    linear-gradient(rgba(241, 241, 236, 0.022) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(241, 241, 236, 0.022) 1px, transparent 1px),
-    var(--black);
-  background-size: auto, 42px 42px, 42px 42px, auto;
-  text-align: left;
-  opacity: 1;
-  transition: background-color 240ms ease;
+  gap: 40px;
 }
 
-.basket-card-index,
-.basket-card-status,
-.basket-card-copy small {
-  color: #777771;
-  font: 650 8px/1 var(--font-geist-mono), monospace;
+.section-kicker {
+  margin: 0 0 9px;
+  color: #6f6e68;
+  font: 650 7px/1 var(--font-geist-mono), monospace;
   letter-spacing: 0.17em;
 }
 
-.basket-card-status {
-  position: absolute;
-  top: clamp(24px, 2.6vw, 44px);
-  right: clamp(24px, 2.6vw, 44px);
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.basket-card-status i {
-  width: 4px;
-  height: 4px;
-  border-radius: 50%;
-  background: currentColor;
-}
-
-.basket-card pre {
-  max-width: 100%;
-  margin: auto;
-  color: #cecdc6;
-  font: 650 clamp(5.3px, 0.58vw, 9.5px)/1.08 var(--font-geist-mono), monospace;
-  letter-spacing: 0.025em;
-  white-space: pre;
-  text-align: left;
-  text-shadow: 0 0 14px rgba(241, 241, 236, 0.12);
-  animation: chestSignal 4.8s ease-in-out infinite;
-  transition: color 260ms ease, transform 320ms ease, text-shadow 320ms ease, opacity 260ms ease;
-}
-
-.basket-card-copy {
-  display: flex;
-  flex-direction: column;
-  gap: 9px;
-}
-
-.basket-card-copy strong {
-  font-size: clamp(22px, 2vw, 35px);
-  font-weight: 430;
-  line-height: 0.95;
-  letter-spacing: -0.045em;
-}
-
-.basket-card.is-available { cursor: pointer; }
-.basket-card.is-available .basket-card-status { color: #c9c8c1; }
-.basket-card.is-available .basket-card-status i { box-shadow: 0 0 9px rgba(255, 255, 255, 0.9); }
-.basket-card.is-available:hover {
-  background-color: #090909;
-}
-.basket-card.is-available:hover pre {
+.etf-page-intro h1 {
+  margin: 0;
   color: var(--white);
-  transform: translateY(-5px) scale(1.025);
-  text-shadow: 0 0 24px rgba(241, 241, 236, 0.28);
+  font-size: clamp(28px, 2.3vw, 39px);
+  font-weight: 520;
+  line-height: 1;
+  letter-spacing: -0.035em;
 }
 
-.basket-card.is-locked { cursor: default; }
-.basket-card.is-locked pre { opacity: 0.5; }
-.basket-card.is-locked .basket-card-copy strong { color: #8e8d87; }
+.etf-page-intro > div > p:last-child {
+  margin: 9px 0 0;
+  color: var(--gray);
+  font-size: clamp(12px, 1vw, 14px);
+  line-height: 1.35;
+}
 
-/* Open basket detail */
-.fund-detail {
-  width: 100%;
+.etf-filters {
+  height: 42px;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(86px, 1fr));
+  border: 1px solid var(--line);
+}
+
+.etf-filters button {
+  min-width: 0;
+  padding: 0 20px;
+  border: 0;
+  border-right: 1px solid var(--line);
+  color: #999892;
+  background: rgba(7, 7, 7, 0.55);
+  font: 650 8px/1 var(--font-geist-mono), monospace;
+  letter-spacing: 0.16em;
+  cursor: pointer;
+  transition: color 160ms ease, background 160ms ease, box-shadow 160ms ease;
+}
+
+.etf-filters button:last-child { border-right: 0; }
+.etf-filters button:hover { color: var(--white); background: rgba(238, 237, 232, 0.035); }
+.etf-filters button.is-active {
+  color: var(--white);
+  box-shadow: inset 0 0 0 1px rgba(238, 237, 232, 0.72);
+  background: rgba(238, 237, 232, 0.03);
+}
+
+.etf-card-grid {
+  min-width: 0;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-rows: repeat(2, minmax(0, 1fr));
+  gap: clamp(14px, 1.5vw, 22px);
+}
+
+.etf-card {
   min-width: 0;
   min-height: 0;
   position: relative;
   display: grid;
-  grid-template-columns: minmax(320px, 0.72fr) minmax(500px, 1.28fr);
+  grid-template-rows: minmax(118px, 1fr) 66px 56px;
   overflow: hidden;
-  isolation: isolate;
-  background: var(--black);
-}
-
-.detail-basket-panel {
-  min-width: 0;
-  min-height: 0;
-  padding: clamp(28px, 3.3vw, 54px);
-  display: flex;
-  flex-direction: column;
-  position: relative;
-  overflow: hidden;
-  border-right: 1px solid var(--line);
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  outline: 0;
+  color: var(--white);
   background:
-    radial-gradient(circle at 50% 66%, rgba(241, 241, 236, 0.055), transparent 32%),
-    linear-gradient(rgba(241, 241, 236, 0.022) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(241, 241, 236, 0.022) 1px, transparent 1px),
-    var(--black);
-  background-size: auto, 44px 44px, 44px 44px, auto;
-}
-
-.back-to-baskets {
-  align-self: flex-start;
-  margin: 0 0 clamp(26px, 5vh, 58px);
-  padding: 0;
-  display: inline-flex;
-  align-items: center;
-  gap: 9px;
-  border: 0;
-  color: #85847e;
-  background: transparent;
-  font: 650 9px/1 var(--font-geist-mono), monospace;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
+    radial-gradient(circle at 82% 32%, rgba(238, 237, 232, 0.038), transparent 28%),
+    rgba(10, 10, 10, 0.93);
   cursor: pointer;
-  transition: color 180ms ease;
-}
-.back-to-baskets:hover { color: var(--white); }
-
-.basket-kicker, .holdings-header p {
-  margin: 0;
-  color: #92918b;
-  font: 650 9px/1 var(--font-geist-mono), monospace;
-  letter-spacing: 0.2em;
+  transition: border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
 }
 
-.detail-basket-panel h1 {
-  margin: 16px 0 0;
-  font-size: clamp(36px, 3.4vw, 58px);
-  font-weight: 430;
-  line-height: 0.92;
-  letter-spacing: -0.055em;
+.etf-card:hover { border-color: rgba(238, 237, 232, 0.4); }
+.etf-card:focus-visible {
+  border-color: var(--ivory);
+  box-shadow: inset 0 0 0 1px var(--ivory);
+}
+.etf-card.is-selected {
+  border-color: var(--ivory);
+  box-shadow: 0 0 0 1px rgba(233, 229, 217, 0.6), 0 0 18px rgba(233, 229, 217, 0.13);
 }
 
-.detail-chest {
+.etf-card-hero {
   min-height: 0;
-  margin: auto -10%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 22px;
-  color: #d1d0ca;
-}
-
-.detail-chest pre {
-  max-width: 100%;
-  margin: 0;
-  color: inherit;
-  font: 650 clamp(4.5px, 0.45vw, 7.7px)/1.1 var(--font-geist-mono), monospace;
-  letter-spacing: 0.02em;
-  white-space: pre;
-  text-shadow: 0 0 16px rgba(241, 241, 236, 0.15);
-  animation: chestSignal 4.8s ease-in-out infinite;
-}
-
-.detail-chest span {
-  padding: 9px 13px;
-  border: 1px solid rgba(241, 241, 236, 0.26);
-  border-radius: 999px;
-  color: #92918a;
-  font: 650 8px/1 var(--font-geist-mono), monospace;
-  letter-spacing: 0.15em;
-}
-
-.holdings-panel {
-  min-width: 0;
-  min-height: 0;
-  padding: clamp(28px, 3.4vw, 54px);
   position: relative;
-  z-index: 2;
-  display: flex;
-  flex-direction: column;
-  background: rgba(9, 9, 9, 0.97);
-  overflow: hidden;
-}
-
-.holdings-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 24px; }
-.holdings-header h2 {
-  margin: 14px 0 0;
-  font-size: clamp(36px, 3.5vw, 62px);
-  font-weight: 430;
-  line-height: 0.9;
-  letter-spacing: -0.055em;
-}
-
-.fund-status {
+  padding: clamp(20px, 2vw, 30px) clamp(190px, 20vw, 300px) 18px clamp(22px, 2vw, 30px);
   display: flex;
   align-items: center;
-  gap: 8px;
-  color: #aaa9a2;
-  font: 650 9px/1 var(--font-geist-mono), monospace;
+}
+
+.etf-card-copy { min-width: 0; position: relative; z-index: 2; }
+.etf-card-copy h2 {
+  margin: 0;
+  color: var(--white);
+  font: 650 clamp(18px, 1.55vw, 25px)/1.05 var(--font-geist-mono), monospace;
+  letter-spacing: 0.12em;
+}
+
+.etf-ticker {
+  width: max-content;
+  margin-top: 12px;
+  padding: 7px 9px;
+  display: block;
+  border: 1px solid var(--line);
+  color: #cecdc6;
+  font: 650 8px/1 var(--font-geist-mono), monospace;
   letter-spacing: 0.14em;
 }
-.fund-status i { width: 5px; height: 5px; border-radius: 50%; background: var(--white); box-shadow: 0 0 9px rgba(255, 255, 255, 0.9); }
 
-.fund-metrics {
-  margin-top: clamp(22px, 3vh, 36px);
+.etf-card-copy p {
+  max-width: 380px;
+  margin: 13px 0 0;
+  color: #989791;
+  font-size: clamp(11px, 0.9vw, 13px);
+  line-height: 1.35;
+}
+
+.etf-metrics {
+  margin: 0;
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   border-top: 1px solid var(--line);
   border-bottom: 1px solid var(--line);
 }
-.fund-metrics span { min-height: 52px; display: flex; flex-direction: column; justify-content: center; gap: 6px; color: #777771; font: 650 8px/1 var(--font-geist-mono), monospace; letter-spacing: 0.13em; }
-.fund-metrics span + span { padding-left: 16px; border-left: 1px solid var(--line); }
-.fund-metrics b { color: #d4d3cc; font-size: 12px; font-weight: 650; }
 
-.holdings-list {
+.etf-metrics > div {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border-right: 1px solid var(--line);
+}
+.etf-metrics > div:last-child { border-right: 0; }
+.etf-metrics dt {
+  color: #8c8b85;
+  font: 650 7px/1 var(--font-geist-mono), monospace;
+  letter-spacing: 0.16em;
+}
+.etf-metrics dd {
+  margin: 0;
+  color: var(--white);
+  font: 500 clamp(15px, 1.35vw, 21px)/1 var(--font-geist-mono), monospace;
+  letter-spacing: 0.08em;
+}
+
+.etf-card-actions {
+  min-width: 0;
+  padding: 0 clamp(16px, 2vw, 28px);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.holding-chips { min-width: 0; display: flex; gap: 10px; }
+.holding-chips span {
+  padding: 8px 11px;
+  border: 1px solid var(--line);
+  color: #c8c7c0;
+  font: 500 9px/1 var(--font-geist-mono), monospace;
+  letter-spacing: 0.11em;
+  white-space: nowrap;
+}
+.holding-chips b { color: #9c9b95; font-weight: 500; }
+
+.select-etf-button {
+  width: clamp(124px, 12vw, 160px);
+  height: 36px;
+  flex: 0 0 auto;
+  border: 1px solid rgba(238, 237, 232, 0.72);
+  color: var(--white);
+  background: transparent;
+  font: 650 9px/1 var(--font-geist-mono), monospace;
+  letter-spacing: 0.18em;
+  cursor: pointer;
+  transition: color 160ms ease, background 160ms ease;
+}
+.select-etf-button:hover { color: var(--black); background: var(--ivory); }
+.etf-card.is-selected .select-etf-button { color: var(--black); background: var(--ivory); }
+
+/* CSS orbit visualizations */
+.orbit-graphic {
+  width: clamp(170px, 16vw, 245px);
+  height: clamp(105px, 11vw, 150px);
+  position: absolute;
+  z-index: 1;
+  top: 50%;
+  right: clamp(15px, 2.4vw, 38px);
+  transform: translateY(-50%);
+  opacity: 0.8;
+}
+
+.orbit-center,
+.orbit-ring,
+.orbit-axis { position: absolute; left: 50%; top: 50%; }
+
+.orbit-center {
+  z-index: 3;
+  width: 42px;
+  height: 42px;
+  border: 1px solid rgba(238, 237, 232, 0.48);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  background:
+    radial-gradient(circle, rgba(238, 237, 232, 0.34) 0 1px, transparent 1px) 0 0 / 3px 3px,
+    radial-gradient(circle at 38% 32%, rgba(238, 237, 232, 0.22), rgba(238, 237, 232, 0.025) 62%);
+  box-shadow: 0 0 14px rgba(238, 237, 232, 0.1);
+}
+
+.orbit-ring {
+  border: 1px solid rgba(238, 237, 232, 0.42);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+}
+.orbit-ring::after {
+  content: "";
+  position: absolute;
+  inset: 8%;
+  border: 1px dashed rgba(238, 237, 232, 0.16);
+  border-radius: inherit;
+}
+.orbit-ring i {
+  width: 5px;
+  height: 5px;
+  position: absolute;
+  top: 50%;
+  right: -3px;
+  border-radius: 50%;
+  background: var(--ivory);
+  box-shadow: 0 0 6px rgba(238, 237, 232, 0.5);
+}
+
+.orbit-axis { display: none; background: rgba(238, 237, 232, 0.25); }
+
+.orbit-core .orbit-ring-a { width: 72px; height: 72px; }
+.orbit-core .orbit-ring-b { width: 105px; height: 88px; }
+.orbit-core .orbit-ring-c { width: 145px; height: 112px; }
+.orbit-core .orbit-ring-d { width: 190px; height: 134px; }
+
+.orbit-tech .orbit-center { width: 70px; height: 70px; background-size: 4px 4px, auto; }
+.orbit-tech .orbit-ring-a,
+.orbit-tech .orbit-ring-b,
+.orbit-tech .orbit-ring-c,
+.orbit-tech .orbit-ring-d { width: 190px; height: 70px; }
+.orbit-tech .orbit-ring-a { transform: translate(-50%, -50%) rotate(0deg); }
+.orbit-tech .orbit-ring-b { transform: translate(-50%, -50%) rotate(28deg); }
+.orbit-tech .orbit-ring-c { transform: translate(-50%, -50%) rotate(-28deg); }
+.orbit-tech .orbit-ring-d { width: 70px; height: 128px; }
+.orbit-tech .orbit-axis { display: block; }
+.orbit-tech .orbit-axis-x { width: 210px; height: 1px; transform: translate(-50%, -50%); }
+.orbit-tech .orbit-axis-y { width: 1px; height: 118px; transform: translate(-50%, -50%); }
+
+.orbit-income .orbit-center { width: 54px; height: 54px; }
+.orbit-income .orbit-ring-a { width: 72px; height: 72px; }
+.orbit-income .orbit-ring-b { width: 108px; height: 92px; }
+.orbit-income .orbit-ring-c { width: 144px; height: 112px; }
+.orbit-income .orbit-ring-d { width: 172px; height: 138px; }
+.orbit-income .orbit-axis { display: block; }
+.orbit-income .orbit-axis-x { width: 190px; height: 1px; transform: translate(-50%, -50%) rotate(-11deg); }
+.orbit-income .orbit-axis-y { width: 1px; height: 148px; transform: translate(-50%, -50%); }
+
+.orbit-alpha .orbit-center { width: 36px; height: 36px; }
+.orbit-alpha .orbit-ring-a,
+.orbit-alpha .orbit-ring-b,
+.orbit-alpha .orbit-ring-c,
+.orbit-alpha .orbit-ring-d { width: 190px; height: 58px; }
+.orbit-alpha .orbit-ring-a { transform: translate(-50%, -50%) rotate(0deg); }
+.orbit-alpha .orbit-ring-b { transform: translate(-50%, -50%) rotate(58deg); }
+.orbit-alpha .orbit-ring-c { transform: translate(-50%, -50%) rotate(-58deg); }
+.orbit-alpha .orbit-ring-d { transform: translate(-50%, -50%) rotate(88deg); }
+
+/* Portfolio */
+.portfolio-page {
+  min-width: 0;
   min-height: 0;
-  margin: 16px 0 0;
-  padding: 0;
-  list-style: none;
-  border-top: 1px solid rgba(241, 241, 236, 0.12);
+  padding: clamp(28px, 4vw, 68px);
+  display: grid;
+  grid-template-columns: minmax(330px, 0.82fr) minmax(480px, 1.18fr);
+  gap: clamp(20px, 3vw, 46px);
   overflow: hidden;
 }
 
-.holdings-list li {
-  min-height: clamp(38px, 4.6vh, 49px);
-  display: grid;
-  grid-template-columns: 36px 60px 1fr auto;
-  gap: 12px;
-  align-items: center;
-  border-bottom: 1px solid rgba(241, 241, 236, 0.12);
-  opacity: 0;
-  transform: translateX(12px);
-  animation: holdingReveal 420ms ease forwards;
+.portfolio-summary,
+.portfolio-allocation {
+  min-width: 0;
+  min-height: 0;
+  border: 1px solid var(--line);
+  background: rgba(10, 10, 10, 0.93);
 }
-.holdings-list li:nth-child(2) { animation-delay: 45ms; }
-.holdings-list li:nth-child(3) { animation-delay: 90ms; }
-.holdings-list li:nth-child(4) { animation-delay: 135ms; }
-.holdings-list li:nth-child(5) { animation-delay: 180ms; }
-.holdings-list li:nth-child(6) { animation-delay: 225ms; }
-.holdings-list li:nth-child(7) { animation-delay: 270ms; }
-.holdings-list li:nth-child(8) { animation-delay: 315ms; }
-.holdings-list li:nth-child(9) { animation-delay: 360ms; }
-.holdings-list li:nth-child(10) { animation-delay: 405ms; }
-.holding-rank { color: #686862; font: 650 9px/1 var(--font-geist-mono), monospace; }
-.holdings-list strong { color: #efeee8; font: 650 12px/1 var(--font-geist-mono), monospace; letter-spacing: 0.06em; }
-.holding-name { color: #9a9992; font-size: 12px; }
-.holding-weight { color: #d5d4cd; font: 650 10px/1 var(--font-geist-mono), monospace; letter-spacing: 0.08em; }
 
-.method-note {
-  margin-top: auto;
-  padding-top: 13px;
+.portfolio-summary {
+  padding: clamp(28px, 3vw, 48px);
+  position: relative;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  overflow: hidden;
+}
+.portfolio-summary h1 {
+  max-width: 520px;
+  margin: 0;
+  font: 650 clamp(34px, 4vw, 64px)/0.95 var(--font-geist-mono), monospace;
+  letter-spacing: 0.04em;
+}
+.portfolio-strategy { max-width: 430px; margin: 18px 0 0; color: var(--gray); line-height: 1.55; }
+.portfolio-summary .orbit-graphic { width: 70%; height: 40%; top: 54%; right: -8%; opacity: 0.55; }
+
+.portfolio-metrics {
+  margin: auto 0 22px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
   border-top: 1px solid var(--line);
-  color: #666660;
-  font: 600 7px/1.2 var(--font-geist-mono), monospace;
-  letter-spacing: 0.11em;
+  border-bottom: 1px solid var(--line);
 }
-.method-note small { margin-top: 2px; color: #777771; font: inherit; text-transform: uppercase; }
+.portfolio-metrics > div { padding: 17px 0; border-right: 1px solid var(--line); }
+.portfolio-metrics > div:last-child { border-right: 0; }
+.portfolio-metrics dt { margin-bottom: 8px; color: var(--muted); font: 650 7px/1 var(--font-geist-mono), monospace; letter-spacing: 0.14em; }
+.portfolio-metrics dd { margin: 0; font: 500 17px/1 var(--font-geist-mono), monospace; }
 
-@keyframes chestSignal {
-  0%, 100% { opacity: 0.76; }
-  50% { opacity: 1; }
+.change-etf-button {
+  width: 150px;
+  height: 40px;
+  border: 1px solid rgba(238, 237, 232, 0.66);
+  background: transparent;
+  font: 650 8px/1 var(--font-geist-mono), monospace;
+  letter-spacing: 0.17em;
+  cursor: pointer;
+}
+.change-etf-button:hover { color: var(--black); background: var(--ivory); }
+
+.portfolio-allocation { padding: clamp(28px, 3vw, 48px); display: flex; flex-direction: column; }
+.portfolio-allocation > header { display: flex; justify-content: space-between; align-items: flex-start; gap: 20px; }
+.portfolio-allocation h2 { margin: 0; font-size: clamp(40px, 4vw, 66px); font-weight: 430; line-height: 0.9; letter-spacing: -0.055em; }
+.portfolio-allocation > header > strong { font: 500 15px/1 var(--font-geist-mono), monospace; letter-spacing: 0.08em; }
+.portfolio-allocation ol { margin: clamp(24px, 4vh, 44px) 0 0; padding: 0; list-style: none; border-top: 1px solid var(--line); }
+.portfolio-allocation li {
+  min-height: clamp(52px, 7vh, 70px);
+  display: grid;
+  grid-template-columns: 44px 80px minmax(120px, 1fr) 78px;
+  gap: 16px;
+  align-items: center;
+  border-bottom: 1px solid var(--line-soft);
+}
+.allocation-rank { color: #686762; font: 650 8px/1 var(--font-geist-mono), monospace; }
+.portfolio-allocation li > strong { font: 650 12px/1 var(--font-geist-mono), monospace; letter-spacing: 0.1em; }
+.portfolio-allocation li > b { color: #c7c6bf; font: 500 10px/1 var(--font-geist-mono), monospace; text-align: right; }
+.allocation-track { height: 2px; position: relative; overflow: hidden; background: rgba(238, 237, 232, 0.1); }
+.allocation-track i { height: 100%; display: block; background: var(--ivory); }
+.portfolio-note { margin: auto 0 0; padding-top: 18px; color: #6f6e68; font-size: 10px; border-top: 1px solid var(--line); }
+
+/* Focus */
+.launch-app:focus-visible,
+.app-identity:focus-visible,
+.app-menu button:focus-visible,
+.etf-filters button:focus-visible,
+.select-etf-button:focus-visible,
+.change-etf-button:focus-visible {
+  outline: 1px solid var(--white);
+  outline-offset: -4px;
 }
 
-@keyframes holdingReveal {
-  to { opacity: 1; transform: translateX(0); }
+@media (max-height: 780px) and (min-width: 901px) {
+  .app-shell { grid-template-rows: 64px minmax(0, 1fr) 34px; }
+  .app-identity span { width: 34px; height: 34px; }
+  .etf-select-page { padding-top: 18px; padding-bottom: 16px; gap: 16px; }
+  .section-kicker { display: none; }
+  .etf-page-intro h1 { font-size: 28px; }
+  .etf-page-intro > div > p:last-child { margin-top: 6px; }
+  .etf-card { grid-template-rows: minmax(108px, 1fr) 58px 50px; }
+  .etf-card-hero { padding-top: 16px; padding-bottom: 14px; }
+  .etf-ticker { margin-top: 8px; padding: 6px 8px; }
+  .etf-card-copy p { margin-top: 8px; }
+  .etf-metrics > div { gap: 5px; }
+  .holding-chips span { padding: 7px 9px; }
+  .select-etf-button { height: 32px; }
+}
+
+@media (max-width: 1100px) {
+  .app-topbar { grid-template-columns: minmax(210px, 1fr) auto minmax(110px, 1fr); }
+  .app-menu button { min-width: 118px; padding: 0 14px; }
+  .app-identity { padding-left: 24px; padding-right: 20px; }
+  .app-system-status { padding: 0 22px; }
+  .etf-card-hero { padding-right: 185px; }
+  .orbit-graphic { width: 170px; right: 9px; }
+  .etf-card-copy h2 { font-size: 18px; }
+  .etf-card-copy p { max-width: 260px; font-size: 11px; }
+  .holding-chips { gap: 6px; }
+  .holding-chips span { padding: 7px 8px; font-size: 8px; }
+  .select-etf-button { width: 112px; }
 }
 
 @media (max-width: 900px) {
-  .app-topbar { grid-template-columns: minmax(190px, 1fr) auto; }
+  .app-shell { grid-template-rows: 68px minmax(0, 1fr) 38px; }
+  .app-topbar { grid-template-columns: minmax(200px, 1fr) auto; }
   .app-system-status { display: none; }
-  .app-menu button { min-width: 112px; padding: 0 15px; }
-  .fund-detail { grid-template-columns: 1fr; grid-template-rows: 40% 60%; }
-  .detail-basket-panel { padding: 22px; border-right: 0; border-bottom: 1px solid var(--line); }
-  .back-to-baskets { margin-bottom: 18px; }
-  .detail-basket-panel h1 { font-size: 32px; }
-  .detail-chest { position: absolute; right: 7%; bottom: 8%; width: 48%; margin: 0; gap: 8px; }
-  .detail-chest pre { font-size: clamp(3px, 0.75vw, 5.4px); }
-  .detail-chest span { padding: 7px 9px; font-size: 6px; }
-  .holdings-panel { padding: 22px; overflow-y: auto; }
-  .holdings-header h2 { font-size: 34px; }
-  .fund-metrics { margin-top: 16px; }
-  .holdings-list li { min-height: 42px; }
-  .method-note { margin-top: 16px; }
+  .app-menu button { min-width: 108px; font-size: 8px; }
+  .etf-select-page { overflow-y: auto; }
+  .etf-page-intro { align-items: flex-start; }
+  .etf-filters { grid-template-columns: repeat(4, 78px); }
+  .etf-filters button { padding: 0 10px; }
+  .etf-card-grid { grid-template-columns: 1fr; grid-template-rows: none; grid-auto-rows: minmax(290px, auto); }
+  .etf-card { min-height: 290px; }
+  .etf-card-hero { padding-right: 250px; }
+  .orbit-graphic { width: 220px; right: 22px; }
+  .portfolio-page { grid-template-columns: 1fr; overflow-y: auto; }
+  .portfolio-summary, .portfolio-allocation { min-height: 520px; }
 }
 
 @media (max-width: 700px) {
@@ -601,40 +696,45 @@ button { color: inherit; font: inherit; }
   .launch-copy h1 { flex-direction: column; gap: 0; font-size: clamp(50px, 15.2vw, 78px); line-height: 0.82; }
   .launch-actions { margin-top: 18px; }
 
-  .app-shell { grid-template-rows: 58px minmax(0, 1fr) 31px; }
-  .app-topbar { grid-template-columns: 116px minmax(0, 1fr); }
-  .app-identity { padding: 0 10px; grid-template-columns: 28px auto; column-gap: 8px; }
-  .app-identity > span { width: 28px; height: 28px; font-size: 10px; }
-  .app-identity strong { font-size: 6.5px; letter-spacing: 0.09em; }
-  .app-identity small { display: none; }
-  .app-menu { min-width: 0; }
-  .app-menu button { min-width: 0; flex: 1; padding: 0 5px; font-size: 5.7px; letter-spacing: 0.06em; }
-  .app-menu button b { margin-right: 3px; }
-  .app-menu button.is-active::after { left: 7px; right: 7px; }
-  .app-statusbar { padding: 0 10px; gap: 10px; font-size: 5px; letter-spacing: 0.04em; }
-  .app-statusbar span:first-child { overflow: hidden; text-overflow: ellipsis; }
-  .app-statusbar span:last-child { display: none; }
+  .app-shell { grid-template-rows: 100px minmax(0, 1fr) 36px; }
+  .app-topbar { grid-template-columns: 1fr; grid-template-rows: 50px 50px; }
+  .app-identity { width: 100%; padding: 0 18px; gap: 10px; }
+  .app-identity span { width: 30px; height: 30px; font-size: 12px; }
+  .app-identity strong { font-size: 9px; }
+  .app-menu { border-top: 1px solid var(--line-soft); }
+  .app-menu button { flex: 1; min-width: 0; padding: 0 6px; font-size: 7px; letter-spacing: 0.11em; }
+  .app-menu button.is-active::before { left: 12px; right: 12px; }
+  .app-menu button.is-active::after { bottom: 9px; }
+  .app-disclaimer { padding: 0 15px; font-size: 8px; }
 
-  .basket-card { padding: 13px; background-size: auto, 28px 28px, 28px 28px, auto; }
-  .basket-card-index, .basket-card-status, .basket-card-copy small { font-size: 5.5px; letter-spacing: 0.11em; }
-  .basket-card-status { top: 13px; right: 13px; gap: 4px; }
-  .basket-card-status i { width: 3px; height: 3px; }
-  .basket-card pre { font-size: clamp(2.1px, 0.82vw, 4.2px); letter-spacing: 0; }
-  .basket-card-copy { gap: 5px; }
-  .basket-card-copy strong { font-size: clamp(13px, 4vw, 19px); }
+  .etf-select-page { padding: 22px 15px 20px; gap: 18px; }
+  .etf-page-intro { flex-direction: column; gap: 18px; }
+  .etf-page-intro h1 { font-size: 30px; }
+  .etf-page-intro > div > p:last-child { font-size: 12px; }
+  .etf-filters { width: 100%; grid-template-columns: repeat(4, 1fr); }
+  .etf-filters button { padding: 0 6px; font-size: 7px; }
+  .etf-card-grid { gap: 14px; }
+  .etf-card { min-height: 360px; grid-template-rows: minmax(190px, 1fr) 72px 76px; }
+  .etf-card-hero { padding: 22px 18px 106px; align-items: flex-start; }
+  .etf-card-copy h2 { font-size: 19px; }
+  .etf-card-copy p { max-width: none; font-size: 12px; }
+  .orbit-graphic { width: 190px; height: 96px; top: auto; right: 50%; bottom: 3px; transform: translateX(50%); }
+  .etf-card-actions { padding: 10px 14px; align-items: stretch; }
+  .holding-chips { flex: 1; }
+  .holding-chips span { flex: 1; display: grid; place-items: center; padding: 0 6px; }
+  .select-etf-button { width: 108px; height: auto; }
+  .etf-metrics dt { font-size: 6.5px; }
+  .etf-metrics dd { font-size: 16px; }
 
-  .basket-kicker { font-size: 8px; }
-  .holdings-panel { padding: 18px; }
-  .holdings-header p { font-size: 8px; }
-  .fund-status { font-size: 7px; }
-  .fund-metrics span { min-height: 46px; font-size: 7px; }
-  .fund-metrics b { font-size: 10px; }
-  .holdings-list { margin-top: 12px; }
-  .holdings-list li { grid-template-columns: 28px 54px 1fr auto; gap: 8px; }
-  .holding-name { font-size: 10px; }
+  .portfolio-page { padding: 15px; gap: 14px; }
+  .portfolio-summary, .portfolio-allocation { min-height: 500px; padding: 24px 20px; }
+  .portfolio-summary h1 { font-size: 34px; }
+  .portfolio-allocation h2 { font-size: 42px; }
+  .portfolio-allocation li { grid-template-columns: 30px 60px 1fr 60px; gap: 8px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .launch-app, .basket-card pre { transition: none; animation: none; }
-  .holdings-list li { opacity: 1; transform: none; animation: none; }
+  .launch-app,
+  .etf-card,
+  .select-etf-button { transition: none; }
 }

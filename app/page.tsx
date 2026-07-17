@@ -1,182 +1,363 @@
 "use client";
 
-import { useState } from "react";
+import { KeyboardEvent, useMemo, useState } from "react";
 import GanymedeScene from "./GanymedeScene";
 
-const chestArt = (id: string) => String.raw`
-                       .--------------------------.
-                  _.-'============================'-._
-             _.-'======================================='-._
-          .-'==============================================='-.
-         /=====================================================\
-        /_______________________________________________________\
-       /                                                  _.-'
-      /_______________________________________________..-'
-                 ||                              ||
-                 ||   *   +   *   +   *          ||
-       .---------''--------------------------------''---------.
-      /       *       DIGITAL ASSET RESERVE       *          /|
-     /_______________________________________________________/ |
-    |                                                       | |
-    |      .-----------------------------------------.      | |
-    |      |              BASKET / ${id}              |      | |
-    |      '-----------------------------------------'      | |
-    |==========================+============================| |
-    |=======================+--+--+=========================| |
-    |=======================| [G] |=========================| /
-    |=======================+-----+=========================|/
-    +=======================================================+
-     \_____________________________________________________/
-`;
+type Filter = "all" | "core" | "growth" | "income";
+type View = "select" | "portfolio";
+type Risk = "LOW" | "MEDIUM" | "HIGH";
 
-const holdings = [
-  ["BTC", "Bitcoin"],
-  ["ETH", "Ethereum"],
-  ["BNB", "BNB"],
-  ["XRP", "XRP"],
-  ["SOL", "Solana"],
-  ["TRX", "TRON"],
-  ["HYPE", "Hyperliquid"],
-  ["DOGE", "Dogecoin"],
-  ["RAIN", "Rain"],
-  ["LEO", "LEO Token"],
+type Holding = {
+  symbol: string;
+  weight: number;
+};
+
+type Etf = {
+  id: string;
+  name: string;
+  ticker: string;
+  category: Exclude<Filter, "all">;
+  strategy: string;
+  return1y: string;
+  fee: string;
+  risk: Risk;
+  visual: "core" | "tech" | "income" | "alpha";
+  holdings: Holding[];
+};
+
+const etfs: Etf[] = [
+  {
+    id: "core-20",
+    name: "GANYMEDE CORE 20",
+    ticker: "GMD CORE",
+    category: "core",
+    strategy: "Balanced exposure to leading digital assets.",
+    return1y: "18.4%",
+    fee: "0.35%",
+    risk: "MEDIUM",
+    visual: "core",
+    holdings: [
+      { symbol: "BTC", weight: 42 },
+      { symbol: "ETH", weight: 28 },
+      { symbol: "SOL", weight: 10 },
+      { symbol: "BNB", weight: 8 },
+      { symbol: "XRP", weight: 6 },
+      { symbol: "OTHER", weight: 6 },
+    ],
+  },
+  {
+    id: "tech-leaders",
+    name: "TECH LEADERS",
+    ticker: "GMD TECH",
+    category: "growth",
+    strategy: "Growth-focused leaders in blockchain infrastructure.",
+    return1y: "24.7%",
+    fee: "0.48%",
+    risk: "HIGH",
+    visual: "tech",
+    holdings: [
+      { symbol: "ETH", weight: 36 },
+      { symbol: "SOL", weight: 18 },
+      { symbol: "BNB", weight: 14 },
+      { symbol: "LINK", weight: 12 },
+      { symbol: "HYPE", weight: 10 },
+      { symbol: "OTHER", weight: 10 },
+    ],
+  },
+  {
+    id: "digital-income",
+    name: "DIGITAL INCOME",
+    ticker: "GMD YIELD",
+    category: "income",
+    strategy: "A diversified strategy designed for steady income.",
+    return1y: "11.2%",
+    fee: "0.40%",
+    risk: "LOW",
+    visual: "income",
+    holdings: [
+      { symbol: "USDC", weight: 32 },
+      { symbol: "ETH", weight: 24 },
+      { symbol: "BTC", weight: 18 },
+      { symbol: "TRX", weight: 12 },
+      { symbol: "BNB", weight: 8 },
+      { symbol: "OTHER", weight: 6 },
+    ],
+  },
+  {
+    id: "next-frontier",
+    name: "NEXT FRONTIER",
+    ticker: "GMD ALPHA",
+    category: "growth",
+    strategy: "Emerging networks selected for long-term growth.",
+    return1y: "29.1%",
+    fee: "0.55%",
+    risk: "HIGH",
+    visual: "alpha",
+    holdings: [
+      { symbol: "SOL", weight: 26 },
+      { symbol: "LINK", weight: 17 },
+      { symbol: "HYPE", weight: 15 },
+      { symbol: "SUI", weight: 13 },
+      { symbol: "AVAX", weight: 11 },
+      { symbol: "OTHER", weight: 18 },
+    ],
+  },
 ];
 
-const baskets = [
-  { id: "01", name: "Market Cap Core", meta: "10 ASSETS / EQUAL WEIGHT", status: "AVAILABLE" },
-  { id: "02", name: "Smart Contract Leaders", meta: "INDEX DESIGN IN PROGRESS", status: "LOCKED" },
-  { id: "03", name: "Digital Infrastructure", meta: "INDEX DESIGN IN PROGRESS", status: "LOCKED" },
-  { id: "04", name: "Alpha Satellite", meta: "INDEX DESIGN IN PROGRESS", status: "LOCKED" },
+const filters: Array<{ id: Filter; label: string }> = [
+  { id: "all", label: "ALL" },
+  { id: "core", label: "CORE" },
+  { id: "growth", label: "GROWTH" },
+  { id: "income", label: "INCOME" },
 ];
+
+function OrbitGraphic({ variant }: { variant: Etf["visual"] }) {
+  return (
+    <div className={`orbit-graphic orbit-${variant}`} aria-hidden="true">
+      <span className="orbit-center" />
+      <span className="orbit-ring orbit-ring-a"><i /></span>
+      <span className="orbit-ring orbit-ring-b"><i /></span>
+      <span className="orbit-ring orbit-ring-c"><i /></span>
+      <span className="orbit-ring orbit-ring-d"><i /></span>
+      <span className="orbit-axis orbit-axis-x" />
+      <span className="orbit-axis orbit-axis-y" />
+    </div>
+  );
+}
+
+type EtfCardProps = {
+  etf: Etf;
+  selected: boolean;
+  onSelect: (id: string) => void;
+  onNavigate: (id: string, direction: number) => void;
+};
+
+function EtfCard({ etf, selected, onSelect, onNavigate }: EtfCardProps) {
+  const handleKeyDown = (event: KeyboardEvent<HTMLElement>) => {
+    if (event.target !== event.currentTarget) return;
+
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      onSelect(etf.id);
+    }
+
+    if (event.key === "ArrowRight" || event.key === "ArrowDown") {
+      event.preventDefault();
+      onNavigate(etf.id, 1);
+    }
+
+    if (event.key === "ArrowLeft" || event.key === "ArrowUp") {
+      event.preventDefault();
+      onNavigate(etf.id, -1);
+    }
+  };
+
+  return (
+    <article
+      id={`etf-card-${etf.id}`}
+      className={`etf-card${selected ? " is-selected" : ""}`}
+      role="radio"
+      aria-checked={selected}
+      aria-label={`${etf.name}, ${etf.ticker}`}
+      tabIndex={0}
+      onClick={() => onSelect(etf.id)}
+      onKeyDown={handleKeyDown}
+    >
+      <div className="etf-card-hero">
+        <div className="etf-card-copy">
+          <h2>{etf.name}</h2>
+          <span className="etf-ticker">{etf.ticker}</span>
+          <p>{etf.strategy}</p>
+        </div>
+        <OrbitGraphic variant={etf.visual} />
+      </div>
+
+      <dl className="etf-metrics">
+        <div><dt>1Y RETURN</dt><dd>{etf.return1y}</dd></div>
+        <div><dt>FEE</dt><dd>{etf.fee}</dd></div>
+        <div><dt>RISK</dt><dd>{etf.risk}</dd></div>
+      </dl>
+
+      <div className="etf-card-actions">
+        <div className="holding-chips" aria-label="Top holdings">
+          {etf.holdings.slice(0, 2).map((holding) => (
+            <span key={holding.symbol}>{holding.symbol} <b>{holding.weight}%</b></span>
+          ))}
+        </div>
+        <button
+          type="button"
+          className="select-etf-button"
+          aria-label={`${selected ? "Selected" : "Select"} ${etf.name}`}
+          aria-pressed={selected}
+          onClick={(event) => {
+            event.stopPropagation();
+            onSelect(etf.id);
+          }}
+        >
+          {selected ? "SELECTED" : "SELECT"}
+        </button>
+      </div>
+    </article>
+  );
+}
+
+type AppNavProps = {
+  view: View;
+  onOverview: () => void;
+  onViewChange: (view: View) => void;
+};
+
+function AppNav({ view, onOverview, onViewChange }: AppNavProps) {
+  return (
+    <header className="app-topbar">
+      <button className="app-identity" type="button" onClick={onOverview}>
+        <span>G</span>
+        <strong>GANYMEDE INDEX</strong>
+      </button>
+
+      <nav className="app-menu" aria-label="Primary navigation">
+        <button type="button" onClick={onOverview}>OVERVIEW</button>
+        <button
+          className={view === "select" ? "is-active" : ""}
+          type="button"
+          aria-current={view === "select" ? "page" : undefined}
+          onClick={() => onViewChange("select")}
+        >
+          SELECT ETF
+        </button>
+        <button
+          className={view === "portfolio" ? "is-active" : ""}
+          type="button"
+          aria-current={view === "portfolio" ? "page" : undefined}
+          onClick={() => onViewChange("portfolio")}
+        >
+          PORTFOLIO
+        </button>
+      </nav>
+
+      <span className="app-system-status"><i /> INDEX ONLINE</span>
+    </header>
+  );
+}
+
+function PortfolioView({ etf, onChange }: { etf: Etf; onChange: () => void }) {
+  return (
+    <main className="portfolio-page">
+      <section className="portfolio-summary">
+        <p className="section-kicker">SELECTED ETF / {etf.ticker}</p>
+        <h1>{etf.name}</h1>
+        <p className="portfolio-strategy">{etf.strategy}</p>
+        <OrbitGraphic variant={etf.visual} />
+        <dl className="portfolio-metrics">
+          <div><dt>1Y RETURN</dt><dd>{etf.return1y}</dd></div>
+          <div><dt>FEE</dt><dd>{etf.fee}</dd></div>
+          <div><dt>RISK</dt><dd>{etf.risk}</dd></div>
+        </dl>
+        <button type="button" className="change-etf-button" onClick={onChange}>CHANGE ETF</button>
+      </section>
+
+      <section className="portfolio-allocation" aria-labelledby="portfolio-title">
+        <header>
+          <div>
+            <p className="section-kicker">CURRENT ALLOCATION</p>
+            <h2 id="portfolio-title">Portfolio</h2>
+          </div>
+          <strong>100.00%</strong>
+        </header>
+        <ol>
+          {etf.holdings.map((holding, index) => (
+            <li key={holding.symbol}>
+              <span className="allocation-rank">{String(index + 1).padStart(2, "0")}</span>
+              <strong>{holding.symbol}</strong>
+              <span className="allocation-track"><i style={{ width: `${holding.weight}%` }} /></span>
+              <b>{holding.weight.toFixed(2)}%</b>
+            </li>
+          ))}
+        </ol>
+        <p className="portfolio-note">Illustrative allocation. Holdings and weights may change at rebalance.</p>
+      </section>
+    </main>
+  );
+}
 
 export default function Home() {
   const [appOpen, setAppOpen] = useState(false);
-  const [selectedBasket, setSelectedBasket] = useState<number | null>(null);
+  const [view, setView] = useState<View>("select");
+  const [activeFilter, setActiveFilter] = useState<Filter>("all");
+  const [selectedEtfId, setSelectedEtfId] = useState("next-frontier");
+
+  const visibleEtfs = useMemo(
+    () => activeFilter === "all" ? etfs : etfs.filter((etf) => etf.category === activeFilter),
+    [activeFilter],
+  );
+
+  const selectedEtf = etfs.find((etf) => etf.id === selectedEtfId) ?? etfs[0];
+
+  const changeFilter = (filter: Filter) => {
+    setActiveFilter(filter);
+    if (filter !== "all" && selectedEtf.category !== filter) {
+      const firstMatch = etfs.find((etf) => etf.category === filter);
+      if (firstMatch) setSelectedEtfId(firstMatch.id);
+    }
+  };
+
+  const navigateCards = (id: string, direction: number) => {
+    const currentIndex = visibleEtfs.findIndex((etf) => etf.id === id);
+    const nextIndex = (currentIndex + direction + visibleEtfs.length) % visibleEtfs.length;
+    const nextEtf = visibleEtfs[nextIndex];
+    setSelectedEtfId(nextEtf.id);
+    requestAnimationFrame(() => document.getElementById(`etf-card-${nextEtf.id}`)?.focus());
+  };
 
   if (appOpen) {
-    const showingBaskets = selectedBasket === null;
-
     return (
       <div className="app-shell">
-        <header className="app-topbar">
-          <button
-            className="app-identity"
-            type="button"
-            onClick={() => {
-              setSelectedBasket(null);
-              setAppOpen(false);
-            }}
-          >
-            <span>G</span>
-            <strong>GANYMEDE INDEX</strong>
-            <small>CRYPTO ETF SYSTEM</small>
-          </button>
+        <AppNav
+          view={view}
+          onOverview={() => setAppOpen(false)}
+          onViewChange={setView}
+        />
 
-          <nav className="app-menu" aria-label="Application sections">
-            <button
-              type="button"
-              onClick={() => {
-                setSelectedBasket(null);
-                setAppOpen(false);
-              }}
-            >
-              <b>00</b> Overview
-            </button>
-            <button
-              className={showingBaskets ? "is-active" : ""}
-              type="button"
-              aria-current={showingBaskets ? "page" : undefined}
-              onClick={() => setSelectedBasket(null)}
-            >
-              <b>01</b> Baskets
-            </button>
-            <button
-              className={showingBaskets ? "" : "is-active"}
-              type="button"
-              aria-current={showingBaskets ? undefined : "page"}
-              onClick={() => setSelectedBasket(0)}
-            >
-              <b>02</b> Composition
-            </button>
-          </nav>
+        {view === "select" ? (
+          <main className="etf-select-page">
+            <header className="etf-page-intro">
+              <div>
+                <p className="section-kicker">GANYMEDE STRATEGIES / 04</p>
+                <h1>Choose your ETF</h1>
+                <p>Compare four strategies and select one for your portfolio.</p>
+              </div>
+              <div className="etf-filters" role="group" aria-label="Filter ETF strategies">
+                {filters.map((filter) => (
+                  <button
+                    key={filter.id}
+                    type="button"
+                    className={activeFilter === filter.id ? "is-active" : ""}
+                    aria-pressed={activeFilter === filter.id}
+                    onClick={() => changeFilter(filter.id)}
+                  >
+                    {filter.label}
+                  </button>
+                ))}
+              </div>
+            </header>
 
-          <span className="app-system-status"><i /> INDEX ONLINE</span>
-        </header>
-
-        {showingBaskets ? (
-          <main className="basket-grid" aria-label="Ganymede ETF basket selection">
-            {baskets.map((basket, index) => (
-              <button
-                className={`basket-card${index === 0 ? " is-available" : " is-locked"}`}
-                type="button"
-                key={basket.id}
-                disabled={index !== 0}
-                onClick={() => setSelectedBasket(index)}
-              >
-                <span className="basket-card-index">BASKET / {basket.id}</span>
-                <span className="basket-card-status"><i /> {basket.status}</span>
-                <pre aria-hidden="true">{chestArt(basket.id)}</pre>
-                <span className="basket-card-copy">
-                  <strong>{basket.name}</strong>
-                  <small>{basket.meta}</small>
-                </span>
-              </button>
-            ))}
+            <section className="etf-card-grid" role="radiogroup" aria-label="ETF products">
+              {visibleEtfs.map((etf) => (
+                <EtfCard
+                  key={etf.id}
+                  etf={etf}
+                  selected={selectedEtfId === etf.id}
+                  onSelect={setSelectedEtfId}
+                  onNavigate={navigateCards}
+                />
+              ))}
+            </section>
           </main>
         ) : (
-          <main className="fund-detail" aria-label="Ganymede crypto ETF basket">
-            <section className="detail-basket-panel" aria-labelledby="basket-title">
-              <button className="back-to-baskets" type="button" onClick={() => setSelectedBasket(null)}>
-                <span aria-hidden="true">&#8592;</span> All Baskets
-              </button>
-              <p className="basket-kicker">BASKET / 01</p>
-              <h1 id="basket-title">Market Cap<br />Core Basket</h1>
-              <div className="detail-chest">
-                <pre aria-hidden="true">{chestArt("01")}</pre>
-                <span>BASKET OPEN / HOLDINGS REVEALED</span>
-              </div>
-            </section>
-
-            <aside className="holdings-panel" aria-live="polite">
-              <header className="holdings-header">
-                <div>
-                  <p>GANYMEDE INDEX / GMDE-10</p>
-                  <h2>Basket<br />Composition</h2>
-                </div>
-                <span className="fund-status"><i /> ACTIVE</span>
-              </header>
-
-              <div className="fund-metrics" aria-label="Basket methodology">
-                <span><b>10</b> ASSETS</span>
-                <span><b>10.0%</b> EACH</span>
-                <span><b>0</b> STABLECOINS</span>
-              </div>
-
-              <ol className="holdings-list">
-                {holdings.map(([symbol, name], index) => (
-                  <li key={symbol}>
-                    <span className="holding-rank">{String(index + 1).padStart(2, "0")}</span>
-                    <strong>{symbol}</strong>
-                    <span className="holding-name">{name}</span>
-                    <span className="holding-weight">10.00%</span>
-                  </li>
-                ))}
-              </ol>
-
-              <footer className="method-note">
-                <span>MARKET-CAP UNIVERSE SNAPSHOT / COINGECKO</span>
-                <span>STABLECOINS, WRAPPERS &amp; DERIVATIVE TOKENS EXCLUDED</span>
-                <small>Prototype composition only. Not investment advice.</small>
-              </footer>
-            </aside>
-          </main>
+          <PortfolioView etf={selectedEtf} onChange={() => setView("select")} />
         )}
 
-        <footer className="app-statusbar">
-          <span>{showingBaskets ? "SELECT A TREASURE CHEST TO INSPECT ITS UNDERLYING ASSETS" : "MARKET CAP CORE / EQUAL-WEIGHT COMPOSITION"}</span>
-          <span><b>01</b> AVAILABLE <i /> <b>03</b> IN DEVELOPMENT</span>
-          <span>GMDE / INDEX PROTOCOL</span>
-        </footer>
+        <footer className="app-disclaimer">Returns are illustrative. Review the prospectus before investing.</footer>
       </div>
     );
   }
@@ -190,7 +371,14 @@ export default function Home() {
         <p>A NEW ORBIT BEGINS</p>
         <h1 id="hero-title"><span>PROJECT</span><span>GANYMEDE</span></h1>
         <div className="launch-actions">
-          <button className="launch-app" type="button" onClick={() => setAppOpen(true)}>
+          <button
+            className="launch-app"
+            type="button"
+            onClick={() => {
+              setView("select");
+              setAppOpen(true);
+            }}
+          >
             Launch App <span aria-hidden="true">&#8599;</span>
           </button>
         </div>
