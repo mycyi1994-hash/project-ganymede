@@ -473,9 +473,8 @@ button { color: inherit; font: inherit; }
   place-items: center;
   overflow: hidden;
   transform: translateY(-50%);
-  color: #c9c8c1;
-  opacity: 0.82;
-  filter: drop-shadow(0 0 9px rgba(238, 237, 232, 0.08));
+  opacity: 0.9;
+  filter: drop-shadow(0 0 10px rgba(238, 237, 232, 0.1));
 }
 
 .ascii-planet::before {
@@ -497,26 +496,17 @@ button { color: inherit; font: inherit; }
   background: repeating-linear-gradient(180deg, transparent 0 3px, rgba(238, 237, 232, 0.16) 4px);
 }
 
-.ascii-planet pre {
-  margin: 0;
+.mini-ascii-celestial {
+  width: 100%;
+  height: 100%;
+  display: block;
   position: relative;
   z-index: 2;
-  color: inherit;
-  font: 650 clamp(5.2px, 0.52vw, 8px)/1.02 var(--font-geist-mono), monospace;
-  letter-spacing: 0;
-  text-align: left;
-  white-space: pre;
-  text-shadow: 0 0 8px rgba(238, 237, 232, 0.14);
-  animation: asciiPlanetSignal 4.8s ease-in-out infinite;
+  filter: drop-shadow(0 0 8px rgba(238, 237, 232, 0.12));
 }
 
-.ascii-planet-tech pre { animation-delay: -1.1s; }
-.ascii-planet-income pre { animation-delay: -2.2s; }
-.ascii-planet-alpha pre { animation-delay: -3.3s; }
-
-@keyframes asciiPlanetSignal {
-  0%, 100% { opacity: 0.72; transform: translateY(0); }
-  50% { opacity: 1; transform: translateY(-2px); }
+.etf-card.is-selected .mini-ascii-celestial {
+  filter: drop-shadow(0 0 12px rgba(238, 237, 232, 0.2));
 }
 
 /* Portfolio */
@@ -553,7 +543,6 @@ button { color: inherit; font: inherit; }
 }
 .portfolio-strategy { max-width: 430px; margin: 18px 0 0; color: var(--gray); line-height: 1.55; }
 .portfolio-summary .ascii-planet { width: 70%; height: 44%; top: 54%; right: -8%; opacity: 0.58; }
-.portfolio-summary .ascii-planet pre { font-size: clamp(6px, 0.65vw, 9px); }
 
 .portfolio-metrics {
   margin: auto 0 22px;
@@ -687,7 +676,6 @@ button { color: inherit; font: inherit; }
   .etf-card-copy h2 { font-size: 19px; }
   .etf-card-copy p { max-width: none; font-size: 12px; }
   .ascii-planet { width: 210px; height: 104px; top: auto; right: 50%; bottom: 2px; transform: translateX(50%); }
-  .ascii-planet pre { font-size: 5.4px; }
   .etf-card-actions { padding: 10px 14px; align-items: stretch; }
   .holding-chips { flex: 1; }
   .holding-chips span { flex: 1; display: grid; place-items: center; padding: 0 6px; }
@@ -706,5 +694,4 @@ button { color: inherit; font: inherit; }
   .launch-app,
   .etf-card,
   .select-etf-button { transition: none; }
-  .ascii-planet pre { animation: none; }
 }

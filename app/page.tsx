@@ -2,6 +2,7 @@
 
 import { KeyboardEvent, useMemo, useState } from "react";
 import GanymedeScene from "./GanymedeScene";
+import MiniAsciiCelestial from "./MiniAsciiCelestial";
 
 type Filter = "all" | "core" | "growth" | "income";
 type View = "select" | "portfolio";
@@ -111,57 +112,10 @@ const filters: Array<{ id: Filter; label: string }> = [
   { id: "income", label: "INCOME" },
 ];
 
-const asciiPlanets: Record<Etf["visual"], string> = {
-  core: String.raw`             .       *       .
-        .-------------------------.
-     .-'       .-"""""""-.         '-.
-   .'       .-'::::###:::::'-.         '.
-  /        /:::::#######:::::\          \
- ;--------|:::::#########:::::|----------;
-  \        \:::::#######:::::/          /
-   '.       '-.::::###::::.-'         .'
-     '-._       '-------'        _.-'
-         '---------------------'`,
-  tech: String.raw`              .-"""""""-.
-           .-'---+--+---'-.
-          /----+-|--|-+----\
-         /-+---+-|--|-+---+-\
-        |------+-+-+-+-------|
-        |======+==+==+=======|
-        |------+-+-+-+-------|
-         \-+---+-|--|-+---+-/
-          \----+-|--|-+----/
-           '-.---+--+---.-'
-              '-.__.-'`,
-  income: String.raw`             *           .
-          .-"""""""""""-.
-       .-'..:::::::......'-.
-      /...:::::::::::.......\
-  .--|---:::::#####:::::------|--.
-.'   |..::::#########::::.....|   '.
-'----|..:::::#######:::::.....|----'
-     \....:::::###:::::....../
-      '. ......::::....... .'
-        '-._.........._.-'
-             '------'`,
-  alpha: String.raw`                o
-          .----/ \----.
-       .-'    /   \    '-.
-  o---'----- / .---. \ -----'---o
-      \     | /#####\ |     /
-       '----+-|#####|-+----'
-       .----+-|#####|-+----.
-      /     | \#####/ |     \
-  o---.----- \ '---' / -----.---o
-       '-.    \   /    .-'
-          '----\ /----'
-                o`,
-};
-
 function AsciiPlanet({ variant }: { variant: Etf["visual"] }) {
   return (
     <div className={`ascii-planet ascii-planet-${variant}`} aria-hidden="true">
-      <pre>{asciiPlanets[variant]}</pre>
+      <MiniAsciiCelestial variant={variant} />
     </div>
   );
 }
