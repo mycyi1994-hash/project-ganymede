@@ -11,6 +11,8 @@ type Particle = {
   delay: number;
   glyph: number;
   kind: "moon" | "ring";
+  orbitAngle?: number;
+  orbitRadius?: number;
 };
 
 const GLYPHS = [".", ":", "+", "*", "0", "1", "/", "=", "-", "|"];
@@ -71,10 +73,10 @@ function makeParticles(width: number, height: number) {
 
   for (let i = 0; i < ringCount; i += 1) {
     const angle = (i / ringCount) * Math.PI * 2;
-    const band = 1.42 + (i % 24) * 0.018 + Math.sin(i * 2.1) * 0.014;
+    const band = 1.54 + (i % 10) * 0.015 + Math.sin(i * 2.1) * 0.006;
     const x = Math.cos(angle) * band;
     const z = Math.sin(angle) * band;
-    const ringTilt = 0.34;
+    const ringTilt = 0.48;
 
     particles.push({
       x,
@@ -85,6 +87,8 @@ function makeParticles(width: number, height: number) {
       delay: 450 + Math.random() * 1250,
       glyph: (i + 3) % GLYPHS.length,
       kind: "ring",
+      orbitAngle: angle,
+      orbitRadius: band,
     });
   }
 
@@ -172,7 +176,8 @@ export default function GanymedeScene() {
     let animationFrame = 0;
     let width = 0;
     let height = 0;
-    let particles: Particle[] = [];
+    let moonParticles: Particle[] = [];
+    let ringParticles: Particle[] = [];
     let glyphAtlas = makeGlyphAtlas(6);
     let start = performance.now();
     let lastFrame = 0;
@@ -186,7 +191,9 @@ export default function GanymedeScene() {
       canvas.width = width * ratio;
       canvas.height = height * ratio;
       context.setTransform(ratio, 0, 0, ratio, 0, 0);
-      particles = makeParticles(width, height);
+      const particles = makeParticles(width, height);
+      moonParticles = particles.filter((particle) => particle.kind === "moon");
+      ringParticles = particles.filter((particle) => particle.kind === "ring");
       glyphAtlas = makeGlyphAtlas(Math.max(4.8, Math.min(7.2, width / 220)));
       start = performance.now();
       lastFrame = 0;
@@ -208,8 +215,28 @@ export default function GanymedeScene() {
       context.clearRect(0, 0, width, height);
       context.globalAlpha = 1;
 
-      particles.forEach((particle, index) => {
-        const rotated = rotatePoint(particle.x, particle.y, particle.z, angle);
+      const drawParticle = (particle: Particle, index: number, layer: "back" | "moon" | "front") => {
+        let rotated;
+
+        if (particle.kind === "ring") {
+          const orbitAngle = (particle.orbitAngle ?? 0) + elapsed * 0.000035;
+          const orbitRadius = particle.orbitRadius ?? 1.6;
+          const ringX = Math.cos(orbitAngle) * orbitRadius;
+          const ringZ = Math.sin(orbitAngle) * orbitRadius;
+          const ringTilt = 0.48;
+          rotated = rotatePoint(
+            ringX,
+            -ringZ * Math.sin(ringTilt),
+            ringZ * Math.cos(ringTilt),
+            0,
+          );
+
+          if (layer === "back" && rotated.z >= 0) return;
+          if (layer === "front" && rotated.z < 0) return;
+        } else {
+          rotated = rotatePoint(particle.x, particle.y, particle.z, angle);
+        }
+
         const perspective = 1 / (1.02 - rotated.z * 0.12);
         const targetX = centerX + rotated.x * sceneScale * perspective;
         const targetY = centerY + rotated.y * sceneScale * perspective;
@@ -221,7 +248,7 @@ export default function GanymedeScene() {
         const x = particle.startX + (targetX - particle.startX) * eased + swirl;
         const y = particle.startY + (targetY - particle.startY) * eased + Math.cos(index) * swirl;
         const depthAlpha = particle.kind === "ring"
-          ? 0.46 + (rotated.z + 2) * 0.14
+          ? (layer === "back" ? 0.18 : 0.5) + (rotated.z + 2) * (layer === "back" ? 0.05 : 0.13)
           : 0.36 + (rotated.z + 1) * 0.3;
 
         const alpha = clamp(localProgress * depthAlpha, 0, 0.96);
@@ -240,7 +267,11 @@ export default function GanymedeScene() {
           glyphAtlas.cell,
           glyphAtlas.cell,
         );
-      });
+      };
+
+      ringParticles.forEach((particle, index) => drawParticle(particle, index, "back"));
+      moonParticles.forEach((particle, index) => drawParticle(particle, index, "moon"));
+      ringParticles.forEach((particle, index) => drawParticle(particle, index, "front"));
 
       SPACECRAFT.forEach((model, index) => {
         const direction = index === 1 ? -1 : 1;
