@@ -461,96 +461,63 @@ button { color: inherit; font: inherit; }
 .select-etf-button:hover { color: var(--black); background: var(--ivory); }
 .etf-card.is-selected .select-etf-button { color: var(--black); background: var(--ivory); }
 
-/* CSS orbit visualizations */
-.orbit-graphic {
-  width: clamp(170px, 16vw, 245px);
-  height: clamp(105px, 11vw, 150px);
+/* ASCII planetary visualizations */
+.ascii-planet {
+  width: clamp(180px, 18vw, 270px);
+  height: clamp(108px, 12vw, 158px);
   position: absolute;
   z-index: 1;
   top: 50%;
-  right: clamp(15px, 2.4vw, 38px);
+  right: clamp(10px, 2vw, 34px);
+  display: grid;
+  place-items: center;
+  overflow: hidden;
   transform: translateY(-50%);
-  opacity: 0.8;
+  color: #c9c8c1;
+  opacity: 0.82;
+  filter: drop-shadow(0 0 9px rgba(238, 237, 232, 0.08));
 }
 
-.orbit-center,
-.orbit-ring,
-.orbit-axis { position: absolute; left: 50%; top: 50%; }
-
-.orbit-center {
-  z-index: 3;
-  width: 42px;
-  height: 42px;
-  border: 1px solid rgba(238, 237, 232, 0.48);
+.ascii-planet::before {
+  content: "";
+  width: 78%;
+  height: 76%;
+  position: absolute;
+  inset: 12% 11%;
   border-radius: 50%;
-  transform: translate(-50%, -50%);
-  background:
-    radial-gradient(circle, rgba(238, 237, 232, 0.34) 0 1px, transparent 1px) 0 0 / 3px 3px,
-    radial-gradient(circle at 38% 32%, rgba(238, 237, 232, 0.22), rgba(238, 237, 232, 0.025) 62%);
-  box-shadow: 0 0 14px rgba(238, 237, 232, 0.1);
+  background: radial-gradient(circle, rgba(238, 237, 232, 0.06), transparent 66%);
 }
 
-.orbit-ring {
-  border: 1px solid rgba(238, 237, 232, 0.42);
-  border-radius: 50%;
-  transform: translate(-50%, -50%);
-}
-.orbit-ring::after {
+.ascii-planet::after {
   content: "";
   position: absolute;
-  inset: 8%;
-  border: 1px dashed rgba(238, 237, 232, 0.16);
-  border-radius: inherit;
-}
-.orbit-ring i {
-  width: 5px;
-  height: 5px;
-  position: absolute;
-  top: 50%;
-  right: -3px;
-  border-radius: 50%;
-  background: var(--ivory);
-  box-shadow: 0 0 6px rgba(238, 237, 232, 0.5);
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.12;
+  background: repeating-linear-gradient(180deg, transparent 0 3px, rgba(238, 237, 232, 0.16) 4px);
 }
 
-.orbit-axis { display: none; background: rgba(238, 237, 232, 0.25); }
+.ascii-planet pre {
+  margin: 0;
+  position: relative;
+  z-index: 2;
+  color: inherit;
+  font: 650 clamp(5.2px, 0.52vw, 8px)/1.02 var(--font-geist-mono), monospace;
+  letter-spacing: 0;
+  text-align: left;
+  white-space: pre;
+  text-shadow: 0 0 8px rgba(238, 237, 232, 0.14);
+  animation: asciiPlanetSignal 4.8s ease-in-out infinite;
+}
 
-.orbit-core .orbit-ring-a { width: 72px; height: 72px; }
-.orbit-core .orbit-ring-b { width: 105px; height: 88px; }
-.orbit-core .orbit-ring-c { width: 145px; height: 112px; }
-.orbit-core .orbit-ring-d { width: 190px; height: 134px; }
+.ascii-planet-tech pre { animation-delay: -1.1s; }
+.ascii-planet-income pre { animation-delay: -2.2s; }
+.ascii-planet-alpha pre { animation-delay: -3.3s; }
 
-.orbit-tech .orbit-center { width: 70px; height: 70px; background-size: 4px 4px, auto; }
-.orbit-tech .orbit-ring-a,
-.orbit-tech .orbit-ring-b,
-.orbit-tech .orbit-ring-c,
-.orbit-tech .orbit-ring-d { width: 190px; height: 70px; }
-.orbit-tech .orbit-ring-a { transform: translate(-50%, -50%) rotate(0deg); }
-.orbit-tech .orbit-ring-b { transform: translate(-50%, -50%) rotate(28deg); }
-.orbit-tech .orbit-ring-c { transform: translate(-50%, -50%) rotate(-28deg); }
-.orbit-tech .orbit-ring-d { width: 70px; height: 128px; }
-.orbit-tech .orbit-axis { display: block; }
-.orbit-tech .orbit-axis-x { width: 210px; height: 1px; transform: translate(-50%, -50%); }
-.orbit-tech .orbit-axis-y { width: 1px; height: 118px; transform: translate(-50%, -50%); }
-
-.orbit-income .orbit-center { width: 54px; height: 54px; }
-.orbit-income .orbit-ring-a { width: 72px; height: 72px; }
-.orbit-income .orbit-ring-b { width: 108px; height: 92px; }
-.orbit-income .orbit-ring-c { width: 144px; height: 112px; }
-.orbit-income .orbit-ring-d { width: 172px; height: 138px; }
-.orbit-income .orbit-axis { display: block; }
-.orbit-income .orbit-axis-x { width: 190px; height: 1px; transform: translate(-50%, -50%) rotate(-11deg); }
-.orbit-income .orbit-axis-y { width: 1px; height: 148px; transform: translate(-50%, -50%); }
-
-.orbit-alpha .orbit-center { width: 36px; height: 36px; }
-.orbit-alpha .orbit-ring-a,
-.orbit-alpha .orbit-ring-b,
-.orbit-alpha .orbit-ring-c,
-.orbit-alpha .orbit-ring-d { width: 190px; height: 58px; }
-.orbit-alpha .orbit-ring-a { transform: translate(-50%, -50%) rotate(0deg); }
-.orbit-alpha .orbit-ring-b { transform: translate(-50%, -50%) rotate(58deg); }
-.orbit-alpha .orbit-ring-c { transform: translate(-50%, -50%) rotate(-58deg); }
-.orbit-alpha .orbit-ring-d { transform: translate(-50%, -50%) rotate(88deg); }
+@keyframes asciiPlanetSignal {
+  0%, 100% { opacity: 0.72; transform: translateY(0); }
+  50% { opacity: 1; transform: translateY(-2px); }
+}
 
 /* Portfolio */
 .portfolio-page {
@@ -585,7 +552,8 @@ button { color: inherit; font: inherit; }
   letter-spacing: 0.04em;
 }
 .portfolio-strategy { max-width: 430px; margin: 18px 0 0; color: var(--gray); line-height: 1.55; }
-.portfolio-summary .orbit-graphic { width: 70%; height: 40%; top: 54%; right: -8%; opacity: 0.55; }
+.portfolio-summary .ascii-planet { width: 70%; height: 44%; top: 54%; right: -8%; opacity: 0.58; }
+.portfolio-summary .ascii-planet pre { font-size: clamp(6px, 0.65vw, 9px); }
 
 .portfolio-metrics {
   margin: auto 0 22px;
@@ -663,7 +631,7 @@ button { color: inherit; font: inherit; }
   .app-identity { padding-left: 24px; padding-right: 20px; }
   .app-system-status { padding: 0 22px; }
   .etf-card-hero { padding-right: 185px; }
-  .orbit-graphic { width: 170px; right: 9px; }
+  .ascii-planet { width: 180px; right: 4px; }
   .etf-card-copy h2 { font-size: 18px; }
   .etf-card-copy p { max-width: 260px; font-size: 11px; }
   .holding-chips { gap: 6px; }
@@ -683,7 +651,7 @@ button { color: inherit; font: inherit; }
   .etf-card-grid { grid-template-columns: 1fr; grid-template-rows: none; grid-auto-rows: minmax(290px, auto); }
   .etf-card { min-height: 290px; }
   .etf-card-hero { padding-right: 250px; }
-  .orbit-graphic { width: 220px; right: 22px; }
+  .ascii-planet { width: 230px; right: 18px; }
   .portfolio-page { grid-template-columns: 1fr; overflow-y: auto; }
   .portfolio-summary, .portfolio-allocation { min-height: 520px; }
 }
@@ -718,7 +686,8 @@ button { color: inherit; font: inherit; }
   .etf-card-hero { padding: 22px 18px 106px; align-items: flex-start; }
   .etf-card-copy h2 { font-size: 19px; }
   .etf-card-copy p { max-width: none; font-size: 12px; }
-  .orbit-graphic { width: 190px; height: 96px; top: auto; right: 50%; bottom: 3px; transform: translateX(50%); }
+  .ascii-planet { width: 210px; height: 104px; top: auto; right: 50%; bottom: 2px; transform: translateX(50%); }
+  .ascii-planet pre { font-size: 5.4px; }
   .etf-card-actions { padding: 10px 14px; align-items: stretch; }
   .holding-chips { flex: 1; }
   .holding-chips span { flex: 1; display: grid; place-items: center; padding: 0 6px; }
@@ -737,4 +706,5 @@ button { color: inherit; font: inherit; }
   .launch-app,
   .etf-card,
   .select-etf-button { transition: none; }
+  .ascii-planet pre { animation: none; }
 }

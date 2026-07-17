@@ -111,16 +111,57 @@ const filters: Array<{ id: Filter; label: string }> = [
   { id: "income", label: "INCOME" },
 ];
 
-function OrbitGraphic({ variant }: { variant: Etf["visual"] }) {
+const asciiPlanets: Record<Etf["visual"], string> = {
+  core: String.raw`             .       *       .
+        .-------------------------.
+     .-'       .-"""""""-.         '-.
+   .'       .-'::::###:::::'-.         '.
+  /        /:::::#######:::::\          \
+ ;--------|:::::#########:::::|----------;
+  \        \:::::#######:::::/          /
+   '.       '-.::::###::::.-'         .'
+     '-._       '-------'        _.-'
+         '---------------------'`,
+  tech: String.raw`              .-"""""""-.
+           .-'---+--+---'-.
+          /----+-|--|-+----\
+         /-+---+-|--|-+---+-\
+        |------+-+-+-+-------|
+        |======+==+==+=======|
+        |------+-+-+-+-------|
+         \-+---+-|--|-+---+-/
+          \----+-|--|-+----/
+           '-.---+--+---.-'
+              '-.__.-'`,
+  income: String.raw`             *           .
+          .-"""""""""""-.
+       .-'..:::::::......'-.
+      /...:::::::::::.......\
+  .--|---:::::#####:::::------|--.
+.'   |..::::#########::::.....|   '.
+'----|..:::::#######:::::.....|----'
+     \....:::::###:::::....../
+      '. ......::::....... .'
+        '-._.........._.-'
+             '------'`,
+  alpha: String.raw`                o
+          .----/ \----.
+       .-'    /   \    '-.
+  o---'----- / .---. \ -----'---o
+      \     | /#####\ |     /
+       '----+-|#####|-+----'
+       .----+-|#####|-+----.
+      /     | \#####/ |     \
+  o---.----- \ '---' / -----.---o
+       '-.    \   /    .-'
+          '----\ /----'
+                o`,
+};
+
+function AsciiPlanet({ variant }: { variant: Etf["visual"] }) {
   return (
-    <div className={`orbit-graphic orbit-${variant}`} aria-hidden="true">
-      <span className="orbit-center" />
-      <span className="orbit-ring orbit-ring-a"><i /></span>
-      <span className="orbit-ring orbit-ring-b"><i /></span>
-      <span className="orbit-ring orbit-ring-c"><i /></span>
-      <span className="orbit-ring orbit-ring-d"><i /></span>
-      <span className="orbit-axis orbit-axis-x" />
-      <span className="orbit-axis orbit-axis-y" />
+    <div className={`ascii-planet ascii-planet-${variant}`} aria-hidden="true">
+      <pre>{asciiPlanets[variant]}</pre>
     </div>
   );
 }
@@ -169,7 +210,7 @@ function EtfCard({ etf, selected, onSelect, onNavigate }: EtfCardProps) {
           <span className="etf-ticker">{etf.ticker}</span>
           <p>{etf.strategy}</p>
         </div>
-        <OrbitGraphic variant={etf.visual} />
+        <AsciiPlanet variant={etf.visual} />
       </div>
 
       <dl className="etf-metrics">
@@ -247,7 +288,7 @@ function PortfolioView({ etf, onChange }: { etf: Etf; onChange: () => void }) {
         <p className="section-kicker">SELECTED ETF / {etf.ticker}</p>
         <h1>{etf.name}</h1>
         <p className="portfolio-strategy">{etf.strategy}</p>
-        <OrbitGraphic variant={etf.visual} />
+        <AsciiPlanet variant={etf.visual} />
         <dl className="portfolio-metrics">
           <div><dt>1Y RETURN</dt><dd>{etf.return1y}</dd></div>
           <div><dt>FEE</dt><dd>{etf.fee}</dd></div>
