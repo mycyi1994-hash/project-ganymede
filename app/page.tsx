@@ -13,7 +13,7 @@ const chestArt = String.raw`
          |====+------------------------------------------+======|
          |====|                                          |======|
          |====|       .--------------------------.       |======|
-         |====|      /   G A N Y M E D E  /  10   \      |======|
+         |====|      /      G A N Y M E D E       \      |======|
          |====|      '--------------------------'       |======|
          |====|                                          |======|
          |====+-------------------+----------------------+======|
@@ -43,27 +43,54 @@ const holdings = [
   ["LEO", "LEO Token"],
 ];
 
+const baskets = [
+  { id: "01", name: "Market Cap Core", meta: "10 ASSETS / EQUAL WEIGHT", status: "AVAILABLE" },
+  { id: "02", name: "Smart Contract Leaders", meta: "INDEX DESIGN IN PROGRESS", status: "LOCKED" },
+  { id: "03", name: "Digital Infrastructure", meta: "INDEX DESIGN IN PROGRESS", status: "LOCKED" },
+  { id: "04", name: "Alpha Satellite", meta: "INDEX DESIGN IN PROGRESS", status: "LOCKED" },
+];
+
 export default function Home() {
   const [appOpen, setAppOpen] = useState(false);
-  const [basketOpen, setBasketOpen] = useState(false);
+  const [selectedBasket, setSelectedBasket] = useState<number | null>(null);
 
-  if (appOpen) {
+  if (appOpen && selectedBasket === null) {
     return (
-      <main className="fund-app" aria-label="Ganymede crypto ETF basket">
-        <section className="basket-stage" aria-labelledby="basket-title">
-          <div className="app-mark" aria-hidden="true">G / GMDE-10</div>
+      <main className="basket-grid" aria-label="Ganymede ETF basket selection">
+        {baskets.map((basket, index) => (
+          <button
+            className={`basket-card${index === 0 ? " is-available" : " is-locked"}`}
+            type="button"
+            key={basket.id}
+            disabled={index !== 0}
+            onClick={() => setSelectedBasket(index)}
+          >
+            <span className="basket-card-index">BASKET / {basket.id}</span>
+            <span className="basket-card-status"><i /> {basket.status}</span>
+            <pre aria-hidden="true">{chestArt}</pre>
+            <span className="basket-card-copy">
+              <strong>{basket.name}</strong>
+              <small>{basket.meta}</small>
+            </span>
+          </button>
+        ))}
+      </main>
+    );
+  }
+
+  if (appOpen && selectedBasket !== null) {
+    return (
+      <main className="fund-detail" aria-label="Ganymede crypto ETF basket">
+        <section className="detail-basket-panel" aria-labelledby="basket-title">
+          <button className="back-to-baskets" type="button" onClick={() => setSelectedBasket(null)}>
+            <span aria-hidden="true">&#8592;</span> All Baskets
+          </button>
           <p className="basket-kicker">BASKET / 01</p>
           <h1 id="basket-title">Market Cap<br />Core Basket</h1>
-
-          <button
-            className={`ascii-chest${basketOpen ? " is-open" : ""}`}
-            type="button"
-            aria-pressed={basketOpen}
-            onClick={() => setBasketOpen(true)}
-          >
+          <div className="detail-chest">
             <pre aria-hidden="true">{chestArt}</pre>
-            <span>{basketOpen ? "BASKET OPEN / HOLDINGS REVEALED" : "CLICK BASKET TO REVEAL HOLDINGS"}</span>
-          </button>
+            <span>BASKET OPEN / HOLDINGS REVEALED</span>
+          </div>
         </section>
 
         <aside className="holdings-panel" aria-live="polite">
@@ -81,23 +108,16 @@ export default function Home() {
             <span><b>0</b> STABLECOINS</span>
           </div>
 
-          {basketOpen ? (
-            <ol className="holdings-list">
-              {holdings.map(([symbol, name], index) => (
-                <li key={symbol}>
-                  <span className="holding-rank">{String(index + 1).padStart(2, "0")}</span>
-                  <strong>{symbol}</strong>
-                  <span className="holding-name">{name}</span>
-                  <span className="holding-weight">10.00%</span>
-                </li>
-              ))}
-            </ol>
-          ) : (
-            <div className="basket-locked">
-              <span>[ BASKET LOCKED ]</span>
-              <p>Select the ASCII basket to inspect its underlying digital assets.</p>
-            </div>
-          )}
+          <ol className="holdings-list">
+            {holdings.map(([symbol, name], index) => (
+              <li key={symbol}>
+                <span className="holding-rank">{String(index + 1).padStart(2, "0")}</span>
+                <strong>{symbol}</strong>
+                <span className="holding-name">{name}</span>
+                <span className="holding-weight">10.00%</span>
+              </li>
+            ))}
+          </ol>
 
           <footer className="method-note">
             <span>MARKET-CAP UNIVERSE SNAPSHOT / COINGECKO</span>
