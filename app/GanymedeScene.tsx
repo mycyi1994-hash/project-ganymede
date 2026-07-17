@@ -192,7 +192,6 @@ function drawSpacecraft(
 
 export default function GanymedeScene() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const statusRef = useRef<HTMLSpanElement>(null);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -356,14 +355,6 @@ export default function GanymedeScene() {
       }
 
       context.globalAlpha = 1;
-      if (statusRef.current) {
-        statusRef.current.textContent = elapsed < 1450
-          ? "GATHERING SIGNAL"
-          : elapsed < 3300
-            ? "FORMING CELESTIAL BODY"
-            : "ORBIT STABLE";
-      }
-
       if (!reduceMotion) animationFrame = requestAnimationFrame(draw);
     };
 
@@ -380,10 +371,6 @@ export default function GanymedeScene() {
   return (
     <div className="scene" aria-label="ASCII particles assemble into a rotating moon with orbital rings and passing spacecraft">
       <canvas ref={canvasRef} className="ascii-canvas" aria-hidden="true" />
-      <div className="scene-status" aria-live="polite">
-        <i aria-hidden="true" />
-        <span ref={statusRef}>GATHERING SIGNAL</span>
-      </div>
     </div>
   );
 }
