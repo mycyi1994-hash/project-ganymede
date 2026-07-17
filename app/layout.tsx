@@ -1,25 +1,32 @@
 import type { Metadata } from "next";
+import { headers } from "next/headers";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
+const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
+const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+export async function generateMetadata(): Promise<Metadata> {
+  const requestHeaders = await headers();
+  const host = requestHeaders.get("x-forwarded-host") ?? requestHeaders.get("host") ?? "neptune-onboarding-seoul.duddlfqotl.chatgpt.site";
+  const protocol = requestHeaders.get("x-forwarded-proto") ?? "https";
+  const imageUrl = `${protocol}://${host}/og.png`;
 
-export const metadata: Metadata = {
-  title: "Neptune — New Hire Onboarding",
-  description: "새로운 동료를 위한 Neptune 온보딩 포털입니다.",
-};
+  return {
+    title: "Project Ganymede",
+    description: "Enter a new orbit. A cinematic new-hire experience built from living ASCII.",
+    openGraph: {
+      title: "Project Ganymede",
+      description: "Enter a new orbit.",
+      images: [{ url: imageUrl, width: 1200, height: 630, alt: "Project Ganymede ASCII moon" }],
+    },
+    twitter: { card: "summary_large_image", title: "Project Ganymede", description: "Enter a new orbit.", images: [imageUrl] },
+  };
+}
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="ko">
+    <html lang="en">
       <body className={`${geistSans.variable} ${geistMono.variable}`}>{children}</body>
     </html>
   );
