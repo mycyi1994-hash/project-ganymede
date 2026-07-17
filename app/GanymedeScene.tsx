@@ -11,6 +11,7 @@ type Particle = {
   delay: number;
   glyph: number;
   kind: "moon" | "ring";
+  surface?: boolean;
   orbitAngle?: number;
   orbitRadius?: number;
 };
@@ -50,14 +51,19 @@ function makeParticles(width: number, height: number) {
   const particles: Particle[] = [];
   const moonCount = width < 640 ? 6480 : 11160;
   const ringCount = width < 640 ? 3420 : 5760;
+  const surfaceCount = Math.floor(moonCount * 0.42);
 
   for (let i = 0; i < moonCount; i += 1) {
-    const y = 1 - (i / (moonCount - 1)) * 2;
+    const surface = i < surfaceCount;
+    const pointIndex = surface ? i : i - surfaceCount;
+    const pointCount = surface ? surfaceCount : moonCount - surfaceCount;
+    const y = 1 - ((pointIndex + 0.5) / pointCount) * 2;
     const radius = Math.sqrt(1 - y * y);
-    const theta = Math.PI * (3 - Math.sqrt(5)) * i;
+    const theta = Math.PI * (3 - Math.sqrt(5)) * pointIndex + (surface ? 0 : 1.7);
     const randomRadius = Math.abs(Math.sin(i * 12.9898 + 78.233) * 43758.5453) % 1;
-    const volume = 0.2 + Math.pow(randomRadius, 0.4) * 0.82;
-    const relief = (1 + Math.sin(theta * 3 + y * 8) * 0.02) * volume;
+    const relief = surface
+      ? 0.985 + randomRadius * 0.018
+      : 0.12 + Math.cbrt(randomRadius) * 0.79;
 
     particles.push({
       x: Math.cos(theta) * radius * relief,
@@ -68,12 +74,16 @@ function makeParticles(width: number, height: number) {
       delay: Math.random() * 1050,
       glyph: i % GLYPHS.length,
       kind: "moon",
+      surface,
     });
   }
 
   for (let i = 0; i < ringCount; i += 1) {
-    const angle = (i / ringCount) * Math.PI * 2;
-    const band = 1.54 + (i % 10) * 0.015 + Math.sin(i * 2.1) * 0.006;
+    const ringIndex = i % 3;
+    const pointIndex = Math.floor(i / 3);
+    const pointCount = Math.ceil((ringCount - ringIndex) / 3);
+    const angle = (pointIndex / pointCount) * Math.PI * 2 + ringIndex * 0.17;
+    const band = [1.42, 1.6, 1.78][ringIndex] + Math.sin(i * 2.1) * 0.0035;
     const x = Math.cos(angle) * band;
     const z = Math.sin(angle) * band;
     const ringTilt = 0.48;
@@ -210,7 +220,7 @@ export default function GanymedeScene() {
       const angle = reduceMotion ? 0.38 : elapsed * 0.000095;
       const centerX = width * 0.5;
       const centerY = height * (width < 640 ? 0.43 : 0.45);
-      const sceneScale = Math.min(width, height) * (width < 640 ? 0.235 : 0.285);
+      const sceneScale = Math.min(width, height) * (width < 640 ? 0.2 : 0.225);
 
       context.clearRect(0, 0, width, height);
       context.globalAlpha = 1;
@@ -249,7 +259,7 @@ export default function GanymedeScene() {
         const y = particle.startY + (targetY - particle.startY) * eased + Math.cos(index) * swirl;
         const depthAlpha = particle.kind === "ring"
           ? (layer === "back" ? 0.18 : 0.5) + (rotated.z + 2) * (layer === "back" ? 0.05 : 0.13)
-          : 0.36 + (rotated.z + 1) * 0.3;
+          : (particle.surface ? 0.42 : 0.2) + (rotated.z + 1) * (particle.surface ? 0.27 : 0.3);
 
         const alpha = clamp(localProgress * depthAlpha, 0, 0.96);
         if (alpha < 0.035) return;
