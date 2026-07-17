@@ -12,9 +12,12 @@ export default function Home() {
         </a>
         <div className="top-actions">
           <span className="mission-code">MISSION / 001</span>
-          <a className="launch-app" href="#experience">Launch App <span aria-hidden="true">↗</span></a>
         </div>
       </header>
+
+      <a className="launch-app launch-center" href="#experience">
+        Launch App <span aria-hidden="true">↗</span>
+      </a>
 
       <section className="hero-copy" aria-labelledby="hero-title">
         <p className="kicker">A NEW ORBIT BEGINS</p>

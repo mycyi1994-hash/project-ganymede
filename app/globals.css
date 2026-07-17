@@ -73,8 +73,21 @@ a { color: inherit; text-decoration: none; }
   font: 550 12px/1 var(--font-geist-sans), sans-serif;
   transition: color 180ms ease, background 180ms ease, transform 180ms ease;
 }
-.launch-app:hover { color: var(--white); background: transparent; transform: translateY(-2px); }
+.launch-app:hover { color: var(--white); background: rgba(5, 5, 5, 0.72); }
 .launch-app:focus-visible, .wordmark:focus-visible { outline: 1px solid var(--white); outline-offset: 5px; }
+
+.launch-center {
+  position: absolute;
+  z-index: 5;
+  top: 45%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  min-width: 164px;
+  padding-block: 14px;
+  box-shadow: 0 0 0 1px rgba(5, 5, 5, 0.3), 0 8px 32px rgba(0, 0, 0, 0.45);
+  animation: launchReveal 900ms 2800ms both;
+}
+.launch-center:hover { transform: translate(-50%, calc(-50% - 2px)); }
 
 .hero-copy {
   position: absolute;
@@ -136,10 +149,15 @@ a { color: inherit; text-decoration: none; }
 .bottom-bar span:last-child { text-align: right; }
 .bottom-bar b { color: var(--white); margin-left: 7px; font-weight: 400; }
 
+@keyframes launchReveal {
+  from { opacity: 0; transform: translate(-50%, calc(-50% + 10px)); }
+  to { opacity: 1; transform: translate(-50%, -50%); }
+}
+
 @media (max-width: 700px) {
   .topbar { height: 78px; }
   .mission-code, .object-data, .bottom-bar span:first-child, .bottom-bar span:last-child { display: none; }
-  .launch-app { min-width: 124px; }
+  .launch-center { top: 43%; min-width: 142px; }
   .scene-status { top: 98px; }
   .hero-copy { bottom: 100px; }
   .hero-copy h1 { font-size: clamp(44px, 15vw, 78px); line-height: .85; }
@@ -147,5 +165,5 @@ a { color: inherit; text-decoration: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .launch-app { transition: none; }
+  .launch-app { transition: none; animation: none; }
 }

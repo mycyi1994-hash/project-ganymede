@@ -9,11 +9,11 @@ type Particle = {
   startX: number;
   startY: number;
   delay: number;
-  char: string;
+  glyph: number;
   kind: "moon" | "ring";
 };
 
-const GLYPHS = [".", ":", "+", "*", "0", "1", "/", "=", "-", "·"];
+const GLYPHS = [".", ":", "+", "*", "0", "1", "/", "=", "-", "|"];
 const SPACECRAFT = [
   ["  /\\  ", "<|===>", "  \\/  "],
   ["  .  ", "=[+]=", " /_\\ "],
@@ -46,14 +46,16 @@ function rotatePoint(x: number, y: number, z: number, angle: number) {
 
 function makeParticles(width: number, height: number) {
   const particles: Particle[] = [];
-  const moonCount = width < 640 ? 1080 : 1860;
-  const ringCount = width < 640 ? 570 : 960;
+  const moonCount = width < 640 ? 6480 : 11160;
+  const ringCount = width < 640 ? 3420 : 5760;
 
   for (let i = 0; i < moonCount; i += 1) {
     const y = 1 - (i / (moonCount - 1)) * 2;
     const radius = Math.sqrt(1 - y * y);
     const theta = Math.PI * (3 - Math.sqrt(5)) * i;
-    const relief = 1 + Math.sin(theta * 3 + y * 8) * 0.025;
+    const randomRadius = Math.abs(Math.sin(i * 12.9898 + 78.233) * 43758.5453) % 1;
+    const volume = 0.2 + Math.pow(randomRadius, 0.4) * 0.82;
+    const relief = (1 + Math.sin(theta * 3 + y * 8) * 0.02) * volume;
 
     particles.push({
       x: Math.cos(theta) * radius * relief,
@@ -62,14 +64,14 @@ function makeParticles(width: number, height: number) {
       startX: 0,
       startY: 0,
       delay: Math.random() * 1050,
-      char: GLYPHS[i % GLYPHS.length],
+      glyph: i % GLYPHS.length,
       kind: "moon",
     });
   }
 
   for (let i = 0; i < ringCount; i += 1) {
     const angle = (i / ringCount) * Math.PI * 2;
-    const band = 1.48 + (i % 4) * 0.075 + Math.sin(i * 2.1) * 0.018;
+    const band = 1.42 + (i % 24) * 0.018 + Math.sin(i * 2.1) * 0.014;
     const x = Math.cos(angle) * band;
     const z = Math.sin(angle) * band;
     const ringTilt = 0.34;
@@ -81,7 +83,7 @@ function makeParticles(width: number, height: number) {
       startX: 0,
       startY: 0,
       delay: 450 + Math.random() * 1250,
-      char: GLYPHS[(i + 3) % GLYPHS.length],
+      glyph: (i + 3) % GLYPHS.length,
       kind: "ring",
     });
   }
@@ -105,6 +107,31 @@ function makeParticles(width: number, height: number) {
   });
 
   return particles;
+}
+
+function makeGlyphAtlas(fontSize: number) {
+  const levels = 6;
+  const cell = Math.max(8, Math.ceil(fontSize * 1.65));
+  const atlas = document.createElement("canvas");
+  const atlasContext = atlas.getContext("2d");
+  atlas.width = cell * GLYPHS.length;
+  atlas.height = cell * levels;
+
+  if (atlasContext) {
+    atlasContext.textAlign = "center";
+    atlasContext.textBaseline = "middle";
+    atlasContext.fillStyle = "#f3f3ee";
+    atlasContext.font = `${fontSize}px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace`;
+
+    for (let level = 0; level < levels; level += 1) {
+      atlasContext.globalAlpha = ((level + 1) / levels) * 0.96;
+      GLYPHS.forEach((glyph, index) => {
+        atlasContext.fillText(glyph, index * cell + cell / 2, level * cell + cell / 2);
+      });
+    }
+  }
+
+  return { atlas, cell, levels };
 }
 
 function drawSpacecraft(
@@ -146,22 +173,32 @@ export default function GanymedeScene() {
     let width = 0;
     let height = 0;
     let particles: Particle[] = [];
+    let glyphAtlas = makeGlyphAtlas(6);
     let start = performance.now();
+    let lastFrame = 0;
     const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
     const resize = () => {
       const bounds = canvas.getBoundingClientRect();
-      const ratio = Math.min(window.devicePixelRatio || 1, 2);
+      const ratio = Math.min(window.devicePixelRatio || 1, 1.5);
       width = bounds.width;
       height = bounds.height;
       canvas.width = width * ratio;
       canvas.height = height * ratio;
       context.setTransform(ratio, 0, 0, ratio, 0, 0);
       particles = makeParticles(width, height);
+      glyphAtlas = makeGlyphAtlas(Math.max(4.8, Math.min(7.2, width / 220)));
       start = performance.now();
+      lastFrame = 0;
     };
 
     const draw = (now: number) => {
+      if (!reduceMotion && now - lastFrame < 32) {
+        animationFrame = requestAnimationFrame(draw);
+        return;
+      }
+      lastFrame = now;
+
       const elapsed = reduceMotion ? 5000 : now - start;
       const angle = reduceMotion ? 0.38 : elapsed * 0.000095;
       const centerX = width * 0.5;
@@ -169,9 +206,7 @@ export default function GanymedeScene() {
       const sceneScale = Math.min(width, height) * (width < 640 ? 0.235 : 0.285);
 
       context.clearRect(0, 0, width, height);
-      context.textAlign = "center";
-      context.textBaseline = "middle";
-      context.font = `${Math.max(5.5, Math.min(9.5, width / 165))}px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace`;
+      context.globalAlpha = 1;
 
       particles.forEach((particle, index) => {
         const rotated = rotatePoint(particle.x, particle.y, particle.z, angle);
@@ -189,9 +224,22 @@ export default function GanymedeScene() {
           ? 0.46 + (rotated.z + 2) * 0.14
           : 0.36 + (rotated.z + 1) * 0.3;
 
-        context.globalAlpha = clamp(localProgress * depthAlpha, 0, 0.96);
-        context.fillStyle = particle.kind === "ring" ? "#cfcfc8" : "#f2f2ed";
-        context.fillText(particle.char, x, y);
+        const alpha = clamp(localProgress * depthAlpha, 0, 0.96);
+        if (alpha < 0.035) return;
+        const level = Math.min(glyphAtlas.levels - 1, Math.floor(alpha * glyphAtlas.levels));
+        const sourceX = particle.glyph * glyphAtlas.cell;
+        const sourceY = level * glyphAtlas.cell;
+        context.drawImage(
+          glyphAtlas.atlas,
+          sourceX,
+          sourceY,
+          glyphAtlas.cell,
+          glyphAtlas.cell,
+          x - glyphAtlas.cell / 2,
+          y - glyphAtlas.cell / 2,
+          glyphAtlas.cell,
+          glyphAtlas.cell,
+        );
       });
 
       SPACECRAFT.forEach((model, index) => {
