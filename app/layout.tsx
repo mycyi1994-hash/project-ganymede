@@ -10,9 +10,9 @@ export async function generateMetadata(): Promise<Metadata> {
   const requestHeaders = await headers();
   const host = requestHeaders.get("x-forwarded-host") ?? requestHeaders.get("host") ?? "neptune-onboarding-seoul.duddlfqotl.chatgpt.site";
   const protocol = requestHeaders.get("x-forwarded-proto") ?? "https";
-  const imageUrl = `${protocol}://${host}/og-v3.png`;
-  const title = "Ganymede Index — Four Funds. One Clear Orbit.";
-  const description = "Compare four pre-launch passive and active digital-asset fund strategies with indicative NAV and GIWA testnet settlement.";
+  const imageUrl = `${protocol}://${host}/og-v4.png`;
+  const title = "Ganymede Index — Four Strategies. One Clear Orbit.";
+  const description = "Compare Foundation, Builder, Stabilizer and Explorer—four private pre-launch digital-asset strategies with transparent mandates and GIWA testnet settlement.";
 
   return {
     title,

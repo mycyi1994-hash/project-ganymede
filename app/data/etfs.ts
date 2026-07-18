@@ -44,6 +44,12 @@ export type Etf = {
   lastRebalanced: string;
   factSheetUrl: string;
   visual: CelestialVisual;
+  portfolioRole: string;
+  roleName: string;
+  bestFor: string;
+  whyChoose: string;
+  notFor: string;
+  signature: string;
   monthlyReturns: number[];
   basket: BasketAsset[];
   methodology: {
@@ -96,6 +102,12 @@ export const etfs: Etf[] = [
     lastRebalanced: "JUL 2026",
     factSheetUrl: "#methodology",
     visual: "core",
+    portfolioRole: "FOUNDATION",
+    roleName: "THE FOUNDATION",
+    bestFor: "LONG-TERM CORE ALLOCATION",
+    whyChoose: "One diversified starting point across established digital assets.",
+    notFor: "Principal protection, predictable income or short-term liquidity certainty.",
+    signature: "BROAD EXPOSURE / CONTROLLED CONCENTRATION",
     monthlyReturns: [2.8, -1.4, 4.2, 1.9, -2.1, 3.6, 5.1, -0.8, 2.4, 1.2, -1.7, 3.9],
     basket: [
       asset(1, "BTC", "Bitcoin", 30, "Store of Value", "Primary digital reserve asset and liquidity anchor."),
@@ -148,6 +160,12 @@ export const etfs: Etf[] = [
     lastRebalanced: "JUL 2026",
     factSheetUrl: "#methodology",
     visual: "tech",
+    portfolioRole: "BUILDER",
+    roleName: "THE BUILDER",
+    bestFor: "FOCUSED THEMATIC GROWTH",
+    whyChoose: "Focused growth exposure to established blockchain infrastructure.",
+    notFor: "Low-volatility allocation or investors avoiding thematic concentration.",
+    signature: "INFRASTRUCTURE GROWTH / SYSTEMATIC CONVICTION",
     monthlyReturns: [4.1, -2.8, 6.4, 3.2, -3.6, 5.8, 7.1, -1.9, 3.7, 2.4, -2.2, 4.8],
     basket: [
       asset(1, "ETH", "Ethereum", 24, "Smart Contract", "Programmable settlement layer and application platform."),
@@ -198,6 +216,12 @@ export const etfs: Etf[] = [
     lastRebalanced: "JUL 2026",
     factSheetUrl: "#methodology",
     visual: "income",
+    portfolioRole: "STABILIZER",
+    roleName: "THE STABILIZER",
+    bestFor: "LOWER-VOLATILITY ALLOCATION",
+    whyChoose: "A risk-budgeted mandate built for a smoother digital-asset allocation.",
+    notFor: "Maximum upside participation or guaranteed cash distributions.",
+    signature: "RISK BUDGET / STRATEGIC LIQUIDITY RESERVE",
     monthlyReturns: [1.4, 0.6, 1.8, -0.7, 0.9, 1.2, 2.1, -0.4, 1.1, 0.8, -0.5, 1.6],
     basket: [
       asset(1, "ETH", "Ethereum", 20, "Smart Contract", "Productive network exposure with staking economics."),
@@ -246,6 +270,12 @@ export const etfs: Etf[] = [
     lastRebalanced: "JUL 2026",
     factSheetUrl: "#methodology",
     visual: "alpha",
+    portfolioRole: "EXPLORER",
+    roleName: "THE EXPLORER",
+    bestFor: "HIGH-RISK FRONTIER GROWTH",
+    whyChoose: "Emerging-network exposure within strict position and liquidity limits.",
+    notFor: "Capital preservation, low turnover or short investment horizons.",
+    signature: "FRONTIER SIGNALS / STRICT POSITION CAPS",
     monthlyReturns: [5.3, -3.9, 7.8, 4.6, -5.1, 6.9, 8.2, -2.6, 4.5, 3.1, -3.4, 5.7],
     basket: [
       asset(1, "SOL", "Solana", 18, "Smart Contract", "High-throughput consumer and financial application network."),

@@ -50,6 +50,13 @@ const PLANET_LABELS: Record<CelestialVariant, string> = {
   alpha: "MARS / 04",
 };
 
+const PRODUCT_GLYPH_COLORS: Record<CelestialVariant, string> = {
+  core: "#c9d8e1",
+  tech: "#d0c0e2",
+  income: "#c7d8cb",
+  alpha: "#ddb9aa",
+};
+
 const CONFIGS: Record<CelestialVariant, Config> = {
   core: {
     kind: "jupiter",
@@ -256,7 +263,7 @@ function makeRings(count: number, bands: number[], dense: boolean) {
   return particles;
 }
 
-function makeGlyphAtlas(fontSize: number) {
+function makeGlyphAtlas(fontSize: number, color: string) {
   const levels = 7;
   const cell = Math.max(7, Math.ceil(fontSize * 1.65));
   const atlas = document.createElement("canvas");
@@ -267,7 +274,7 @@ function makeGlyphAtlas(fontSize: number) {
   if (context) {
     context.textAlign = "center";
     context.textBaseline = "middle";
-    context.fillStyle = "#eeede8";
+    context.fillStyle = color;
     context.font = `${fontSize}px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace`;
     for (let level = 0; level < levels; level += 1) {
       context.globalAlpha = ((level + 1) / levels) * 0.96;
@@ -303,7 +310,7 @@ export default function MiniAsciiCelestial({ variant }: { variant: CelestialVari
     const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     let width = 0;
     let height = 0;
-    let glyphAtlas = makeGlyphAtlas(5.8);
+    let glyphAtlas = makeGlyphAtlas(5.8, PRODUCT_GLYPH_COLORS[variant]);
     let animationFrame = 0;
     let resizeFrame = 0;
     let lastFrame = 0;
@@ -318,7 +325,7 @@ export default function MiniAsciiCelestial({ variant }: { variant: CelestialVari
       canvas.width = Math.max(1, Math.floor(width * ratio));
       canvas.height = Math.max(1, Math.floor(height * ratio));
       context.setTransform(ratio, 0, 0, ratio, 0, 0);
-      glyphAtlas = makeGlyphAtlas(clamp(Math.min(width, height) / 34, 4.8, 6.8));
+      glyphAtlas = makeGlyphAtlas(clamp(Math.min(width, height) / 34, 4.8, 6.8), PRODUCT_GLYPH_COLORS[variant]);
     };
 
     const drawGlyph = (glyph: number, x: number, y: number, alpha: number, size = 1) => {

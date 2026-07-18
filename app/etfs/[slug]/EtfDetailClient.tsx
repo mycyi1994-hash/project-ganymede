@@ -169,10 +169,10 @@ function OverviewPanel({ etf, liveProduct, engineMode, amountKrw, subscriptionSt
         </article>
       </div>
 
-      <aside className="product-order-card" aria-label="ETF subscription order">
-        <div className="order-card-heading"><span>ORDER SIMULATOR</span><b>{engineMode === "live" ? "LIVE CONTROLLED" : "PAPER / TESTNET"}</b></div>
+      <aside className="product-order-card" aria-label="ETF allocation simulation">
+        <div className="order-card-heading"><span>ALLOCATION SIMULATOR</span><b>{engineMode === "live" ? "LIVE CONTROLLED" : "PAPER / TESTNET"}</b></div>
         <ol className="subscription-steps" aria-label="Subscription steps"><li className="is-active"><b>01</b><span>AMOUNT</span></li><li><b>02</b><span>ELIGIBILITY</span></li><li><b>03</b><span>REVIEW</span></li><li><b>04</b><span>SETTLE</span></li></ol>
-        <p>Preview a primary-market fund-share request. A live order requires identity, document consent, funding approval and an official valuation point.</p>
+        <p>Estimate fund shares using the latest indicative NAV. This simulation does not place an order or transfer funds.</p>
         <label className="subscription-amount">
           <span>SUBSCRIPTION AMOUNT / KRW</span>
           <input type="number" min="100000" step="100000" inputMode="numeric" value={amountKrw} onChange={(event) => onAmountChange(event.target.value)} aria-describedby="subscription-minimum" />
@@ -185,7 +185,7 @@ function OverviewPanel({ etf, liveProduct, engineMode, amountKrw, subscriptionSt
           <div><dt>EXPENSE RATIO</dt><dd>{etf.fee}</dd></div>
         </dl>
         <div className="order-environment"><span><i /> SIMULATION ONLY</span><p>No economic asset is issued on GIWA Sepolia.</p></div>
-        <button type="button" disabled={submitting || asNumber(amountKrw) < 100_000} className={`product-add-button${hasRequest ? " is-added" : ""}`} onClick={onSubscribe}>{submitting ? "SUBMITTING…" : hasRequest ? "VIEW SIMULATION" : "CONTINUE TO REVIEW"}</button>
+        <button type="button" disabled={submitting || asNumber(amountKrw) < 100_000} className={`product-add-button${hasRequest ? " is-added" : ""}`} onClick={onSubscribe}>{submitting ? "SIMULATING…" : hasRequest ? "VIEW PAPER ALLOCATION" : "SIMULATE ALLOCATION"}</button>
         {subscriptionStatus && <p className="subscription-state" role="status">REQUEST STATUS <b>{subscriptionStatus.toUpperCase()}</b></p>}
         {orderError && <p className="subscription-error" role="alert">{orderError}</p>}
         <WalletConnect />
@@ -378,7 +378,7 @@ export default function EtfDetailClient({ etf }: { etf: Etf }) {
   return (
     <main className={`product-detail-page ganymede-v4 product-${etf.id}`}>
       <header className="detail-topbar product-detail-topbar">
-        <button type="button" className="detail-brand" onClick={() => window.location.assign("/")} aria-label="Ganymede Index overview"><span>G</span><strong>GANYMEDE INDEX<small>DIGITAL ASSET ETFs</small></strong></button>
+        <button type="button" className="detail-brand" onClick={() => window.location.assign("/")} aria-label="Ganymede Index overview"><span>G</span><strong>GANYMEDE INDEX<small>DIGITAL-ASSET STRATEGIES</small></strong></button>
         <p>ETF PRODUCTS <i>/</i> {etf.ticker}</p>
         <WalletConnect compact />
       </header>
@@ -388,12 +388,14 @@ export default function EtfDetailClient({ etf }: { etf: Etf }) {
       <section className="product-detail-hero" aria-labelledby="detail-product-name">
         <div className="product-detail-copy">
           <button className="detail-back" type="button" onClick={() => window.location.assign("/?app=select")}>← ALL ETF PRODUCTS</button>
-          <div className="product-detail-labels"><span>MODEL FUND / {etf.ticker}</span><b className={`strategy-style-badge strategy-${etf.strategyStyle}`}>{etf.strategyStyle.toUpperCase()}</b><b className={`risk-badge risk-${etf.risk.toLowerCase()}`}>{etf.risk} RISK</b></div>
+          <span className="product-signature">{etf.signature}</span>
+          <div className="product-detail-labels"><span>{etf.roleName} / {etf.ticker}</span><b className={`strategy-style-badge strategy-${etf.strategyStyle}`}>{etf.strategyStyle.toUpperCase()}</b><b className={`risk-badge risk-${etf.risk.toLowerCase()}`}>{etf.risk} RISK</b></div>
           <h1 id="detail-product-name">{etf.name}</h1>
           <h2>{etf.tagline}</h2>
           <p>{etf.description}</p>
-          <div className="product-hero-actions"><button type="button" onClick={openSubscription}>{subscriptionStatus ? "VIEW SIMULATION" : "SIMULATE ORDER"}</button><button type="button" onClick={() => setActiveTab("documents")}>REVIEW DOCUMENTS</button></div>
-          <dl className="product-hero-facts"><div><dt>STYLE</dt><dd>{etf.strategyStyle.toUpperCase()}</dd></div><div><dt>REBALANCE</dt><dd>{etf.rebalanceFrequency}</dd></div><div><dt>MINIMUM</dt><dd>{etf.minimum}</dd></div></dl>
+          <div className="product-fit-strip"><div><span>WHY CHOOSE IT</span><p>{etf.whyChoose}</p></div><div><span>BEST FOR</span><p>{etf.bestFor}</p></div><div><span>MAY NOT SUIT</span><p>{etf.notFor}</p></div></div>
+          <div className="product-hero-actions"><button type="button" onClick={openSubscription}>{subscriptionStatus ? "VIEW PAPER ALLOCATION" : "SIMULATE ALLOCATION"}</button><button type="button" onClick={() => setActiveTab("methodology")}>REVIEW METHOD</button></div>
+          <dl className="product-hero-facts"><div><dt>FEE</dt><dd>{etf.fee}</dd></div><div><dt>RISK</dt><dd>{etf.risk}</dd></div><div><dt>REBALANCE</dt><dd>{etf.rebalanceFrequency}</dd></div></dl>
         </div>
 
         <div className="product-hero-visual" aria-label={`${etf.name} animated ASCII product planet`}><MiniAsciiCelestial variant={etf.visual} /></div>

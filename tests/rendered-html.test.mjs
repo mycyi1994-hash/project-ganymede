@@ -19,11 +19,11 @@ test("server-renders the Ganymede landing page", async () => {
   assert.match(response.headers.get("content-type") ?? "", /^text\/html\b/i);
   const html = await response.text();
   assert.match(html, /GANYMEDE INDEX/);
-  assert.match(html, /FOUR FUNDS/);
+  assert.match(html, /FOUR STRATEGIES/);
   assert.match(html, /ONE CLEAR ORBIT/);
-  assert.match(html, /EXPLORE THE FUNDS/);
+  assert.match(html, /COMPARE STRATEGIES/);
   assert.match(html, /PRE-LAUNCH/);
-  assert.match(html, /GIWA TESTNET/);
+  assert.match(html, /GIWA SEPOLIA/);
 });
 
 test("direct ETF detail URLs render product and basket data", async () => {
@@ -37,7 +37,8 @@ test("direct ETF detail URLs render product and basket data", async () => {
   assert.match(html, /PERFORMANCE/);
   assert.match(html, /HOLDINGS/);
   assert.match(html, /INVESTMENT OBJECTIVE/);
-  assert.match(html, /SIMULATE ORDER/);
+  assert.match(html, /SIMULATE ALLOCATION/);
+  assert.match(html, /THE FOUNDATION/);
   assert.match(html, /GIWA Sepolia/);
 });
 
