@@ -40,6 +40,10 @@ function formatNav(value: string | undefined, fallback: string) {
   return `₩${(asNumber(value) / 1_000_000).toLocaleString("ko-KR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
+function formatWeight(value: number) {
+  return Number(value.toFixed(2)).toString();
+}
+
 async function currentWalletAddress() {
   if (!window.ethereum) return null;
   try {
@@ -229,9 +233,9 @@ function HoldingsPanel({ etf, liveProduct }: { etf: Etf; liveProduct: LiveProduc
       iconKey: target.symbol.toLowerCase(),
     };
   });
-  const targetWeight = liveBasket.reduce((sum, asset) => sum + asset.weight, 0);
-  if (liveBasket.length && targetWeight < 100) {
-    liveBasket.push({ rank: liveBasket.length + 1, ticker: "CASH", name: "Fund Cash Buffer", weight: 100 - targetWeight, assetClass: "Cash", description: "Mandate-level liquidity and operating cash buffer.", iconKey: "cash" });
+  const targetWeightBps = (liveProduct?.targets ?? []).reduce((sum, target) => sum + target.target_weight_bps, 0);
+  if (liveBasket.length && targetWeightBps < 10_000) {
+    liveBasket.push({ rank: liveBasket.length + 1, ticker: "CASH", name: "Fund Cash Buffer", weight: (10_000 - targetWeightBps) / 100, assetClass: "Cash", description: "Mandate-level liquidity and operating cash buffer.", iconKey: "cash" });
   }
   const basket = liveBasket.length ? liveBasket : etf.basket;
   const stops = basket.map((asset, index) => {
@@ -255,7 +259,7 @@ function HoldingsPanel({ etf, liveProduct }: { etf: Etf; liveProduct: LiveProduc
             <span>{asset.assetClass}</span>
             <span>{asset.description}</span>
             <span className="holding-progress"><i><b style={{ width: `${asset.weight / maximum * 100}%` }} /></i></span>
-            <span><b>{asset.weight}%</b></span>
+            <span><b>{formatWeight(asset.weight)}%</b></span>
           </div>
         ))}
       </div>
@@ -385,7 +389,7 @@ export default function EtfDetailClient({ etf }: { etf: Etf }) {
         <aside className="product-market-data">
           <span>FUND DATA / {liveProduct?.nav?.quality?.toUpperCase() ?? "INITIALIZING"}</span>
           <div className="product-nav"><small>LATEST NAV</small><b>{formatNav(liveProduct?.nav?.navPerShareMicros, etf.nav)}</b><em>{liveProduct?.status?.toUpperCase() ?? "BOOTSTRAPPING"}</em></div>
-          <dl><div><dt>FUND AUM</dt><dd>{liveProduct?.nav ? formatKrw(liveProduct.nav.netAssetValueKrw) : etf.aum}</dd></div><div><dt>1Y RETURN</dt><dd>+{etf.oneYearReturn}</dd></div><div><dt>EXPENSE RATIO</dt><dd>{etf.fee}</dd></div><div><dt>BASKET</dt><dd>{totalWeight}% / {etf.assetCount}</dd></div></dl>
+          <dl><div><dt>FUND AUM</dt><dd>{liveProduct?.nav ? formatKrw(liveProduct.nav.netAssetValueKrw) : etf.aum}</dd></div><div><dt>1Y RETURN</dt><dd>+{etf.oneYearReturn}</dd></div><div><dt>EXPENSE RATIO</dt><dd>{etf.fee}</dd></div><div><dt>BASKET</dt><dd>{liveProduct?.targets?.length ? `${liveProduct.targets.reduce((sum, target) => sum + target.target_weight_bps, 0) / 100}% / ${liveProduct.targets.length}` : `${totalWeight}% / ${etf.assetCount}`}</dd></div></dl>
         </aside>
       </section>
 
