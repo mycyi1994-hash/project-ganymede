@@ -1,4 +1,6 @@
-export type Filter = "all" | "core" | "growth" | "income";
+export type Filter = "all" | "passive" | "active";
+export type ProductCategory = "core" | "growth" | "income";
+export type StrategyStyle = "passive" | "active";
 export type Risk = "LOW" | "MEDIUM" | "HIGH";
 export type CelestialVisual = "core" | "tech" | "income" | "alpha";
 
@@ -17,7 +19,8 @@ export type Etf = {
   slug: string;
   ticker: string;
   name: string;
-  category: Exclude<Filter, "all">;
+  category: ProductCategory;
+  strategyStyle: StrategyStyle;
   tagline: string;
   description: string;
   oneYearReturn: string;
@@ -69,6 +72,7 @@ export const etfs: Etf[] = [
     ticker: "GMD CORE",
     name: "GANYMEDE CORE 20",
     category: "core",
+    strategyStyle: "passive",
     tagline: "Balanced exposure to leading digital assets.",
     description: "A diversified core strategy designed to capture long-term growth while reducing single-asset concentration.",
     oneYearReturn: "18.4%",
@@ -116,6 +120,7 @@ export const etfs: Etf[] = [
     ticker: "GMD TECH",
     name: "TECH LEADERS",
     category: "growth",
+    strategyStyle: "active",
     tagline: "Growth-focused leaders in blockchain infrastructure.",
     description: "A concentrated technology strategy focused on networks, middleware and protocols enabling the next generation of onchain applications.",
     oneYearReturn: "24.7%",
@@ -163,6 +168,7 @@ export const etfs: Etf[] = [
     ticker: "GMD YIELD",
     name: "DIGITAL INCOME",
     category: "income",
+    strategyStyle: "passive",
     tagline: "A diversified strategy designed for steady income.",
     description: "A lower-volatility digital allocation combining reserve assets, productive networks and a dedicated liquidity sleeve.",
     oneYearReturn: "11.2%",
@@ -210,6 +216,7 @@ export const etfs: Etf[] = [
     ticker: "GMD ALPHA",
     name: "NEXT FRONTIER",
     category: "growth",
+    strategyStyle: "active",
     tagline: "Emerging networks selected for long-term growth.",
     description: "A high-conviction basket of rapidly developing networks selected for adoption, capital efficiency and category expansion.",
     oneYearReturn: "29.1%",

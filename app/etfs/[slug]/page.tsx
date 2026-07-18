@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { etfs, getEtfBySlug } from "../../data/etfs";
-import EtfDetailClient from "./EtfDetailClient.tsx";
+import EtfDetailClient from "./EtfDetailClient";
 
 export function generateStaticParams() {
   return etfs.map((etf) => ({ slug: etf.slug }));

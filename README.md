@@ -1,98 +1,89 @@
-# vinext-starter
+# Ganymede ETF Operating System
 
-A clean full-stack starter running on
-[vinext](https://github.com/cloudflare/vinext), with optional Cloudflare D1 and
-Drizzle support.
+Ganymede is a full-stack operating system for passive and systematic-active digital-asset ETF products. It combines the investor product surface with portfolio construction, market data, NAV, rebalancing, execution, subscriptions, redemptions, GIWA settlement evidence and an append-only audit trail.
 
-## Prerequisites
+The deployed system defaults to `paper` mode. Live public issuance is deliberately gated until licensed fund, custody, transfer-agent, venue, administrator, distribution and approved offering-document integrations are configured.
 
-- Node.js `>=22.13.0`
+## Product mandates
 
-## Quick Start
+| Product | Style | Method |
+| --- | --- | --- |
+| GMD CORE | Passive | Liquidity-screened square-root float-market-cap index |
+| GMD YIELD | Passive | Liquidity-screened inverse-volatility index with cash buffer |
+| GMD TECH | Active | Momentum, liquidity and inverse-volatility composite |
+| GMD ALPHA | Active | Higher-frequency emerging-network composite with tighter caps |
+
+Stablecoins are excluded from the eligible investment universe. Every mandate enforces minimum history and liquidity, custody eligibility, position floors/caps, cash buffers and turnover limits.
+
+## Operating loop
+
+The Cloudflare Worker runs every five minutes and may also wake opportunistically on requests. A D1 lease prevents overlapping cycles.
+
+1. Refresh Upbit tickers, order books and daily candles; use clearly labelled deterministic reference data if the venue is unavailable.
+2. Process controlled subscription and redemption states.
+3. Evaluate all passive and active mandates.
+4. Validate eligibility, weights, turnover and rebalance cadence.
+5. Create idempotent sell-before-buy order intents.
+6. Execute through paper or explicitly enabled live Upbit adapters.
+7. Reconcile positions and publish fixed-point NAV snapshots with holdings hashes.
+8. Queue GIWA share mint/burn and NAV/rebalance evidence through an external relayer.
+9. Persist engine state and tamper-evident audit hashes.
+
+Monetary values and shares are stored as integer strings. No floating-point arithmetic is used for fund accounting or settlement.
+
+## Data model
+
+The migration in `drizzle/0000_giant_speedball.sql` creates 20 D1 tables covering products, assets, strategy configuration and signals, target allocations, prices, positions, NAVs, rebalances, orders, fills, investors, subscriptions, redemptions, investor positions, GIWA settlements, audit events, engine state and distributed leases.
+
+Generate a new migration after schema changes:
+
+```bash
+npm run db:generate
+```
+
+## API surface
+
+- `GET /api/market` — product NAV, target weights and latest engine cycle
+- `GET /api/health` — D1, Upbit and GIWA readiness
+- `GET|POST|DELETE /api/portfolio` — investor ledger, subscriptions and redemptions
+- `GET /api/operations/status` — orders, rebalances, settlements and cycle counters
+- `POST /api/operations/run` — authorized controlled cycle
+- `POST /api/operations/actions` — KYC, funding, redemption and product pause/resume controls
+
+Investor writes use the private Sites identity header or a GIWA wallet in paper mode. Live mode requires authenticated investor identity. Operator writes require an allowlisted identity or bearer token.
+
+## GIWA contracts
+
+`contracts/GanymedeFundShare.sol` implements a permissioned, pausable, six-decimal fund-share registry with idempotent subscription/redemption settlement. `contracts/GanymedeNavRegistry.sol` stores monotonic NAV and rebalance evidence hashes. Private keys are never accepted by the application; contract writes go through the configured external relayer and should be controlled by a multisig.
+
+GIWA Sepolia is a settlement test rail, not proof of custody, licensing or an Upbit mainnet relationship.
+
+## Local development
+
+Requires Node.js `>=22.13.0`.
 
 ```bash
 npm install
 npm run dev
-npm run build
+npm test
 ```
 
-This starter does not use `wrangler.jsonc`.
+The Sites configuration provisions the `DB` D1 binding and the build registers the five-minute cron. Apply the bundled migration to a local or hosted database before exercising APIs.
 
-## Included Shape
+## Environment and live activation
 
-- edit site code under `app/`
-- `.openai/hosting.json` declares optional Sites D1 and R2 bindings
-- `vite.config.ts` simulates declared bindings for local development
-- `db/schema.ts` starts intentionally empty
-- `examples/d1/` contains an optional D1 example surface
-- `drizzle.config.ts` supports local migration generation when needed
+Copy `.env.example` into the appropriate secret store. Never commit credentials.
 
-## Workspace Auth Headers
+Live Upbit execution is enabled only when all three conditions are true:
 
-OpenAI workspace sites can read the current user's email from
-`oai-authenticated-user-email`.
+1. `TRADING_MODE=live`
+2. Valid `UPBIT_ACCESS_KEY` and `UPBIT_SECRET_KEY`
+3. `LIVE_TRADING_CONFIRMATION=ENABLE_GANYMEDE_LIVE_UPBIT_ORDERS`
 
-SIWC-authenticated workspace sites may also receive
-`oai-authenticated-user-full-name` when the user's SIWC profile has a non-empty
-`name` claim. The full-name value is percent-encoded UTF-8 and is accompanied by
-`oai-authenticated-user-full-name-encoding: percent-encoded-utf-8`.
+GIWA writes additionally require a relayer URL/token and deployed share/NAV registry addresses. The application accepts no signing key.
 
-Treat the full name as optional and fall back to email when it is absent:
+Before live activation, complete legal classification, approved offering documents, fund administrator NAV sign-off, custody reconciliation, cash banking, venue whitelisting, transfer-agent controls, sanctions/KYC/AML workflows, disaster recovery, monitoring, key rotation, smart-contract audit and staged low-limit production testing.
 
-```tsx
-import { headers } from "next/headers";
+## Verification
 
-export default async function Home() {
-  const requestHeaders = await headers();
-  const email = requestHeaders.get("oai-authenticated-user-email");
-  const encodedFullName = requestHeaders.get("oai-authenticated-user-full-name");
-  const fullName =
-    encodedFullName &&
-    requestHeaders.get("oai-authenticated-user-full-name-encoding") ===
-      "percent-encoded-utf-8"
-      ? decodeURIComponent(encodedFullName)
-      : null;
-
-  const displayName = fullName ?? email;
-  // ...
-}
-```
-
-## Optional Dispatch-Owned ChatGPT Sign-In
-
-Import the ready-to-use helpers from `app/chatgpt-auth.ts` when the site needs
-optional or required ChatGPT sign-in:
-
-- Use `getChatGPTUser()` for optional signed-in UI.
-- Use `requireChatGPTUser(returnTo)` for server-rendered pages that should send
-  anonymous visitors through Sign in with ChatGPT.
-- Use `chatGPTSignInPath(returnTo)` and `chatGPTSignOutPath(returnTo)` for
-  browser links or actions.
-- Pass a same-origin relative `returnTo` path for the destination after sign-in
-  or sign-out. The helper validates and safely encodes it.
-- Mark protected pages with `export const dynamic = "force-dynamic"` because
-  they depend on per-request identity headers.
-
-Dispatch owns `/signin-with-chatgpt`, `/signout-with-chatgpt`, `/callback`, the
-OAuth cookies, and identity header injection. Do not implement app routes for
-those reserved paths. Routes that do not import and call the helper remain
-anonymous-compatible.
-
-SIWC establishes identity only; it does not prove workspace membership. Use the
-Sites hosting platform's access policy controls for workspace-wide restrictions,
-or enforce explicit server-side membership or allowlist checks.
-
-Use SIWC for account pages, user-specific dashboards, saved records, and write
-actions tied to the current ChatGPT user. Leave public content anonymous.
-
-## Useful Commands
-
-- `npm run dev`: start local development
-- `npm run build`: verify the vinext build output
-- `npm test`: build the starter and verify its rendered loading skeleton
-- `npm run db:generate`: generate Drizzle migrations after schema changes
-
-## Learn More
-
-- [vinext Documentation](https://github.com/cloudflare/vinext)
-- [Drizzle D1 Guide](https://orm.drizzle.team/docs/get-started/d1-new)
+`npm test` builds the Cloudflare target and verifies server-rendered routes, fixed-point accounting, passive constraints, active turnover controls and rebalance cadence. A local integration run should also verify the complete D1 flow: initial engine cycle, subscription request, controlled settlement cycle and resulting investor position.

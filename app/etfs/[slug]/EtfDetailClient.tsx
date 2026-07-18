@@ -7,6 +7,48 @@ import type { BasketAsset, Etf } from "../../data/etfs";
 
 type ProductTab = "overview" | "performance" | "holdings" | "methodology" | "documents";
 
+type LiveProduct = {
+  id: string;
+  strategyStyle: "passive" | "active";
+  status: string;
+  nav: null | {
+    navPerShareMicros: string;
+    netAssetValueKrw: string;
+    asOf: string;
+    quality: string;
+  };
+  lastRebalance: null | { status?: string; completed_at?: string };
+};
+
+type MarketPayload = {
+  products: LiveProduct[];
+  lastCycle: null | { mode: "paper" | "live"; marketDataQuality: string; completedAt: string };
+};
+
+function asNumber(value: string | number | null | undefined) {
+  const parsed = Number(value ?? 0);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function formatKrw(value: string | number) {
+  return `₩${asNumber(value).toLocaleString("ko-KR", { maximumFractionDigits: 0 })}`;
+}
+
+function formatNav(value: string | undefined, fallback: string) {
+  if (!value) return fallback;
+  return `₩${(asNumber(value) / 1_000_000).toLocaleString("ko-KR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
+async function currentWalletAddress() {
+  if (!window.ethereum) return null;
+  try {
+    const accounts = await window.ethereum.request({ method: "eth_accounts" }) as string[];
+    return accounts[0] ?? null;
+  } catch {
+    return null;
+  }
+}
+
 const tabs: Array<{ id: ProductTab; label: string }> = [
   { id: "overview", label: "OVERVIEW" },
   { id: "performance", label: "PERFORMANCE" },
@@ -52,7 +94,20 @@ function ProductTabs({ active, onChange }: { active: ProductTab; onChange: (tab:
   );
 }
 
-function OverviewPanel({ etf, added, onAdd }: { etf: Etf; added: boolean; onAdd: () => void }) {
+function OverviewPanel({ etf, liveProduct, engineMode, amountKrw, subscriptionStatus, submitting, orderError, onAmountChange, onSubscribe }: {
+  etf: Etf;
+  liveProduct: LiveProduct | null;
+  engineMode: "paper" | "live";
+  amountKrw: string;
+  subscriptionStatus: string;
+  submitting: boolean;
+  orderError: string;
+  onAmountChange: (value: string) => void;
+  onSubscribe: () => void;
+}) {
+  const navPerShare = liveProduct?.nav ? asNumber(liveProduct.nav.navPerShareMicros) / 1_000_000 : asNumber(etf.nav.replace("$", ""));
+  const estimatedShares = navPerShare > 0 ? asNumber(amountKrw) / navPerShare : 0;
+  const hasRequest = Boolean(subscriptionStatus);
   return (
     <div className="product-overview-panel">
       <div className="product-overview-main">
@@ -91,18 +146,24 @@ function OverviewPanel({ etf, added, onAdd }: { etf: Etf; added: boolean; onAdd:
         </article>
       </div>
 
-      <aside className="product-order-card" aria-label="Add model position">
-        <div className="order-card-heading"><span>MODEL POSITION</span><b>TESTNET DEMO</b></div>
-        <p>Track this strategy in your local portfolio. No purchase or blockchain transaction will occur.</p>
+      <aside className="product-order-card" aria-label="ETF subscription order">
+        <div className="order-card-heading"><span>SUBSCRIPTION</span><b>{engineMode === "live" ? "LIVE CONTROLLED" : "PAPER CONTROLLED"}</b></div>
+        <p>Submit a primary-market fund-share subscription. KYC, cash funding, execution and GIWA settlement are tracked as separate controlled states.</p>
+        <label className="subscription-amount">
+          <span>SUBSCRIPTION AMOUNT / KRW</span>
+          <input type="number" min="100000" step="100000" inputMode="numeric" value={amountKrw} onChange={(event) => onAmountChange(event.target.value)} aria-describedby="subscription-minimum" />
+        </label>
         <dl>
-          <div><dt>MODEL ALLOCATION</dt><dd>$10,000</dd></div>
-          <div><dt>REFERENCE NAV</dt><dd>{etf.nav}</dd></div>
-          <div><dt>EST. UNITS</dt><dd>{(10000 / Number.parseFloat(etf.nav.replace("$", ""))).toFixed(3)}</dd></div>
+          <div><dt>ORDER NOTIONAL</dt><dd>{formatKrw(amountKrw)}</dd></div>
+          <div><dt>{liveProduct?.nav ? "LATEST NAV" : "REFERENCE NAV"}</dt><dd>{formatNav(liveProduct?.nav?.navPerShareMicros, etf.nav)}</dd></div>
+          <div><dt>EST. FUND SHARES</dt><dd>{estimatedShares.toLocaleString("en-US", { minimumFractionDigits: 3, maximumFractionDigits: 3 })}</dd></div>
           <div><dt>EXPENSE RATIO</dt><dd>{etf.fee}</dd></div>
         </dl>
-        <button type="button" className={`product-add-button${added ? " is-added" : ""}`} onClick={onAdd}>{added ? "VIEW IN PORTFOLIO" : "ADD TO PORTFOLIO"}</button>
+        <button type="button" disabled={submitting || asNumber(amountKrw) < 100_000} className={`product-add-button${hasRequest ? " is-added" : ""}`} onClick={onSubscribe}>{submitting ? "SUBMITTING…" : hasRequest ? "VIEW SUBSCRIPTION" : "SUBSCRIBE"}</button>
+        {subscriptionStatus && <p className="subscription-state" role="status">REQUEST STATUS <b>{subscriptionStatus.toUpperCase()}</b></p>}
+        {orderError && <p className="subscription-error" role="alert">{orderError}</p>}
         <WalletConnect />
-        <small>Wallet connection verifies GIWA Sepolia network access only. It does not authorize an investment.</small>
+        <small id="subscription-minimum">Minimum ₩100,000. A wallet connection identifies the GIWA settlement account; it does not bypass KYC, funding approval or fund controls.</small>
       </aside>
     </div>
   );
@@ -137,11 +198,9 @@ function PerformancePanel({ etf }: { etf: Etf }) {
 }
 
 function HoldingsPanel({ etf }: { etf: Etf }) {
-  let cursor = 0;
   const stops = etf.basket.map((asset, index) => {
-    const start = cursor;
-    cursor += asset.weight;
-    return `${shades[index % shades.length]} ${start}% ${cursor}%`;
+    const start = etf.basket.slice(0, index).reduce((sum, preceding) => sum + preceding.weight, 0);
+    return `${shades[index % shades.length]} ${start}% ${start + asset.weight}%`;
   }).join(",");
   const maximum = Math.max(...etf.basket.map((asset) => asset.weight));
 
@@ -198,10 +257,10 @@ function DocumentsPanel({ etf }: { etf: Etf }) {
       </section>
       <aside id="risk-disclosure">
         <span>IMPORTANT INFORMATION</span>
-        <h3>Illustrative product environment</h3>
-        <p>Ganymede ETF products, NAVs, assets under management and performance figures shown here are illustrative and do not represent registered securities or an offer to buy or sell any financial instrument.</p>
-        <p>GIWA Sepolia is a test network. Test ETH and other testnet assets have no economic value. Network data may be reset, delayed or reorganized without notice.</p>
-        <p>Connecting MetaMask only requests account access and adds or switches to GIWA Sepolia. This interface does not request a signature or submit a transaction.</p>
+        <h3>Controlled product launch</h3>
+        <p>The strategy, NAV, order, rebalance, investor and audit services are implemented as an operating system. Public offering remains disabled until the fund, custody, transfer-agent, venue and distribution approvals are configured.</p>
+        <p>GIWA Sepolia is the current share-settlement rail. Testnet assets have no economic value and the relayer remains isolated from fund custody.</p>
+        <p>Performance history shown in this interface is illustrative until an administrator-verified live track record is available. Review the approved prospectus before investing.</p>
       </aside>
     </div>
   );
@@ -209,29 +268,60 @@ function DocumentsPanel({ etf }: { etf: Etf }) {
 
 export default function EtfDetailClient({ etf }: { etf: Etf }) {
   const [activeTab, setActiveTab] = useState<ProductTab>("overview");
-  const [added, setAdded] = useState(false);
+  const [liveProduct, setLiveProduct] = useState<LiveProduct | null>(null);
+  const [engineMode, setEngineMode] = useState<"paper" | "live">("paper");
+  const [amountKrw, setAmountKrw] = useState("1000000");
+  const [subscriptionStatus, setSubscriptionStatus] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [orderError, setOrderError] = useState("");
   const totalWeight = useMemo(() => etf.basket.reduce((sum, asset) => sum + asset.weight, 0), [etf.basket]);
 
   useEffect(() => {
-    setAdded(localStorage.getItem(`ganymede-portfolio-${etf.slug}`) === "added");
-  }, [etf.slug]);
+    let cancelled = false;
+    const load = async () => {
+      try {
+        const [marketResponse, walletAddress] = await Promise.all([fetch("/api/market", { cache: "no-store" }), currentWalletAddress()]);
+        const market = await marketResponse.json() as MarketPayload & { error?: string };
+        if (!marketResponse.ok) throw new Error(market.error || "Fund engine is unavailable");
+        if (!cancelled) {
+          setLiveProduct(market.products.find((product) => product.id === etf.id) ?? null);
+          setEngineMode(market.lastCycle?.mode ?? "paper");
+        }
+        const portfolioResponse = await fetch("/api/portfolio", { cache: "no-store", headers: walletAddress ? { "x-ganymede-wallet": walletAddress } : undefined });
+        if (!portfolioResponse.ok) return;
+        const portfolio = await portfolioResponse.json() as { subscriptions?: Array<{ product_id?: string; productId?: string; status?: string }> };
+        const latest = portfolio.subscriptions?.find((subscription) => (subscription.product_id ?? subscription.productId) === etf.id);
+        if (!cancelled && latest?.status) setSubscriptionStatus(latest.status);
+      } catch (error) {
+        if (!cancelled) setOrderError(error instanceof Error ? error.message : "Fund engine is unavailable");
+      }
+    };
+    void load();
+    return () => { cancelled = true; };
+  }, [etf.id]);
 
-  const addToPortfolio = () => {
-    if (added) {
+  const subscribe = async () => {
+    if (subscriptionStatus) {
       window.location.assign("/?app=portfolio");
       return;
     }
-    let savedIds: string[] = [];
+    setSubmitting(true);
+    setOrderError("");
     try {
-      const stored = JSON.parse(localStorage.getItem("ganymede-portfolio-ids") ?? "[]");
-      savedIds = Array.isArray(stored) ? stored.filter((value): value is string => typeof value === "string") : [];
-    } catch {
-      savedIds = [];
+      const walletAddress = await currentWalletAddress();
+      const response = await fetch("/api/portfolio", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...(walletAddress ? { "x-ganymede-wallet": walletAddress } : {}) },
+        body: JSON.stringify({ productId: etf.id, amountKrw, walletAddress, clientReference: crypto.randomUUID() }),
+      });
+      const payload = await response.json() as { subscription?: { status?: string }; error?: string };
+      if (!response.ok) throw new Error(payload.error || "Subscription request failed");
+      setSubscriptionStatus(payload.subscription?.status ?? "submitted");
+    } catch (error) {
+      setOrderError(error instanceof Error ? error.message : "Subscription request failed");
+    } finally {
+      setSubmitting(false);
     }
-    if (!savedIds.includes(etf.id)) savedIds.push(etf.id);
-    localStorage.setItem("ganymede-portfolio-ids", JSON.stringify(savedIds));
-    localStorage.setItem(`ganymede-portfolio-${etf.slug}`, "added");
-    setAdded(true);
   };
 
   return (
@@ -242,38 +332,38 @@ export default function EtfDetailClient({ etf }: { etf: Etf }) {
         <WalletConnect compact />
       </header>
 
-      <div className="giwa-testnet-notice"><span><i /> GIWA CHAIN TESTNET</span><p>Connected network: GIWA Sepolia · Chain ID 91342 · Test assets have no economic value</p><a href="https://sepolia-explorer.giwa.io" target="_blank" rel="noreferrer">OPEN EXPLORER ↗</a></div>
+      <div className="giwa-testnet-notice"><span><i /> GIWA SETTLEMENT RAIL</span><p>GIWA Sepolia · Chain ID 91342 · Permissioned fund-share registry</p><a href="https://sepolia-explorer.giwa.io" target="_blank" rel="noreferrer">OPEN EXPLORER ↗</a></div>
 
       <section className="product-detail-hero" aria-labelledby="detail-product-name">
         <div className="product-detail-copy">
           <button className="detail-back" type="button" onClick={() => window.location.assign("/?app=select")}>← ALL ETF PRODUCTS</button>
-          <div className="product-detail-labels"><span>ETF / {etf.ticker}</span><b className={`risk-badge risk-${etf.risk.toLowerCase()}`}>{etf.risk} RISK</b></div>
+          <div className="product-detail-labels"><span>ETF / {etf.ticker}</span><b className={`strategy-style-badge strategy-${etf.strategyStyle}`}>{etf.strategyStyle.toUpperCase()}</b><b className={`risk-badge risk-${etf.risk.toLowerCase()}`}>{etf.risk} RISK</b></div>
           <h1 id="detail-product-name">{etf.name}</h1>
           <h2>{etf.tagline}</h2>
           <p>{etf.description}</p>
-          <div className="product-hero-actions"><button type="button" onClick={addToPortfolio}>{added ? "VIEW PORTFOLIO" : "ADD TO PORTFOLIO"}</button><button type="button" onClick={() => setActiveTab("documents")}>REVIEW DOCUMENTS</button></div>
+          <div className="product-hero-actions"><button type="button" onClick={() => setActiveTab("overview")}>{subscriptionStatus ? "VIEW SUBSCRIPTION" : "SUBSCRIBE"}</button><button type="button" onClick={() => setActiveTab("documents")}>REVIEW DOCUMENTS</button></div>
         </div>
 
         <div className="product-hero-visual" aria-label={`${etf.name} animated ASCII product planet`}><MiniAsciiCelestial variant={etf.visual} /></div>
 
         <aside className="product-market-data">
-          <span>MARKET DATA / ILLUSTRATIVE</span>
-          <div className="product-nav"><small>NAV</small><b>{etf.nav}</b><em>{etf.navChange}</em></div>
-          <dl><div><dt>MODEL AUM</dt><dd>{etf.aum}</dd></div><div><dt>1Y RETURN</dt><dd>+{etf.oneYearReturn}</dd></div><div><dt>EXPENSE RATIO</dt><dd>{etf.fee}</dd></div><div><dt>BASKET</dt><dd>{totalWeight}% / {etf.assetCount}</dd></div></dl>
+          <span>FUND DATA / {liveProduct?.nav?.quality?.toUpperCase() ?? "INITIALIZING"}</span>
+          <div className="product-nav"><small>LATEST NAV</small><b>{formatNav(liveProduct?.nav?.navPerShareMicros, etf.nav)}</b><em>{liveProduct?.status?.toUpperCase() ?? "BOOTSTRAPPING"}</em></div>
+          <dl><div><dt>FUND AUM</dt><dd>{liveProduct?.nav ? formatKrw(liveProduct.nav.netAssetValueKrw) : etf.aum}</dd></div><div><dt>1Y RETURN</dt><dd>+{etf.oneYearReturn}</dd></div><div><dt>EXPENSE RATIO</dt><dd>{etf.fee}</dd></div><div><dt>BASKET</dt><dd>{totalWeight}% / {etf.assetCount}</dd></div></dl>
         </aside>
       </section>
 
       <ProductTabs active={activeTab} onChange={setActiveTab} />
 
       <section id={`product-panel-${activeTab}`} role="tabpanel" aria-labelledby={`product-tab-${activeTab}`} className="product-tab-panel">
-        {activeTab === "overview" && <OverviewPanel etf={etf} added={added} onAdd={addToPortfolio} />}
+        {activeTab === "overview" && <OverviewPanel etf={etf} liveProduct={liveProduct} engineMode={engineMode} amountKrw={amountKrw} subscriptionStatus={subscriptionStatus} submitting={submitting} orderError={orderError} onAmountChange={setAmountKrw} onSubscribe={subscribe} />}
         {activeTab === "performance" && <PerformancePanel etf={etf} />}
         {activeTab === "holdings" && <HoldingsPanel etf={etf} />}
         {activeTab === "methodology" && <MethodologyPanel etf={etf} />}
         {activeTab === "documents" && <DocumentsPanel etf={etf} />}
       </section>
 
-      <footer className="product-detail-footer"><span>GANYMEDE INDEX / {etf.ticker}</span><p>Illustrative data only. Not an offer, recommendation or solicitation to invest.</p><span>GIWA SEPOLIA / 91342</span></footer>
+      <footer className="product-detail-footer"><span>GANYMEDE INDEX / {etf.ticker}</span><p>Subscriptions remain subject to KYC, approved offering documents, funding and operational acceptance.</p><span>GIWA SEPOLIA / 91342</span></footer>
     </main>
   );
 }
