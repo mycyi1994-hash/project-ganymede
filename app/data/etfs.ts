@@ -21,14 +21,27 @@ export type Etf = {
   tagline: string;
   description: string;
   oneYearReturn: string;
+  ytdReturn: string;
+  sinceInceptionReturn: string;
+  nav: string;
+  navChange: string;
+  aum: string;
   fee: string;
   risk: Risk;
+  volatility: string;
+  maxDrawdown: string;
+  benchmark: string;
+  inceptionDate: string;
+  domicile: string;
+  minimum: string;
+  distribution: string;
   assetCount: number;
   rebalanceFrequency: string;
   strategyType: string;
   lastRebalanced: string;
   factSheetUrl: string;
   visual: CelestialVisual;
+  monthlyReturns: number[];
   basket: BasketAsset[];
   methodology: {
     selection: string;
@@ -59,14 +72,27 @@ export const etfs: Etf[] = [
     tagline: "Balanced exposure to leading digital assets.",
     description: "A diversified core strategy designed to capture long-term growth while reducing single-asset concentration.",
     oneYearReturn: "18.4%",
+    ytdReturn: "12.8%",
+    sinceInceptionReturn: "31.6%",
+    nav: "$23.84",
+    navChange: "+1.42%",
+    aum: "$128.4M",
     fee: "0.35%",
     risk: "MEDIUM",
+    volatility: "38.2%",
+    maxDrawdown: "-21.4%",
+    benchmark: "Ganymede Digital Large Cap Index",
+    inceptionDate: "APR 18, 2024",
+    domicile: "CAYMAN ISLANDS",
+    minimum: "$100",
+    distribution: "ACCUMULATING",
     assetCount: 10,
     rebalanceFrequency: "QUARTERLY",
     strategyType: "CORE STRATEGY",
     lastRebalanced: "JUL 2026",
     factSheetUrl: "#methodology",
     visual: "core",
+    monthlyReturns: [2.8, -1.4, 4.2, 1.9, -2.1, 3.6, 5.1, -0.8, 2.4, 1.2, -1.7, 3.9],
     basket: [
       asset(1, "BTC", "Bitcoin", 42, "Store of Value", "Primary digital reserve asset and liquidity anchor."),
       asset(2, "ETH", "Ethereum", 28, "Smart Contract", "Core programmable settlement and application network."),
@@ -93,14 +119,27 @@ export const etfs: Etf[] = [
     tagline: "Growth-focused leaders in blockchain infrastructure.",
     description: "A concentrated technology strategy focused on networks, middleware and protocols enabling the next generation of onchain applications.",
     oneYearReturn: "24.7%",
+    ytdReturn: "17.5%",
+    sinceInceptionReturn: "44.9%",
+    nav: "$31.26",
+    navChange: "+2.08%",
+    aum: "$94.7M",
     fee: "0.48%",
     risk: "HIGH",
+    volatility: "52.7%",
+    maxDrawdown: "-29.8%",
+    benchmark: "Ganymede Blockchain Infrastructure Index",
+    inceptionDate: "JUN 03, 2024",
+    domicile: "CAYMAN ISLANDS",
+    minimum: "$100",
+    distribution: "ACCUMULATING",
     assetCount: 12,
     rebalanceFrequency: "MONTHLY",
     strategyType: "GROWTH STRATEGY",
     lastRebalanced: "JUL 2026",
     factSheetUrl: "#methodology",
     visual: "tech",
+    monthlyReturns: [4.1, -2.8, 6.4, 3.2, -3.6, 5.8, 7.1, -1.9, 3.7, 2.4, -2.2, 4.8],
     basket: [
       asset(1, "ETH", "Ethereum", 36, "Smart Contract", "Programmable settlement layer and application platform."),
       asset(2, "SOL", "Solana", 18, "Smart Contract", "High-performance application and payments network."),
@@ -127,14 +166,27 @@ export const etfs: Etf[] = [
     tagline: "A diversified strategy designed for steady income.",
     description: "A lower-volatility digital allocation combining reserve assets, productive networks and a dedicated liquidity sleeve.",
     oneYearReturn: "11.2%",
+    ytdReturn: "7.9%",
+    sinceInceptionReturn: "19.8%",
+    nav: "$18.72",
+    navChange: "+0.36%",
+    aum: "$76.2M",
     fee: "0.40%",
     risk: "LOW",
+    volatility: "22.9%",
+    maxDrawdown: "-12.6%",
+    benchmark: "Ganymede Digital Income Index",
+    inceptionDate: "AUG 12, 2024",
+    domicile: "CAYMAN ISLANDS",
+    minimum: "$100",
+    distribution: "QUARTERLY",
     assetCount: 8,
     rebalanceFrequency: "MONTHLY",
     strategyType: "INCOME STRATEGY",
     lastRebalanced: "JUL 2026",
     factSheetUrl: "#methodology",
     visual: "income",
+    monthlyReturns: [1.4, 0.6, 1.8, -0.7, 0.9, 1.2, 2.1, -0.4, 1.1, 0.8, -0.5, 1.6],
     basket: [
       asset(1, "USDC", "USD Coin", 32, "Cash Equivalent", "Liquidity reserve and volatility buffer."),
       asset(2, "ETH", "Ethereum", 24, "Smart Contract", "Productive network exposure with staking economics."),
@@ -161,14 +213,27 @@ export const etfs: Etf[] = [
     tagline: "Emerging networks selected for long-term growth.",
     description: "A high-conviction basket of rapidly developing networks selected for adoption, capital efficiency and category expansion.",
     oneYearReturn: "29.1%",
+    ytdReturn: "21.3%",
+    sinceInceptionReturn: "53.7%",
+    nav: "$36.41",
+    navChange: "+2.64%",
+    aum: "$61.8M",
     fee: "0.55%",
     risk: "HIGH",
+    volatility: "61.4%",
+    maxDrawdown: "-34.5%",
+    benchmark: "Ganymede Emerging Networks Index",
+    inceptionDate: "SEP 09, 2024",
+    domicile: "CAYMAN ISLANDS",
+    minimum: "$100",
+    distribution: "ACCUMULATING",
     assetCount: 14,
     rebalanceFrequency: "MONTHLY",
     strategyType: "ALPHA STRATEGY",
     lastRebalanced: "JUL 2026",
     factSheetUrl: "#methodology",
     visual: "alpha",
+    monthlyReturns: [5.3, -3.9, 7.8, 4.6, -5.1, 6.9, 8.2, -2.6, 4.5, 3.1, -3.4, 5.7],
     basket: [
       asset(1, "SOL", "Solana", 26, "Smart Contract", "High-throughput consumer and financial application network."),
       asset(2, "LINK", "Chainlink", 17, "Infrastructure", "Data, automation and interoperability infrastructure."),

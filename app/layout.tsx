@@ -10,17 +10,17 @@ export async function generateMetadata(): Promise<Metadata> {
   const requestHeaders = await headers();
   const host = requestHeaders.get("x-forwarded-host") ?? requestHeaders.get("host") ?? "neptune-onboarding-seoul.duddlfqotl.chatgpt.site";
   const protocol = requestHeaders.get("x-forwarded-proto") ?? "https";
-  const imageUrl = `${protocol}://${host}/og.png`;
+  const imageUrl = `${protocol}://${host}/og-v2.png`;
 
   return {
-    title: "Project Ganymede",
-    description: "A cinematic crypto index basket built from living ASCII.",
+    title: "Ganymede Index — Digital Asset ETF Strategies",
+    description: "Research, compare and track rules-based digital asset ETF strategies on GIWA Testnet.",
     openGraph: {
-      title: "Project Ganymede",
-      description: "A cinematic crypto index basket built from living ASCII.",
-      images: [{ url: imageUrl, width: 1200, height: 630, alt: "Project Ganymede ASCII moon" }],
+      title: "Ganymede Index — Digital Asset ETF Strategies",
+      description: "Research, compare and track rules-based digital asset ETF strategies on GIWA Testnet.",
+      images: [{ url: imageUrl, width: 1200, height: 630, alt: "Ganymede Index digital asset ETF platform" }],
     },
-    twitter: { card: "summary_large_image", title: "Project Ganymede", description: "A cinematic crypto index basket built from living ASCII.", images: [imageUrl] },
+    twitter: { card: "summary_large_image", title: "Ganymede Index — Digital Asset ETF Strategies", description: "Research, compare and track rules-based digital asset ETF strategies on GIWA Testnet.", images: [imageUrl] },
   };
 }
 

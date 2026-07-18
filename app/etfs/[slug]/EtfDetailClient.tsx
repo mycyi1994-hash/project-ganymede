@@ -2,227 +2,213 @@
 
 import { KeyboardEvent, useEffect, useMemo, useState } from "react";
 import MiniAsciiCelestial from "../../MiniAsciiCelestial";
+import WalletConnect from "../../WalletConnect";
 import type { BasketAsset, Etf } from "../../data/etfs";
 
-type BasketTab = "allocation" | "assets" | "methodology";
+type ProductTab = "overview" | "performance" | "holdings" | "methodology" | "documents";
 
-const tabs: Array<{ id: BasketTab; label: string }> = [
-  { id: "allocation", label: "ALLOCATION" },
-  { id: "assets", label: "ASSET LIST" },
+const tabs: Array<{ id: ProductTab; label: string }> = [
+  { id: "overview", label: "OVERVIEW" },
+  { id: "performance", label: "PERFORMANCE" },
+  { id: "holdings", label: "HOLDINGS" },
   { id: "methodology", label: "METHODOLOGY" },
+  { id: "documents", label: "DOCUMENTS & RISKS" },
 ];
 
 const shades = ["#eeede8", "#aaa9a4", "#85847f", "#64635f", "#4d4c49", "#393936"];
-
-function assetShade(index: number, ticker: string, highlighted: string | null) {
-  if (!highlighted) return shades[index % shades.length];
-  return highlighted === ticker ? "#ffffff" : ["#5a5955", "#474642", "#3c3b38", "#343330", "#2d2c2a", "#272624"][index % 6];
-}
 
 function AssetMark({ asset }: { asset: BasketAsset }) {
   return <span className={`detail-asset-mark mark-${asset.iconKey}`} aria-hidden="true">{asset.ticker.slice(0, 1)}</span>;
 }
 
-function BasketTabs({ active, onChange }: { active: BasketTab; onChange: (tab: BasketTab) => void }) {
-  const handleKeyDown = (event: KeyboardEvent<HTMLButtonElement>, current: BasketTab) => {
-    if (!(["ArrowLeft", "ArrowRight", "Home", "End"] as string[]).includes(event.key)) return;
+function ProductTabs({ active, onChange }: { active: ProductTab; onChange: (tab: ProductTab) => void }) {
+  const handleKeyDown = (event: KeyboardEvent<HTMLButtonElement>, current: ProductTab) => {
+    if (!(event.key === "ArrowLeft" || event.key === "ArrowRight" || event.key === "Home" || event.key === "End")) return;
     event.preventDefault();
     const currentIndex = tabs.findIndex((tab) => tab.id === current);
-    const nextIndex = event.key === "Home"
-      ? 0
-      : event.key === "End"
-        ? tabs.length - 1
-        : (currentIndex + (event.key === "ArrowRight" ? 1 : -1) + tabs.length) % tabs.length;
+    const nextIndex = event.key === "Home" ? 0 : event.key === "End" ? tabs.length - 1 : (currentIndex + (event.key === "ArrowRight" ? 1 : -1) + tabs.length) % tabs.length;
     const next = tabs[nextIndex].id;
     onChange(next);
-    requestAnimationFrame(() => document.getElementById(`basket-tab-${next}`)?.focus());
+    requestAnimationFrame(() => document.getElementById(`product-tab-${next}`)?.focus());
   };
 
   return (
-    <div className="basket-tabs" role="tablist" aria-label="Basket details">
+    <div className="product-tabs" role="tablist" aria-label="ETF product information">
       {tabs.map((tab) => (
         <button
           key={tab.id}
-          id={`basket-tab-${tab.id}`}
+          id={`product-tab-${tab.id}`}
           type="button"
           role="tab"
           aria-selected={active === tab.id}
-          aria-controls={`basket-panel-${tab.id}`}
+          aria-controls={`product-panel-${tab.id}`}
           tabIndex={active === tab.id ? 0 : -1}
           className={active === tab.id ? "is-active" : ""}
           onClick={() => onChange(tab.id)}
           onKeyDown={(event) => handleKeyDown(event, tab.id)}
-        >
-          {tab.label}
-        </button>
+        >{tab.label}</button>
       ))}
     </div>
   );
 }
 
-function AllocationDonut({ basket, highlighted, onHighlight }: {
-  basket: BasketAsset[];
-  highlighted: string | null;
-  onHighlight: (ticker: string | null) => void;
-}) {
+function OverviewPanel({ etf, added, onAdd }: { etf: Etf; added: boolean; onAdd: () => void }) {
+  return (
+    <div className="product-overview-panel">
+      <div className="product-overview-main">
+        <article className="product-information-card objective-card">
+          <span>INVESTMENT OBJECTIVE</span>
+          <h3>What this strategy is designed to do</h3>
+          <p>{etf.description}</p>
+          <div className="objective-points">
+            <div><b>RULES-BASED</b><p>Transparent selection and weighting methodology.</p></div>
+            <div><b>DIVERSIFIED</b><p>{etf.assetCount} eligible assets across the strategy universe.</p></div>
+            <div><b>REBALANCED</b><p>{etf.rebalanceFrequency.toLowerCase()} review and portfolio maintenance.</p></div>
+          </div>
+        </article>
+
+        <article className="product-information-card product-facts-card">
+          <span>PRODUCT FACTS</span>
+          <dl>
+            <div><dt>Benchmark</dt><dd>{etf.benchmark}</dd></div>
+            <div><dt>Inception</dt><dd>{etf.inceptionDate}</dd></div>
+            <div><dt>Domicile</dt><dd>{etf.domicile}</dd></div>
+            <div><dt>Distribution</dt><dd>{etf.distribution}</dd></div>
+            <div><dt>Minimum model position</dt><dd>{etf.minimum}</dd></div>
+            <div><dt>Rebalance</dt><dd>{etf.rebalanceFrequency}</dd></div>
+          </dl>
+        </article>
+
+        <article className="product-information-card risk-summary-card">
+          <span>KEY RISKS</span>
+          <h3>{etf.risk} risk classification</h3>
+          <p>{etf.methodology.risk}</p>
+          <ul>
+            <li>Digital assets may experience extreme price volatility and liquidity gaps.</li>
+            <li>Index methodology and constituent eligibility may change at rebalance.</li>
+            <li>Model returns do not include taxes, spreads or execution costs.</li>
+          </ul>
+        </article>
+      </div>
+
+      <aside className="product-order-card" aria-label="Add model position">
+        <div className="order-card-heading"><span>MODEL POSITION</span><b>TESTNET DEMO</b></div>
+        <p>Track this strategy in your local portfolio. No purchase or blockchain transaction will occur.</p>
+        <dl>
+          <div><dt>MODEL ALLOCATION</dt><dd>$10,000</dd></div>
+          <div><dt>REFERENCE NAV</dt><dd>{etf.nav}</dd></div>
+          <div><dt>EST. UNITS</dt><dd>{(10000 / Number.parseFloat(etf.nav.replace("$", ""))).toFixed(3)}</dd></div>
+          <div><dt>EXPENSE RATIO</dt><dd>{etf.fee}</dd></div>
+        </dl>
+        <button type="button" className={`product-add-button${added ? " is-added" : ""}`} onClick={onAdd}>{added ? "VIEW IN PORTFOLIO" : "ADD TO PORTFOLIO"}</button>
+        <WalletConnect />
+        <small>Wallet connection verifies GIWA Sepolia network access only. It does not authorize an investment.</small>
+      </aside>
+    </div>
+  );
+}
+
+function PerformancePanel({ etf }: { etf: Etf }) {
+  const months = ["AUG", "SEP", "OCT", "NOV", "DEC", "JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL"];
+  return (
+    <div className="performance-panel">
+      <dl className="performance-summary">
+        <div><dt>YTD</dt><dd>+{etf.ytdReturn}</dd></div>
+        <div><dt>1 YEAR</dt><dd>+{etf.oneYearReturn}</dd></div>
+        <div><dt>SINCE INCEPTION</dt><dd>+{etf.sinceInceptionReturn}</dd></div>
+        <div><dt>VOLATILITY</dt><dd>{etf.volatility}</dd></div>
+        <div><dt>MAX DRAWDOWN</dt><dd>{etf.maxDrawdown}</dd></div>
+      </dl>
+      <article className="return-chart-card">
+        <header><div><span>MONTHLY MODEL RETURNS</span><h3>Trailing 12 months</h3></div><p>Return %</p></header>
+        <div className="return-chart" role="img" aria-label={`Monthly returns for ${etf.name}: ${etf.monthlyReturns.join(", ")} percent`}>
+          {etf.monthlyReturns.map((value, index) => (
+            <div className="return-column" key={months[index]}>
+              <div className="return-bar-space"><i className={value >= 0 ? "is-positive" : "is-negative"} style={{ height: `${Math.abs(value) * 6 + 5}px` }} /></div>
+              <b>{value > 0 ? "+" : ""}{value.toFixed(1)}</b>
+              <span>{months[index]}</span>
+            </div>
+          ))}
+        </div>
+      </article>
+      <div className="performance-disclosure"><span>i</span><p>Past or illustrative performance does not guarantee future results. Returns are shown before taxes and may not reflect actual tradability.</p></div>
+    </div>
+  );
+}
+
+function HoldingsPanel({ etf }: { etf: Etf }) {
   let cursor = 0;
-  const stops = basket.map((asset, index) => {
+  const stops = etf.basket.map((asset, index) => {
     const start = cursor;
     cursor += asset.weight;
-    return `${assetShade(index, asset.ticker, highlighted)} ${start}% ${cursor}%`;
-  });
-  const label = basket.map((asset) => `${asset.name} ${asset.weight}%`).join(", ");
-
-  return (
-    <div className="allocation-visual">
-      <div
-        className="allocation-donut"
-        role="img"
-        aria-label={`ETF allocation: ${label}`}
-        style={{ background: `conic-gradient(${stops.join(",")})` }}
-      >
-        <span><b>100</b><small>% ALLOCATED</small></span>
-      </div>
-      <ul className="allocation-legend" aria-label="Allocation legend">
-        {basket.map((asset, index) => (
-          <li key={asset.ticker}>
-            <button
-              type="button"
-              className={highlighted === asset.ticker ? "is-highlighted" : ""}
-              onMouseEnter={() => onHighlight(asset.ticker)}
-              onMouseLeave={() => onHighlight(null)}
-              onFocus={() => onHighlight(asset.ticker)}
-              onBlur={() => onHighlight(null)}
-            >
-              <i style={{ background: assetShade(index, asset.ticker, highlighted) }} />
-              <strong>{asset.ticker}</strong>
-              <span>{asset.name}</span>
-              <em />
-              <b>{asset.weight}%</b>
-            </button>
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
-}
-
-function AllocationStackedBar({ basket, highlighted, onHighlight }: {
-  basket: BasketAsset[];
-  highlighted: string | null;
-  onHighlight: (ticker: string | null) => void;
-}) {
-  return (
-    <div className="allocation-stack" aria-label="100% stacked allocation bar">
-      {basket.map((asset, index) => (
-        <button
-          key={asset.ticker}
-          type="button"
-          style={{ width: `${asset.weight}%`, background: assetShade(index, asset.ticker, highlighted) }}
-          aria-label={`${asset.name}, ${asset.weight}%`}
-          onMouseEnter={() => onHighlight(asset.ticker)}
-          onMouseLeave={() => onHighlight(null)}
-          onFocus={() => onHighlight(asset.ticker)}
-          onBlur={() => onHighlight(null)}
-        >
-          {asset.weight >= 7 ? `${asset.weight}%` : ""}
-        </button>
-      ))}
-    </div>
-  );
-}
-
-function HoldingsTable({ basket, highlighted, onHighlight }: {
-  basket: BasketAsset[];
-  highlighted: string | null;
-  onHighlight: (ticker: string | null) => void;
-}) {
-  const maximum = Math.max(...basket.map((asset) => asset.weight));
-
-  return (
-    <div className="holdings-table" role="table" aria-label="ETF basket holdings">
-      <div className="holding-row holding-head" role="row">
-        <span role="columnheader">#</span><span role="columnheader">TICKER</span><span role="columnheader">ASSET</span><span role="columnheader">ALLOCATION</span><span role="columnheader">WEIGHT</span>
-      </div>
-      {basket.map((asset) => (
-        <button
-          className={`holding-row${highlighted === asset.ticker ? " is-highlighted" : ""}`}
-          role="row"
-          type="button"
-          key={asset.ticker}
-          onMouseEnter={() => onHighlight(asset.ticker)}
-          onMouseLeave={() => onHighlight(null)}
-          onFocus={() => onHighlight(asset.ticker)}
-          onBlur={() => onHighlight(null)}
-        >
-          <span role="cell">{String(asset.rank).padStart(2, "0")}</span>
-          <span role="cell" className="holding-ticker"><AssetMark asset={asset} /><b>{asset.ticker}</b></span>
-          <span role="cell" className="holding-name">{asset.name}</span>
-          <span role="cell" className="holding-progress"><i><b style={{ width: `${(asset.weight / maximum) * 100}%` }} /></i></span>
-          <span role="cell" className="holding-weight">{asset.weight}%</span>
-        </button>
-      ))}
-    </div>
-  );
-}
-
-function SummaryCards({ etf }: { etf: Etf }) {
+    return `${shades[index % shades.length]} ${start}% ${cursor}%`;
+  }).join(",");
   const maximum = Math.max(...etf.basket.map((asset) => asset.weight));
-  const assetClasses = new Set(etf.basket.map((asset) => asset.assetClass)).size;
-  return (
-    <aside className="basket-summary-cards" aria-label="Basket summary">
-      <div><span className="summary-symbol">&#10244;</span><p>LARGEST POSITION</p><strong>{maximum}<small>%</small></strong></div>
-      <div><span className="summary-symbol">&#11041;</span><p>ASSET CLASSES</p><strong>{String(assetClasses).padStart(2, "0")}</strong></div>
-      <div><span className="summary-symbol">&#9638;</span><p>LAST REBALANCED</p><strong className="summary-date">{etf.lastRebalanced}</strong></div>
-    </aside>
-  );
-}
 
-function AllocationPanel({ etf }: { etf: Etf }) {
-  const [highlighted, setHighlighted] = useState<string | null>(null);
   return (
-    <div className="allocation-panel">
-      <AllocationDonut basket={etf.basket} highlighted={highlighted} onHighlight={setHighlighted} />
-      <AllocationStackedBar basket={etf.basket} highlighted={highlighted} onHighlight={setHighlighted} />
-      <div className="holdings-and-summary">
-        <HoldingsTable basket={etf.basket} highlighted={highlighted} onHighlight={setHighlighted} />
-        <SummaryCards etf={etf} />
+    <div className="holdings-panel-v2">
+      <div className="basket-visual-v2">
+        <div className="allocation-donut" style={{ background: `conic-gradient(${stops})` }} role="img" aria-label={`${etf.name} basket allocation`}><span><b>100</b><small>% ALLOCATED</small></span></div>
+        <div><span>BASKET COMPOSITION</span><h3>{etf.assetCount} assets, 100% allocated</h3><p>Holdings are reviewed at each {etf.rebalanceFrequency.toLowerCase()} rebalance and may change without notice.</p></div>
       </div>
-      <p className="basket-caveat"><span aria-hidden="true">i</span> Weights are illustrative and may change at each rebalance.</p>
-    </div>
-  );
-}
-
-function AssetListPanel({ etf }: { etf: Etf }) {
-  return (
-    <div className="asset-list-panel">
-      <div className="asset-list-header"><span>RANK / ASSET</span><span>CLASS</span><span>ROLE IN BASKET</span><span>WEIGHT</span></div>
-      {etf.basket.map((asset) => (
-        <article key={asset.ticker} className="asset-list-row">
-          <div><small>{String(asset.rank).padStart(2, "0")}</small><AssetMark asset={asset} /><p><b>{asset.ticker}</b><span>{asset.name}</span></p></div>
-          <strong>{asset.assetClass}</strong>
-          <p>{asset.description}</p>
-          <em>{asset.weight}%</em>
-        </article>
-      ))}
+      <div className="holdings-table-v2" role="table" aria-label="ETF basket holdings">
+        <div className="holding-row-v2 holding-head-v2" role="row"><span>#</span><span>ASSET</span><span>CLASS</span><span>ROLE</span><span>ALLOCATION</span><span>WEIGHT</span></div>
+        {etf.basket.map((asset) => (
+          <div className="holding-row-v2" role="row" key={asset.ticker}>
+            <span>{String(asset.rank).padStart(2, "0")}</span>
+            <span className="holding-asset-v2"><AssetMark asset={asset} /><b>{asset.ticker}</b><small>{asset.name}</small></span>
+            <span>{asset.assetClass}</span>
+            <span>{asset.description}</span>
+            <span className="holding-progress"><i><b style={{ width: `${asset.weight / maximum * 100}%` }} /></i></span>
+            <span><b>{asset.weight}%</b></span>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
 
 function MethodologyPanel({ etf }: { etf: Etf }) {
   const items = [
-    ["01 / SELECTION", etf.methodology.selection],
-    ["02 / WEIGHTING", etf.methodology.weighting],
-    ["03 / REBALANCING", etf.methodology.rebalance],
-    ["04 / ELIGIBILITY", etf.methodology.eligibility],
-    ["05 / POSITION LIMITS", etf.methodology.limits],
-    ["06 / RISK NOTICE", etf.methodology.risk],
+    ["01", "SELECTION", etf.methodology.selection],
+    ["02", "WEIGHTING", etf.methodology.weighting],
+    ["03", "REBALANCING", etf.methodology.rebalance],
+    ["04", "ELIGIBILITY", etf.methodology.eligibility],
+    ["05", "POSITION LIMITS", etf.methodology.limits],
+    ["06", "RISK CONTROLS", etf.methodology.risk],
   ];
-  return <div className="methodology-panel">{items.map(([label, copy]) => <article key={label}><span>{label}</span><p>{copy}</p></article>)}</div>;
+  return <div className="methodology-panel-v2">{items.map(([number, label, copy]) => <article key={number}><span>{number}</span><div><b>{label}</b><p>{copy}</p></div></article>)}</div>;
+}
+
+function DocumentsPanel({ etf }: { etf: Etf }) {
+  const documents = [
+    ["PRODUCT SUMMARY", "Key product facts, objective, costs and risks", "UPDATED JUL 2026"],
+    ["INDEX METHODOLOGY", "Selection, weighting and rebalancing rules", "VERSION 2.1"],
+    ["RISK DISCLOSURE", "Digital asset, liquidity, custody and testnet risks", "UPDATED JUL 2026"],
+    ["HOLDINGS REPORT", `Current ${etf.assetCount}-asset basket composition`, etf.lastRebalanced],
+  ];
+  return (
+    <div className="documents-panel">
+      <section>
+        <span>PRODUCT DOCUMENTS</span>
+        <h3>Review before adding a strategy</h3>
+        {documents.map(([name, description, version], index) => (
+          <article key={name}><span>{String(index + 1).padStart(2, "0")}</span><div><b>{name}</b><p>{description}</p></div><small>{version}</small><button type="button" onClick={() => window.print()}>PRINT / SAVE</button></article>
+        ))}
+      </section>
+      <aside id="risk-disclosure">
+        <span>IMPORTANT INFORMATION</span>
+        <h3>Illustrative product environment</h3>
+        <p>Ganymede ETF products, NAVs, assets under management and performance figures shown here are illustrative and do not represent registered securities or an offer to buy or sell any financial instrument.</p>
+        <p>GIWA Sepolia is a test network. Test ETH and other testnet assets have no economic value. Network data may be reset, delayed or reorganized without notice.</p>
+        <p>Connecting MetaMask only requests account access and adds or switches to GIWA Sepolia. This interface does not request a signature or submit a transaction.</p>
+      </aside>
+    </div>
+  );
 }
 
 export default function EtfDetailClient({ etf }: { etf: Etf }) {
-  const [activeTab, setActiveTab] = useState<BasketTab>("allocation");
+  const [activeTab, setActiveTab] = useState<ProductTab>("overview");
   const [added, setAdded] = useState(false);
   const totalWeight = useMemo(() => etf.basket.reduce((sum, asset) => sum + asset.weight, 0), [etf.basket]);
 
@@ -231,9 +217,14 @@ export default function EtfDetailClient({ etf }: { etf: Etf }) {
   }, [etf.slug]);
 
   const addToPortfolio = () => {
+    if (added) {
+      window.location.assign("/?app=portfolio");
+      return;
+    }
     let savedIds: string[] = [];
     try {
-      savedIds = JSON.parse(localStorage.getItem("ganymede-portfolio-ids") ?? "[]");
+      const stored = JSON.parse(localStorage.getItem("ganymede-portfolio-ids") ?? "[]");
+      savedIds = Array.isArray(stored) ? stored.filter((value): value is string => typeof value === "string") : [];
     } catch {
       savedIds = [];
     }
@@ -243,62 +234,46 @@ export default function EtfDetailClient({ etf }: { etf: Etf }) {
     setAdded(true);
   };
 
-  const showMethodology = () => {
-    setActiveTab("methodology");
-    requestAnimationFrame(() => document.getElementById("basket-tab-methodology")?.focus());
-  };
-
   return (
-    <main className="etf-detail-shell">
-      <header className="detail-topbar">
-        <button type="button" className="detail-brand" onClick={() => window.location.assign("/")} aria-label="Ganymede Index overview"><span>G</span><strong>GANYMEDE INDEX</strong></button>
-        <p>SELECT ETF <i>/</i> {etf.ticker}</p>
-        <span className="detail-system"><i /> INDEX ONLINE</span>
+    <main className="product-detail-page">
+      <header className="detail-topbar product-detail-topbar">
+        <button type="button" className="detail-brand" onClick={() => window.location.assign("/")} aria-label="Ganymede Index overview"><span>G</span><strong>GANYMEDE INDEX<small>DIGITAL ASSET ETFs</small></strong></button>
+        <p>ETF PRODUCTS <i>/</i> {etf.ticker}</p>
+        <WalletConnect compact />
       </header>
 
-      <div className="etf-detail-layout">
-        <section className="etf-identity-panel" aria-labelledby="detail-product-name">
-          <button className="detail-back" type="button" onClick={() => window.location.assign("/?app=select")}>&larr; BACK TO ETF SELECTION</button>
-          <div className="detail-identity-copy">
-            <p className="detail-kicker">ETF / {etf.ticker}</p>
-            <h1 id="detail-product-name">{etf.name}</h1>
-            <h2>{etf.tagline}</h2>
-            <p>{etf.description}</p>
-          </div>
+      <div className="giwa-testnet-notice"><span><i /> GIWA CHAIN TESTNET</span><p>Connected network: GIWA Sepolia · Chain ID 91342 · Test assets have no economic value</p><a href="https://sepolia-explorer.giwa.io" target="_blank" rel="noreferrer">OPEN EXPLORER ↗</a></div>
 
-          <dl className="detail-metrics">
-            <div><dt>1Y RETURN</dt><dd>{etf.oneYearReturn}</dd></div>
-            <div><dt>FEE</dt><dd>{etf.fee}</dd></div>
-            <div><dt>RISK</dt><dd>{etf.risk}</dd></div>
-          </dl>
+      <section className="product-detail-hero" aria-labelledby="detail-product-name">
+        <div className="product-detail-copy">
+          <button className="detail-back" type="button" onClick={() => window.location.assign("/?app=select")}>← ALL ETF PRODUCTS</button>
+          <div className="product-detail-labels"><span>ETF / {etf.ticker}</span><b className={`risk-badge risk-${etf.risk.toLowerCase()}`}>{etf.risk} RISK</b></div>
+          <h1 id="detail-product-name">{etf.name}</h1>
+          <h2>{etf.tagline}</h2>
+          <p>{etf.description}</p>
+          <div className="product-hero-actions"><button type="button" onClick={addToPortfolio}>{added ? "VIEW PORTFOLIO" : "ADD TO PORTFOLIO"}</button><button type="button" onClick={() => setActiveTab("documents")}>REVIEW DOCUMENTS</button></div>
+        </div>
 
-          <div className="detail-facts">
-            <span><i aria-hidden="true">&#10248;</i><b>{etf.assetCount} ASSETS</b></span>
-            <span><i aria-hidden="true">&#8635;</i><b>{etf.rebalanceFrequency} REBALANCING</b></span>
-            <span><i aria-hidden="true">&#8857;</i><b>{etf.strategyType}</b></span>
-          </div>
+        <div className="product-hero-visual" aria-label={`${etf.name} animated ASCII product planet`}><MiniAsciiCelestial variant={etf.visual} /></div>
 
-          <div className="detail-particle-visual" aria-label={`${etf.name} animated ASCII product planet`}><MiniAsciiCelestial variant={etf.visual} /></div>
+        <aside className="product-market-data">
+          <span>MARKET DATA / ILLUSTRATIVE</span>
+          <div className="product-nav"><small>NAV</small><b>{etf.nav}</b><em>{etf.navChange}</em></div>
+          <dl><div><dt>MODEL AUM</dt><dd>{etf.aum}</dd></div><div><dt>1Y RETURN</dt><dd>+{etf.oneYearReturn}</dd></div><div><dt>EXPENSE RATIO</dt><dd>{etf.fee}</dd></div><div><dt>BASKET</dt><dd>{totalWeight}% / {etf.assetCount}</dd></div></dl>
+        </aside>
+      </section>
 
-          <div className="detail-actions">
-            <button type="button" className="fact-sheet-action" onClick={showMethodology}>VIEW FACT SHEET <span aria-hidden="true">&#8599;</span></button>
-            <button type="button" className={`portfolio-action${added ? " is-added" : ""}`} onClick={addToPortfolio} aria-pressed={added}>{added ? "ADDED TO PORTFOLIO" : "ADD TO PORTFOLIO"}</button>
-          </div>
-        </section>
+      <ProductTabs active={activeTab} onChange={setActiveTab} />
 
-        <section className="basket-composition-panel" aria-labelledby="basket-title">
-          <header className="basket-header">
-            <div><h2 id="basket-title">BASKET COMPOSITION</h2><p>{etf.assetCount} assets &middot; {totalWeight}% allocated</p></div>
-            <span>ETF / {etf.ticker}</span>
-          </header>
-          <BasketTabs active={activeTab} onChange={setActiveTab} />
-          <div id={`basket-panel-${activeTab}`} role="tabpanel" aria-labelledby={`basket-tab-${activeTab}`} className="basket-tab-panel">
-            {activeTab === "allocation" && <AllocationPanel etf={etf} />}
-            {activeTab === "assets" && <AssetListPanel etf={etf} />}
-            {activeTab === "methodology" && <MethodologyPanel etf={etf} />}
-          </div>
-        </section>
-      </div>
+      <section id={`product-panel-${activeTab}`} role="tabpanel" aria-labelledby={`product-tab-${activeTab}`} className="product-tab-panel">
+        {activeTab === "overview" && <OverviewPanel etf={etf} added={added} onAdd={addToPortfolio} />}
+        {activeTab === "performance" && <PerformancePanel etf={etf} />}
+        {activeTab === "holdings" && <HoldingsPanel etf={etf} />}
+        {activeTab === "methodology" && <MethodologyPanel etf={etf} />}
+        {activeTab === "documents" && <DocumentsPanel etf={etf} />}
+      </section>
+
+      <footer className="product-detail-footer"><span>GANYMEDE INDEX / {etf.ticker}</span><p>Illustrative data only. Not an offer, recommendation or solicitation to invest.</p><span>GIWA SEPOLIA / 91342</span></footer>
     </main>
   );
 }
