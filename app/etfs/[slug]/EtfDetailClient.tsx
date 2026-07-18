@@ -231,6 +231,14 @@ export default function EtfDetailClient({ etf }: { etf: Etf }) {
   }, [etf.slug]);
 
   const addToPortfolio = () => {
+    let savedIds: string[] = [];
+    try {
+      savedIds = JSON.parse(localStorage.getItem("ganymede-portfolio-ids") ?? "[]");
+    } catch {
+      savedIds = [];
+    }
+    if (!savedIds.includes(etf.id)) savedIds.push(etf.id);
+    localStorage.setItem("ganymede-portfolio-ids", JSON.stringify(savedIds));
     localStorage.setItem(`ganymede-portfolio-${etf.slug}`, "added");
     setAdded(true);
   };

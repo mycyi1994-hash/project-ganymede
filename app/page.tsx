@@ -137,42 +137,114 @@ function AppNav({ view, onOverview, onViewChange }: AppNavProps) {
   );
 }
 
-function PortfolioView({ etf, onChange }: { etf: Etf; onChange: () => void }) {
+function PortfolioView({ products, onChange, onRemove }: {
+  products: Etf[];
+  onChange: () => void;
+  onRemove: (etf: Etf) => void;
+}) {
+  const [syncLabel, setSyncLabel] = useState("REBALANCE MODEL");
+  const strategyWeight = 100 / products.length;
+  const palette = ["#eeede8", "#aaa9a4", "#777671", "#4d4c49"];
+  const blendedReturn = products.reduce((sum, product) => sum + Number.parseFloat(product.oneYearReturn), 0) / products.length;
+  const blendedFee = products.reduce((sum, product) => sum + Number.parseFloat(product.fee), 0) / products.length;
+  const riskScore = products.reduce((sum, product) => sum + ({ LOW: 1, MEDIUM: 2, HIGH: 3 }[product.risk]), 0) / products.length;
+  const blendedRisk = riskScore >= 2.45 ? "HIGH" : riskScore >= 1.55 ? "MEDIUM" : "LOW";
+  const uniqueAssets = new Set(products.flatMap((product) => product.basket.map((holding) => holding.ticker))).size;
+
+  const exposures = Array.from(products.reduce((map, product) => {
+    product.basket.forEach((holding) => {
+      const current = map.get(holding.ticker) ?? { ticker: holding.ticker, name: holding.name, weight: 0 };
+      current.weight += holding.weight / products.length;
+      map.set(holding.ticker, current);
+    });
+    return map;
+  }, new Map<string, { ticker: string; name: string; weight: number }>()).values())
+    .sort((a, b) => b.weight - a.weight);
+
+  let cursor = 0;
+  const ringStops = products.map((product, index) => {
+    const start = cursor;
+    cursor += strategyWeight;
+    return `${palette[index]} ${start}% ${cursor}%`;
+  }).join(",");
+
   return (
     <main className="portfolio-page">
-      <section className="portfolio-summary">
-        <p className="section-kicker">SELECTED ETF / {etf.ticker}</p>
-        <h1>{etf.name}</h1>
-        <p className="portfolio-strategy">{etf.tagline}</p>
-        <AsciiPlanet variant={etf.visual} />
-        <dl className="portfolio-metrics">
-          <div><dt>1Y RETURN</dt><dd>{etf.oneYearReturn}</dd></div>
-          <div><dt>FEE</dt><dd>{etf.fee}</dd></div>
-          <div><dt>RISK</dt><dd>{etf.risk}</dd></div>
-        </dl>
-        <button type="button" className="change-etf-button" onClick={onChange}>CHANGE ETF</button>
-      </section>
+      <header className="portfolio-header">
+        <div>
+          <p className="section-kicker">PORTFOLIO CONTROL / MODEL 01</p>
+          <h1>Mission portfolio</h1>
+          <p>A live model combining your selected Ganymede strategies.</p>
+        </div>
+        <div className="portfolio-header-actions">
+          <span><i /> MODEL ONLINE</span>
+          <button type="button" onClick={onChange}>ADD STRATEGY</button>
+          <button
+            type="button"
+            className="is-primary"
+            onClick={() => {
+              setSyncLabel("MODEL SYNCED");
+              window.setTimeout(() => setSyncLabel("REBALANCE MODEL"), 1800);
+            }}
+          >{syncLabel}</button>
+        </div>
+      </header>
 
-      <section className="portfolio-allocation" aria-labelledby="portfolio-title">
-        <header>
-          <div>
-            <p className="section-kicker">CURRENT ALLOCATION</p>
-            <h2 id="portfolio-title">Portfolio</h2>
+      <dl className="portfolio-kpis">
+        <div><dt>MODEL VALUE</dt><dd>$100,000</dd><small>Illustrative capital</small></div>
+        <div><dt>BLENDED 1Y</dt><dd>+{blendedReturn.toFixed(1)}%</dd><small>Weighted strategy return</small></div>
+        <div><dt>WEIGHTED FEE</dt><dd>{blendedFee.toFixed(2)}%</dd><small>Annual expense ratio</small></div>
+        <div><dt>RISK SIGNAL</dt><dd>{blendedRisk}</dd><small>{uniqueAssets} unique assets</small></div>
+      </dl>
+
+      <div className="portfolio-workspace">
+        <section className="portfolio-strategies" aria-labelledby="portfolio-title">
+          <header>
+            <div>
+              <p className="section-kicker">STRATEGY ALLOCATION</p>
+              <h2 id="portfolio-title">Selected ETFs</h2>
+            </div>
+            <strong>{products.length.toString().padStart(2, "0")} / 04</strong>
+          </header>
+          <div className="portfolio-strategy-body">
+            <div className="portfolio-ring" style={{ background: `conic-gradient(${ringStops})` }} role="img" aria-label={`${products.length} equally weighted ETF strategies`}>
+              <span><b>100</b><small>% DEPLOYED</small></span>
+            </div>
+            <ol className="portfolio-strategy-list">
+              {products.map((product, index) => (
+                <li key={product.id}>
+                  <i style={{ background: palette[index] }} />
+                  <span><b>{product.ticker}</b><small>{product.name}</small></span>
+                  <strong>{strategyWeight.toFixed(1)}%</strong>
+                  <button type="button" onClick={() => onRemove(product)} aria-label={`Remove ${product.name}`}>×</button>
+                </li>
+              ))}
+            </ol>
           </div>
-          <strong>100.00%</strong>
-        </header>
-        <ol>
-          {etf.basket.map((holding, index) => (
-            <li key={holding.ticker}>
-              <span className="allocation-rank">{String(index + 1).padStart(2, "0")}</span>
-              <strong>{holding.ticker}</strong>
-              <span className="allocation-track"><i style={{ width: `${holding.weight}%` }} /></span>
-              <b>{holding.weight.toFixed(2)}%</b>
-            </li>
-          ))}
-        </ol>
-        <p className="portfolio-note">Illustrative allocation. Holdings and weights may change at rebalance.</p>
-      </section>
+        </section>
+
+        <section className="portfolio-exposure" aria-labelledby="exposure-title">
+          <header>
+            <div>
+              <p className="section-kicker">LOOK-THROUGH EXPOSURE</p>
+              <h2 id="exposure-title">Underlying assets</h2>
+            </div>
+            <strong>{uniqueAssets.toString().padStart(2, "0")} ASSETS</strong>
+          </header>
+          <ol>
+            {exposures.slice(0, 8).map((holding, index) => (
+              <li key={holding.ticker}>
+                <span className="allocation-rank">{String(index + 1).padStart(2, "0")}</span>
+                <strong>{holding.ticker}</strong>
+                <span className="exposure-name">{holding.name}</span>
+                <span className="allocation-track"><i style={{ width: `${Math.min(100, holding.weight * 2.25)}%` }} /></span>
+                <b>{holding.weight.toFixed(1)}%</b>
+              </li>
+            ))}
+          </ol>
+          <p className="portfolio-note">Combined exposure is calculated from the current model weights. OTHER may include additional qualifying assets.</p>
+        </section>
+      </div>
     </main>
   );
 }
@@ -182,6 +254,7 @@ export default function Home() {
   const [view, setView] = useState<View>("select");
   const [activeFilter, setActiveFilter] = useState<Filter>("all");
   const [selectedEtfId, setSelectedEtfId] = useState("next-frontier");
+  const [portfolioEtfIds, setPortfolioEtfIds] = useState<string[]>([]);
 
   const visibleEtfs = useMemo(
     () => activeFilter === "all" ? etfs : etfs.filter((etf) => etf.category === activeFilter),
@@ -189,6 +262,22 @@ export default function Home() {
   );
 
   const selectedEtf = etfs.find((etf) => etf.id === selectedEtfId) ?? etfs[0];
+  const portfolioEtfs = (portfolioEtfIds.length
+    ? portfolioEtfIds.map((id) => etfs.find((etf) => etf.id === id)).filter((etf): etf is Etf => Boolean(etf))
+    : [selectedEtf]);
+
+  const refreshPortfolio = () => {
+    let savedIds: string[] = [];
+    try {
+      savedIds = JSON.parse(localStorage.getItem("ganymede-portfolio-ids") ?? "[]");
+    } catch {
+      savedIds = [];
+    }
+    const validIds = etfs
+      .filter((etf) => savedIds.includes(etf.id) || localStorage.getItem(`ganymede-portfolio-${etf.slug}`) === "added")
+      .map((etf) => etf.id);
+    setPortfolioEtfIds(validIds);
+  };
 
   useEffect(() => {
     const query = new URLSearchParams(window.location.search);
@@ -199,6 +288,7 @@ export default function Home() {
     if (returningToSelection) setAppOpen(true);
     if (savedFilter && filters.some((filter) => filter.id === savedFilter)) setActiveFilter(savedFilter);
     if (savedSelection && etfs.some((etf) => etf.id === savedSelection)) setSelectedEtfId(savedSelection);
+    refreshPortfolio();
 
     if (returningToSelection) {
       requestAnimationFrame(() => {
@@ -241,7 +331,10 @@ export default function Home() {
         <AppNav
           view={view}
           onOverview={() => setAppOpen(false)}
-          onViewChange={setView}
+          onViewChange={(nextView) => {
+            if (nextView === "portfolio") refreshPortfolio();
+            setView(nextView);
+          }}
         />
 
         {view === "select" ? (
@@ -280,7 +373,16 @@ export default function Home() {
             </section>
           </main>
         ) : (
-          <PortfolioView etf={selectedEtf} onChange={() => setView("select")} />
+          <PortfolioView
+            products={portfolioEtfs}
+            onChange={() => setView("select")}
+            onRemove={(product) => {
+              localStorage.removeItem(`ganymede-portfolio-${product.slug}`);
+              const nextIds = portfolioEtfIds.filter((id) => id !== product.id);
+              localStorage.setItem("ganymede-portfolio-ids", JSON.stringify(nextIds));
+              setPortfolioEtfIds(nextIds);
+            }}
+          />
         )}
 
         <footer className="app-disclaimer">Returns are illustrative. Review the prospectus before investing.</footer>

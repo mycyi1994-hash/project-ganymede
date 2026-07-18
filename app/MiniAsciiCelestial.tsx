@@ -348,6 +348,51 @@ export default function MiniAsciiCelestial({ variant }: { variant: CelestialVari
       const scale = Math.min(width, height) * config.scale;
       context.clearRect(0, 0, width, height);
 
+      const variantSeed = ({ core: 17, tech: 31, income: 47, alpha: 61 } as const)[variant];
+
+      const drawAmbientField = () => {
+        for (let index = 0; index < 42; index += 1) {
+          const x = hash(index * 3 + variantSeed) * width;
+          const y = hash(index * 7 + variantSeed + 9) * height;
+          const distance = Math.hypot((x - centerX) / Math.max(width, 1), (y - centerY) / Math.max(height, 1));
+          if (distance < 0.22) continue;
+          const pulse = reduceMotion ? 0.5 : 0.42 + Math.sin(elapsed * 0.0012 + index) * 0.18;
+          drawGlyph(index % 9 === 0 ? 2 : 0, x, y, 0.08 + pulse * 0.13, index % 13 === 0 ? 1.15 : 0.78);
+        }
+      };
+
+      const drawComet = () => {
+        const travel = reduceMotion ? 0.58 : (elapsed * 0.000032 + variantSeed * 0.017) % 1;
+        const headX = width * (1.16 - travel * 1.42);
+        const headY = height * (0.13 + travel * 0.38) + Math.sin(elapsed * 0.0005 + variantSeed) * height * 0.025;
+        for (let tail = 12; tail >= 0; tail -= 1) {
+          drawGlyph(
+            tail === 0 ? 3 : tail % 3 === 0 ? 8 : 0,
+            headX + tail * Math.max(3.7, width * 0.009),
+            headY - tail * Math.max(1.25, height * 0.006),
+            tail === 0 ? 0.75 : 0.34 * (1 - tail / 13),
+            tail === 0 ? 1.2 : 0.72,
+          );
+        }
+      };
+
+      const drawSpacecraft = (index: number) => {
+        const direction = index === 0 ? 1 : -1;
+        const angle = elapsed * (0.00011 + index * 0.000025) * direction + variantSeed * 0.08 + index * Math.PI;
+        const orbitX = width * (0.38 + index * 0.05);
+        const orbitY = height * (0.3 + index * 0.035);
+        const x = centerX + Math.cos(angle) * orbitX;
+        const y = centerY + Math.sin(angle) * orbitY;
+        const facing = Math.cos(angle) >= 0 ? 1 : -1;
+        drawGlyph(6, x - 6 * facing, y, 0.62, 0.85);
+        drawGlyph(7, x, y, 0.74, 0.9);
+        drawGlyph(6, x + 6 * facing, y, 0.62, 0.85);
+        drawGlyph(2, x - 11 * facing, y + 1, 0.32, 0.72);
+      };
+
+      drawAmbientField();
+      drawComet();
+
       const projectRing = (particle: RingParticle | { angle: number; radius: number }) => {
         const angle = particle.angle + elapsed * config.ringSpeed;
         const x = Math.cos(angle) * particle.radius;
@@ -410,6 +455,8 @@ export default function MiniAsciiCelestial({ variant }: { variant: CelestialVari
 
       drawRingLayer(true);
       drawMoonLayer(true);
+      drawSpacecraft(0);
+      drawSpacecraft(1);
 
       if (reduceMotion) cancelAnimationFrame(animationFrame);
     };
