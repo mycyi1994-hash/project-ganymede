@@ -17,6 +17,7 @@ type LiveProduct = {
     asOf: string;
     quality: string;
   };
+  targets: Array<{ symbol: string; target_weight_bps: number; rationale: string; effective_at: string }>;
   lastRebalance: null | { status?: string; completed_at?: string };
 };
 
@@ -58,6 +59,24 @@ const tabs: Array<{ id: ProductTab; label: string }> = [
 ];
 
 const shades = ["#eeede8", "#aaa9a4", "#85847f", "#64635f", "#4d4c49", "#393936"];
+
+const assetMetadata: Record<string, { name: string; assetClass: string }> = {
+  BTC: { name: "Bitcoin", assetClass: "Store of Value" },
+  ETH: { name: "Ethereum", assetClass: "Smart Contract" },
+  XRP: { name: "XRP", assetClass: "Payments" },
+  SOL: { name: "Solana", assetClass: "Smart Contract" },
+  DOGE: { name: "Dogecoin", assetClass: "Payments" },
+  ADA: { name: "Cardano", assetClass: "Smart Contract" },
+  TRX: { name: "TRON", assetClass: "Payments" },
+  AVAX: { name: "Avalanche", assetClass: "Smart Contract" },
+  LINK: { name: "Chainlink", assetClass: "Infrastructure" },
+  DOT: { name: "Polkadot", assetClass: "Interoperability" },
+  SUI: { name: "Sui", assetClass: "Smart Contract" },
+  NEAR: { name: "NEAR Protocol", assetClass: "Smart Contract" },
+  APT: { name: "Aptos", assetClass: "Smart Contract" },
+  ETC: { name: "Ethereum Classic", assetClass: "Smart Contract" },
+  CASH: { name: "Fund Cash Buffer", assetClass: "Cash" },
+};
 
 function AssetMark({ asset }: { asset: BasketAsset }) {
   return <span className={`detail-asset-mark mark-${asset.iconKey}`} aria-hidden="true">{asset.ticker.slice(0, 1)}</span>;
@@ -117,7 +136,7 @@ function OverviewPanel({ etf, liveProduct, engineMode, amountKrw, subscriptionSt
           <p>{etf.description}</p>
           <div className="objective-points">
             <div><b>RULES-BASED</b><p>Transparent selection and weighting methodology.</p></div>
-            <div><b>DIVERSIFIED</b><p>{etf.assetCount} eligible assets across the strategy universe.</p></div>
+            <div><b>DIVERSIFIED</b><p>{liveProduct?.targets?.length || etf.assetCount} eligible assets across the strategy universe.</p></div>
             <div><b>REBALANCED</b><p>{etf.rebalanceFrequency.toLowerCase()} review and portfolio maintenance.</p></div>
           </div>
         </article>
@@ -129,7 +148,7 @@ function OverviewPanel({ etf, liveProduct, engineMode, amountKrw, subscriptionSt
             <div><dt>Inception</dt><dd>{etf.inceptionDate}</dd></div>
             <div><dt>Domicile</dt><dd>{etf.domicile}</dd></div>
             <div><dt>Distribution</dt><dd>{etf.distribution}</dd></div>
-            <div><dt>Minimum model position</dt><dd>{etf.minimum}</dd></div>
+            <div><dt>Minimum subscription</dt><dd>{etf.minimum}</dd></div>
             <div><dt>Rebalance</dt><dd>{etf.rebalanceFrequency}</dd></div>
           </dl>
         </article>
@@ -141,7 +160,7 @@ function OverviewPanel({ etf, liveProduct, engineMode, amountKrw, subscriptionSt
           <ul>
             <li>Digital assets may experience extreme price volatility and liquidity gaps.</li>
             <li>Index methodology and constituent eligibility may change at rebalance.</li>
-            <li>Model returns do not include taxes, spreads or execution costs.</li>
+            <li>Displayed performance may not include taxes, spreads or all execution costs.</li>
           </ul>
         </article>
       </div>
@@ -197,22 +216,39 @@ function PerformancePanel({ etf }: { etf: Etf }) {
   );
 }
 
-function HoldingsPanel({ etf }: { etf: Etf }) {
-  const stops = etf.basket.map((asset, index) => {
-    const start = etf.basket.slice(0, index).reduce((sum, preceding) => sum + preceding.weight, 0);
+function HoldingsPanel({ etf, liveProduct }: { etf: Etf; liveProduct: LiveProduct | null }) {
+  const liveBasket: BasketAsset[] = (liveProduct?.targets ?? []).map((target, index) => {
+    const metadata = assetMetadata[target.symbol] ?? { name: target.symbol, assetClass: "Digital Asset" };
+    return {
+      rank: index + 1,
+      ticker: target.symbol,
+      name: metadata.name,
+      weight: target.target_weight_bps / 100,
+      assetClass: metadata.assetClass,
+      description: target.rationale,
+      iconKey: target.symbol.toLowerCase(),
+    };
+  });
+  const targetWeight = liveBasket.reduce((sum, asset) => sum + asset.weight, 0);
+  if (liveBasket.length && targetWeight < 100) {
+    liveBasket.push({ rank: liveBasket.length + 1, ticker: "CASH", name: "Fund Cash Buffer", weight: 100 - targetWeight, assetClass: "Cash", description: "Mandate-level liquidity and operating cash buffer.", iconKey: "cash" });
+  }
+  const basket = liveBasket.length ? liveBasket : etf.basket;
+  const stops = basket.map((asset, index) => {
+    const start = basket.slice(0, index).reduce((sum, preceding) => sum + preceding.weight, 0);
     return `${shades[index % shades.length]} ${start}% ${start + asset.weight}%`;
   }).join(",");
-  const maximum = Math.max(...etf.basket.map((asset) => asset.weight));
+  const maximum = Math.max(...basket.map((asset) => asset.weight));
 
   return (
     <div className="holdings-panel-v2">
       <div className="basket-visual-v2">
         <div className="allocation-donut" style={{ background: `conic-gradient(${stops})` }} role="img" aria-label={`${etf.name} basket allocation`}><span><b>100</b><small>% ALLOCATED</small></span></div>
-        <div><span>BASKET COMPOSITION</span><h3>{etf.assetCount} assets, 100% allocated</h3><p>Holdings are reviewed at each {etf.rebalanceFrequency.toLowerCase()} rebalance and may change without notice.</p></div>
+        <div><span>BASKET COMPOSITION</span><h3>{basket.length} positions, 100% allocated</h3><p>{liveBasket.length ? "Latest engine-approved target allocation, including the mandate cash buffer." : `Holdings are reviewed at each ${etf.rebalanceFrequency.toLowerCase()} rebalance and may change without notice.`}</p></div>
       </div>
       <div className="holdings-table-v2" role="table" aria-label="ETF basket holdings">
         <div className="holding-row-v2 holding-head-v2" role="row"><span>#</span><span>ASSET</span><span>CLASS</span><span>ROLE</span><span>ALLOCATION</span><span>WEIGHT</span></div>
-        {etf.basket.map((asset) => (
+        {basket.map((asset) => (
           <div className="holding-row-v2" role="row" key={asset.ticker}>
             <span>{String(asset.rank).padStart(2, "0")}</span>
             <span className="holding-asset-v2"><AssetMark asset={asset} /><b>{asset.ticker}</b><small>{asset.name}</small></span>
@@ -358,7 +394,7 @@ export default function EtfDetailClient({ etf }: { etf: Etf }) {
       <section id={`product-panel-${activeTab}`} role="tabpanel" aria-labelledby={`product-tab-${activeTab}`} className="product-tab-panel">
         {activeTab === "overview" && <OverviewPanel etf={etf} liveProduct={liveProduct} engineMode={engineMode} amountKrw={amountKrw} subscriptionStatus={subscriptionStatus} submitting={submitting} orderError={orderError} onAmountChange={setAmountKrw} onSubscribe={subscribe} />}
         {activeTab === "performance" && <PerformancePanel etf={etf} />}
-        {activeTab === "holdings" && <HoldingsPanel etf={etf} />}
+        {activeTab === "holdings" && <HoldingsPanel etf={etf} liveProduct={liveProduct} />}
         {activeTab === "methodology" && <MethodologyPanel etf={etf} />}
         {activeTab === "documents" && <DocumentsPanel etf={etf} />}
       </section>

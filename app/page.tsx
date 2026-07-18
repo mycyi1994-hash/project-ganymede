@@ -156,7 +156,7 @@ function EtfCard({ etf, liveProduct, onOpen, onNavigate }: {
           </div>
           <h2>{etf.name}</h2>
           <p>{etf.tagline}</p>
-          <small>{etf.strategyStyle === "passive" ? "RULES-BASED INDEX" : "SYSTEMATIC ACTIVE"} · {etf.assetCount} ASSETS</small>
+          <small>{etf.strategyStyle === "passive" ? "RULES-BASED INDEX" : "SYSTEMATIC ACTIVE"} · {liveProduct?.targets?.length || etf.assetCount} ASSETS</small>
         </div>
         <AsciiPlanet variant={etf.visual} />
       </div>

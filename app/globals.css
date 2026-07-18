@@ -1900,6 +1900,11 @@ body:has(.product-detail-page) { height: auto; min-height: 100%; overflow: auto;
 }
 
 @media (max-width: 700px) {
+  .etf-platform-shell { grid-template-rows: 100px minmax(0, 1fr) 36px; }
+  .etf-platform-shell .platform-topbar { height: 100px; grid-template-columns: 1fr; grid-template-rows: 50px 50px; }
+  .etf-platform-shell .platform-topbar .app-identity { grid-row: 1; width: 100%; }
+  .etf-platform-shell .platform-topbar .app-menu { grid-row: 2; width: 100%; min-width: 0; border-top: 1px solid var(--line-soft); }
+  .etf-platform-shell .platform-topbar .app-menu button { flex: 1; min-width: 0; padding: 0 3px; font-size: 7px; letter-spacing: 0.08em; }
   .platform-launch-nav .launch-wordmark b { font-size: 11px; }
   .etf-launch-copy > p:first-child { font-size: 9px; }
   .etf-launch-copy .launch-description { font-size: 15px; }
