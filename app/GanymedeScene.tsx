@@ -208,6 +208,7 @@ export default function GanymedeScene() {
     let glyphAtlas = makeGlyphAtlas(6);
     let start = performance.now();
     let lastFrame = 0;
+    let pageVisible = !document.hidden;
     const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
     const resize = () => {
@@ -227,6 +228,10 @@ export default function GanymedeScene() {
     };
 
     const draw = (now: number) => {
+      if (!pageVisible) {
+        animationFrame = requestAnimationFrame(draw);
+        return;
+      }
       if (!reduceMotion && now - lastFrame < 32) {
         animationFrame = requestAnimationFrame(draw);
         return;
@@ -360,11 +365,14 @@ export default function GanymedeScene() {
 
     resize();
     window.addEventListener("resize", resize);
+    const handleVisibility = () => { pageVisible = !document.hidden; };
+    document.addEventListener("visibilitychange", handleVisibility);
     animationFrame = requestAnimationFrame(draw);
 
     return () => {
       cancelAnimationFrame(animationFrame);
       window.removeEventListener("resize", resize);
+      document.removeEventListener("visibilitychange", handleVisibility);
     };
   }, []);
 

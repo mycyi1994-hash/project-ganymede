@@ -170,23 +170,26 @@ function OverviewPanel({ etf, liveProduct, engineMode, amountKrw, subscriptionSt
       </div>
 
       <aside className="product-order-card" aria-label="ETF subscription order">
-        <div className="order-card-heading"><span>SUBSCRIPTION</span><b>{engineMode === "live" ? "LIVE CONTROLLED" : "PAPER CONTROLLED"}</b></div>
-        <p>Submit a primary-market fund-share subscription. KYC, cash funding, execution and GIWA settlement are tracked as separate controlled states.</p>
+        <div className="order-card-heading"><span>ORDER SIMULATOR</span><b>{engineMode === "live" ? "LIVE CONTROLLED" : "PAPER / TESTNET"}</b></div>
+        <ol className="subscription-steps" aria-label="Subscription steps"><li className="is-active"><b>01</b><span>AMOUNT</span></li><li><b>02</b><span>ELIGIBILITY</span></li><li><b>03</b><span>REVIEW</span></li><li><b>04</b><span>SETTLE</span></li></ol>
+        <p>Preview a primary-market fund-share request. A live order requires identity, document consent, funding approval and an official valuation point.</p>
         <label className="subscription-amount">
           <span>SUBSCRIPTION AMOUNT / KRW</span>
           <input type="number" min="100000" step="100000" inputMode="numeric" value={amountKrw} onChange={(event) => onAmountChange(event.target.value)} aria-describedby="subscription-minimum" />
         </label>
+        <div className="amount-presets" aria-label="Quick amount selection"><button type="button" onClick={() => onAmountChange("500000")}>₩500K</button><button type="button" onClick={() => onAmountChange("1000000")}>₩1M</button><button type="button" onClick={() => onAmountChange("5000000")}>₩5M</button></div>
         <dl>
           <div><dt>ORDER NOTIONAL</dt><dd>{formatKrw(amountKrw)}</dd></div>
-          <div><dt>{liveProduct?.nav ? "LATEST NAV" : "REFERENCE NAV"}</dt><dd>{formatNav(liveProduct?.nav?.navPerShareMicros, etf.nav)}</dd></div>
+          <div><dt>{liveProduct?.nav ? "INDICATIVE NAV" : "REFERENCE NAV"}</dt><dd>{formatNav(liveProduct?.nav?.navPerShareMicros, etf.nav)}</dd></div>
           <div><dt>EST. FUND SHARES</dt><dd>{estimatedShares.toLocaleString("en-US", { minimumFractionDigits: 3, maximumFractionDigits: 3 })}</dd></div>
           <div><dt>EXPENSE RATIO</dt><dd>{etf.fee}</dd></div>
         </dl>
-        <button type="button" disabled={submitting || asNumber(amountKrw) < 100_000} className={`product-add-button${hasRequest ? " is-added" : ""}`} onClick={onSubscribe}>{submitting ? "SUBMITTING…" : hasRequest ? "VIEW SUBSCRIPTION" : "SUBSCRIBE"}</button>
+        <div className="order-environment"><span><i /> SIMULATION ONLY</span><p>No economic asset is issued on GIWA Sepolia.</p></div>
+        <button type="button" disabled={submitting || asNumber(amountKrw) < 100_000} className={`product-add-button${hasRequest ? " is-added" : ""}`} onClick={onSubscribe}>{submitting ? "SUBMITTING…" : hasRequest ? "VIEW SIMULATION" : "CONTINUE TO REVIEW"}</button>
         {subscriptionStatus && <p className="subscription-state" role="status">REQUEST STATUS <b>{subscriptionStatus.toUpperCase()}</b></p>}
         {orderError && <p className="subscription-error" role="alert">{orderError}</p>}
         <WalletConnect />
-        <small id="subscription-minimum">Minimum ₩100,000. A wallet connection identifies the GIWA settlement account; it does not bypass KYC, funding approval or fund controls.</small>
+        <small id="subscription-minimum">Minimum ₩100,000. The displayed share estimate uses indicative or reference NAV and can change before any approved dealing point.</small>
       </aside>
     </div>
   );
@@ -196,6 +199,7 @@ function PerformancePanel({ etf }: { etf: Etf }) {
   const months = ["AUG", "SEP", "OCT", "NOV", "DEC", "JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL"];
   return (
     <div className="performance-panel">
+      <div className="model-data-banner"><span>MODEL DATA</span><p>Illustrative strategy history · not an administrator-verified track record</p></div>
       <dl className="performance-summary">
         <div><dt>YTD</dt><dd>+{etf.ytdReturn}</dd></div>
         <div><dt>1 YEAR</dt><dd>+{etf.oneYearReturn}</dd></div>
@@ -281,10 +285,10 @@ function MethodologyPanel({ etf }: { etf: Etf }) {
 
 function DocumentsPanel({ etf }: { etf: Etf }) {
   const documents = [
-    ["PRODUCT SUMMARY", "Key product facts, objective, costs and risks", "UPDATED JUL 2026"],
-    ["INDEX METHODOLOGY", "Selection, weighting and rebalancing rules", "VERSION 2.1"],
-    ["RISK DISCLOSURE", "Digital asset, liquidity, custody and testnet risks", "UPDATED JUL 2026"],
-    ["HOLDINGS REPORT", `Current ${etf.assetCount}-asset basket composition`, etf.lastRebalanced],
+    ["PRODUCT SUMMARY", "Key product facts, objective, costs and risks", "DRAFT / PRE-LAUNCH"],
+    ["INDEX METHODOLOGY", "Selection, weighting and rebalancing rules", "DRAFT / V2.1"],
+    ["RISK DISCLOSURE", "Digital asset, liquidity, custody and testnet risks", "DRAFT / PRE-LAUNCH"],
+    ["HOLDINGS REPORT", `Current ${etf.assetCount}-asset model basket composition`, "MODEL PORTFOLIO"],
   ];
   return (
     <div className="documents-panel">
@@ -292,7 +296,7 @@ function DocumentsPanel({ etf }: { etf: Etf }) {
         <span>PRODUCT DOCUMENTS</span>
         <h3>Review before adding a strategy</h3>
         {documents.map(([name, description, version], index) => (
-          <article key={name}><span>{String(index + 1).padStart(2, "0")}</span><div><b>{name}</b><p>{description}</p></div><small>{version}</small><button type="button" onClick={() => window.print()}>PRINT / SAVE</button></article>
+          <article key={name}><span>{String(index + 1).padStart(2, "0")}</span><div><b>{name}</b><p>{description}</p></div><small>{version}</small><button type="button" disabled title="Approved downloadable document not yet available">COMING SOON</button></article>
         ))}
       </section>
       <aside id="risk-disclosure">
@@ -315,6 +319,13 @@ export default function EtfDetailClient({ etf }: { etf: Etf }) {
   const [submitting, setSubmitting] = useState(false);
   const [orderError, setOrderError] = useState("");
   const totalWeight = useMemo(() => etf.basket.reduce((sum, asset) => sum + asset.weight, 0), [etf.basket]);
+  const liveTargetWeightBps = (liveProduct?.targets ?? []).reduce((sum, target) => sum + target.target_weight_bps, 0);
+  const livePositionCount = (liveProduct?.targets?.length ?? 0) + (liveTargetWeightBps > 0 && liveTargetWeightBps < 10_000 ? 1 : 0);
+
+  const openSubscription = () => {
+    setActiveTab("overview");
+    window.setTimeout(() => document.querySelector<HTMLElement>(".product-order-card")?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -365,31 +376,33 @@ export default function EtfDetailClient({ etf }: { etf: Etf }) {
   };
 
   return (
-    <main className="product-detail-page">
+    <main className={`product-detail-page ganymede-v4 product-${etf.id}`}>
       <header className="detail-topbar product-detail-topbar">
         <button type="button" className="detail-brand" onClick={() => window.location.assign("/")} aria-label="Ganymede Index overview"><span>G</span><strong>GANYMEDE INDEX<small>DIGITAL ASSET ETFs</small></strong></button>
         <p>ETF PRODUCTS <i>/</i> {etf.ticker}</p>
         <WalletConnect compact />
       </header>
 
-      <div className="giwa-testnet-notice"><span><i /> GIWA SETTLEMENT RAIL</span><p>GIWA Sepolia · Chain ID 91342 · Permissioned fund-share registry</p><a href="https://sepolia-explorer.giwa.io" target="_blank" rel="noreferrer">OPEN EXPLORER ↗</a></div>
+      <div className="giwa-testnet-notice"><span><i /> PRE-LAUNCH TEST ENVIRONMENT</span><p>GIWA Sepolia · Chain ID 91342 · Simulated fund-share registry</p><a href="https://sepolia-explorer.giwa.io" target="_blank" rel="noreferrer">OPEN EXPLORER ↗</a></div>
 
       <section className="product-detail-hero" aria-labelledby="detail-product-name">
         <div className="product-detail-copy">
           <button className="detail-back" type="button" onClick={() => window.location.assign("/?app=select")}>← ALL ETF PRODUCTS</button>
-          <div className="product-detail-labels"><span>ETF / {etf.ticker}</span><b className={`strategy-style-badge strategy-${etf.strategyStyle}`}>{etf.strategyStyle.toUpperCase()}</b><b className={`risk-badge risk-${etf.risk.toLowerCase()}`}>{etf.risk} RISK</b></div>
+          <div className="product-detail-labels"><span>MODEL FUND / {etf.ticker}</span><b className={`strategy-style-badge strategy-${etf.strategyStyle}`}>{etf.strategyStyle.toUpperCase()}</b><b className={`risk-badge risk-${etf.risk.toLowerCase()}`}>{etf.risk} RISK</b></div>
           <h1 id="detail-product-name">{etf.name}</h1>
           <h2>{etf.tagline}</h2>
           <p>{etf.description}</p>
-          <div className="product-hero-actions"><button type="button" onClick={() => setActiveTab("overview")}>{subscriptionStatus ? "VIEW SUBSCRIPTION" : "SUBSCRIBE"}</button><button type="button" onClick={() => setActiveTab("documents")}>REVIEW DOCUMENTS</button></div>
+          <div className="product-hero-actions"><button type="button" onClick={openSubscription}>{subscriptionStatus ? "VIEW SIMULATION" : "SIMULATE ORDER"}</button><button type="button" onClick={() => setActiveTab("documents")}>REVIEW DOCUMENTS</button></div>
+          <dl className="product-hero-facts"><div><dt>STYLE</dt><dd>{etf.strategyStyle.toUpperCase()}</dd></div><div><dt>REBALANCE</dt><dd>{etf.rebalanceFrequency}</dd></div><div><dt>MINIMUM</dt><dd>{etf.minimum}</dd></div></dl>
         </div>
 
         <div className="product-hero-visual" aria-label={`${etf.name} animated ASCII product planet`}><MiniAsciiCelestial variant={etf.visual} /></div>
 
         <aside className="product-market-data">
-          <span>FUND DATA / {liveProduct?.nav?.quality?.toUpperCase() ?? "INITIALIZING"}</span>
-          <div className="product-nav"><small>LATEST NAV</small><b>{formatNav(liveProduct?.nav?.navPerShareMicros, etf.nav)}</b><em>{liveProduct?.status?.toUpperCase() ?? "BOOTSTRAPPING"}</em></div>
-          <dl><div><dt>FUND AUM</dt><dd>{liveProduct?.nav ? formatKrw(liveProduct.nav.netAssetValueKrw) : etf.aum}</dd></div><div><dt>1Y RETURN</dt><dd>+{etf.oneYearReturn}</dd></div><div><dt>EXPENSE RATIO</dt><dd>{etf.fee}</dd></div><div><dt>BASKET</dt><dd>{liveProduct?.targets?.length ? `${liveProduct.targets.reduce((sum, target) => sum + target.target_weight_bps, 0) / 100}% / ${liveProduct.targets.length}` : `${totalWeight}% / ${etf.assetCount}`}</dd></div></dl>
+          <span>INDICATIVE FUND DATA / {liveProduct?.nav?.quality?.toUpperCase() ?? "INITIALIZING"}</span>
+          <div className="product-nav"><small>INDICATIVE NAV</small><b>{formatNav(liveProduct?.nav?.navPerShareMicros, etf.nav)}</b><em>{liveProduct?.status?.toUpperCase() ?? "BOOTSTRAPPING"}</em></div>
+          <p className="product-nav-time">AS OF {liveProduct?.nav?.asOf ? new Date(liveProduct.nav.asOf).toLocaleString("ko-KR", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }) : "AWAITING DATA"}</p>
+          <dl><div><dt>FUND AUM</dt><dd>{liveProduct?.nav ? formatKrw(liveProduct.nav.netAssetValueKrw) : etf.aum}</dd></div><div><dt>MODEL 1Y</dt><dd>+{etf.oneYearReturn}</dd></div><div><dt>EXPENSE RATIO</dt><dd>{etf.fee}</dd></div><div><dt>BASKET</dt><dd>{liveProduct?.targets?.length ? `100% / ${livePositionCount}` : `${totalWeight}% / ${etf.assetCount}`}</dd></div></dl>
         </aside>
       </section>
 

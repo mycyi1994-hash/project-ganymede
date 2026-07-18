@@ -1,4 +1,7 @@
 @import "tailwindcss";
+@import "./ganymede-v4.css";
+
+@layer legacy {
 
 :root {
   --black: #070707;
@@ -1939,4 +1942,6 @@ body:has(.product-detail-page) { height: auto; min-height: 100%; overflow: auto;
   .etf-platform-launch::before,
   .etf-platform-shell::before,
   .product-detail-page::before { animation: none; }
+}
+
 }

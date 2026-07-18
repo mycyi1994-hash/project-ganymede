@@ -10,17 +10,19 @@ export async function generateMetadata(): Promise<Metadata> {
   const requestHeaders = await headers();
   const host = requestHeaders.get("x-forwarded-host") ?? requestHeaders.get("host") ?? "neptune-onboarding-seoul.duddlfqotl.chatgpt.site";
   const protocol = requestHeaders.get("x-forwarded-proto") ?? "https";
-  const imageUrl = `${protocol}://${host}/og-v2.png`;
+  const imageUrl = `${protocol}://${host}/og-v3.png`;
+  const title = "Ganymede Index — Four Funds. One Clear Orbit.";
+  const description = "Compare four pre-launch passive and active digital-asset fund strategies with indicative NAV and GIWA testnet settlement.";
 
   return {
-    title: "Ganymede Index — Digital Asset ETF Strategies",
-    description: "Research, compare and track rules-based digital asset ETF strategies on GIWA Testnet.",
+    title,
+    description,
     openGraph: {
-      title: "Ganymede Index — Digital Asset ETF Strategies",
-      description: "Research, compare and track rules-based digital asset ETF strategies on GIWA Testnet.",
-      images: [{ url: imageUrl, width: 1200, height: 630, alt: "Ganymede Index digital asset ETF platform" }],
+      title,
+      description,
+      images: [{ url: imageUrl, width: 1200, height: 630, alt: "Ganymede Index celestial fund observatory" }],
     },
-    twitter: { card: "summary_large_image", title: "Ganymede Index — Digital Asset ETF Strategies", description: "Research, compare and track rules-based digital asset ETF strategies on GIWA Testnet.", images: [imageUrl] },
+    twitter: { card: "summary_large_image", title, description, images: [imageUrl] },
   };
 }
 

@@ -19,10 +19,11 @@ test("server-renders the Ganymede landing page", async () => {
   assert.match(response.headers.get("content-type") ?? "", /^text\/html\b/i);
   const html = await response.text();
   assert.match(html, /GANYMEDE INDEX/);
-  assert.match(html, /ETF OPERATING SYSTEM/);
-  assert.match(html, /Explore ETFs/);
-  assert.match(html, /CONNECT METAMASK/);
-  assert.match(html, /5 MIN LOOP/);
+  assert.match(html, /FOUR FUNDS/);
+  assert.match(html, /ONE CLEAR ORBIT/);
+  assert.match(html, /EXPLORE THE FUNDS/);
+  assert.match(html, /PRE-LAUNCH/);
+  assert.match(html, /GIWA TESTNET/);
 });
 
 test("direct ETF detail URLs render product and basket data", async () => {
@@ -30,14 +31,14 @@ test("direct ETF detail URLs render product and basket data", async () => {
   assert.equal(response.status, 200);
   const html = (await response.text()).replaceAll("<!-- -->", "");
   assert.match(html, /GANYMEDE CORE 20/);
-  assert.match(html, /GIWA SETTLEMENT RAIL/);
-  assert.match(html, /FUND DATA/);
-  assert.match(html, /NAV/);
+  assert.match(html, /PRE-LAUNCH TEST ENVIRONMENT/);
+  assert.match(html, /INDICATIVE FUND DATA/);
+  assert.match(html, /INDICATIVE NAV/);
   assert.match(html, /PERFORMANCE/);
   assert.match(html, /HOLDINGS/);
   assert.match(html, /INVESTMENT OBJECTIVE/);
-  assert.match(html, /SUBSCRIPTION/);
-  assert.match(html, /SUBSCRIBE/);
+  assert.match(html, /SIMULATE ORDER/);
+  assert.match(html, /GIWA Sepolia/);
 });
 
 test("unknown ETF slugs return not found", async () => {

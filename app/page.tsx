@@ -144,9 +144,12 @@ function EtfCard({ etf, liveProduct, onOpen, onNavigate }: {
       onNavigate(etf.id, -1);
     }
   };
-  const targetHoldings = liveProduct?.targets?.length ? liveProduct.targets.slice(0, 2) : etf.basket.slice(0, 2).map((holding) => ({ symbol: holding.ticker, target_weight_bps: holding.weight * 100 }));
+  const allTargetHoldings = liveProduct?.targets?.length ? liveProduct.targets : etf.basket.map((holding) => ({ symbol: holding.ticker, target_weight_bps: holding.weight * 100 }));
+  const targetHoldings = allTargetHoldings.slice(0, 3);
   return (
-    <article id={`etf-card-${etf.id}`} className="etf-card etf-product-card" tabIndex={0} aria-label={`View ${etf.name} product details`} onClick={() => onOpen(etf.id)} onKeyDown={handleKeyDown}>
+    <article className={`etf-card etf-product-card product-${etf.id}`}>
+      <button id={`etf-card-${etf.id}`} className="etf-card-hit" type="button" aria-label={`View ${etf.name} product details`} onClick={() => onOpen(etf.id)} onKeyDown={handleKeyDown} />
+      <div className="product-card-index" aria-hidden="true"><span>{String(etfs.findIndex((candidate) => candidate.id === etf.id) + 1).padStart(2, "0")}</span><i /></div>
       <div className="etf-card-hero">
         <div className="etf-card-copy">
           <div className="product-card-labels">
@@ -156,20 +159,22 @@ function EtfCard({ etf, liveProduct, onOpen, onNavigate }: {
           </div>
           <h2>{etf.name}</h2>
           <p>{etf.tagline}</p>
-          <small>{etf.strategyStyle === "passive" ? "RULES-BASED INDEX" : "SYSTEMATIC ACTIVE"} · {liveProduct?.targets?.length || etf.assetCount} ASSETS</small>
+          <small>{etf.strategyStyle === "passive" ? "RULES-BASED INDEX" : "SYSTEMATIC ACTIVE"} · {liveProduct?.targets?.length || etf.assetCount} ASSETS · {etf.rebalanceFrequency}</small>
         </div>
         <AsciiPlanet variant={etf.visual} />
       </div>
       <dl className="etf-metrics product-card-metrics">
-        <div><dt>LIVE NAV</dt><dd>{liveProduct?.nav ? formatNav(liveProduct.nav.navPerShareMicros) : etf.nav}<small>{liveProduct?.nav?.quality?.toUpperCase() ?? etf.navChange}</small></dd></div>
-        <div><dt>1Y RETURN</dt><dd>+{etf.oneYearReturn}</dd></div>
+        <div><dt>{liveProduct?.nav ? "INDICATIVE NAV" : "REFERENCE NAV"}</dt><dd>{liveProduct?.nav ? formatNav(liveProduct.nav.navPerShareMicros) : etf.nav}<small>{liveProduct?.nav?.quality?.toUpperCase() ?? "MODEL"}</small></dd></div>
+        <div><dt>MODEL 1Y</dt><dd>+{etf.oneYearReturn}</dd></div>
         <div><dt>EXPENSE RATIO</dt><dd>{etf.fee}</dd></div>
+        <div><dt>RISK</dt><dd>{etf.risk}</dd></div>
       </dl>
       <div className="etf-card-actions">
         <div className="holding-chips" aria-label="Top target holdings">
           {targetHoldings.map((holding) => <span key={holding.symbol}>{holding.symbol} <b>{(holding.target_weight_bps / 100).toFixed(1)}%</b></span>)}
+          {allTargetHoldings.length > 3 && <span className="holding-more">+{allTargetHoldings.length - 3}</span>}
         </div>
-        <button type="button" className="select-etf-button" onClick={(event) => { event.stopPropagation(); onOpen(etf.id); }}>VIEW PRODUCT <span aria-hidden="true">→</span></button>
+        <span className="select-etf-button" aria-hidden="true">EXPLORE FUND <span>↗</span></span>
       </div>
     </article>
   );
@@ -179,13 +184,12 @@ function AppNav({ view, onOverview, onViewChange }: { view: View; onOverview: ()
   return (
     <header className="app-topbar platform-topbar">
       <button className="app-identity" type="button" onClick={onOverview}><span>G</span><strong>GANYMEDE INDEX<small>ETF OPERATING SYSTEM</small></strong></button>
-      <nav className="app-menu" aria-label="Primary navigation">
+      <nav className="app-menu investor-menu" aria-label="Primary navigation">
         <button type="button" onClick={onOverview}>OVERVIEW</button>
-        <button className={view === "select" ? "is-active" : ""} type="button" aria-current={view === "select" ? "page" : undefined} onClick={() => onViewChange("select")}>ETF PRODUCTS</button>
-        <button className={view === "portfolio" ? "is-active" : ""} type="button" aria-current={view === "portfolio" ? "page" : undefined} onClick={() => onViewChange("portfolio")}>PORTFOLIO</button>
-        <button className={view === "operations" ? "is-active" : ""} type="button" aria-current={view === "operations" ? "page" : undefined} onClick={() => onViewChange("operations")}>OPERATIONS</button>
+        <button className={view === "select" ? "is-active" : ""} type="button" aria-current={view === "select" ? "page" : undefined} onClick={() => onViewChange("select")}>FUNDS</button>
+        <button className={view === "portfolio" ? "is-active" : ""} type="button" aria-current={view === "portfolio" ? "page" : undefined} onClick={() => onViewChange("portfolio")}>MY PORTFOLIO</button>
       </nav>
-      <WalletConnect compact />
+      <div className="app-utility-zone"><button type="button" className={`control-room-link${view === "operations" ? " is-active" : ""}`} onClick={() => onViewChange("operations")}><i /> CONTROL ROOM</button><WalletConnect compact /></div>
     </header>
   );
 }
@@ -221,9 +225,14 @@ function PortfolioView({ data, loading, error, onBrowse, onRedeem, onOpen }: {
   return (
     <main className="portfolio-page holdings-portfolio-page">
       <header className="portfolio-header">
-        <div><p className="section-kicker">SETTLED FUND SHARE LEDGER</p><h1>My ETF portfolio</h1><p>Cost basis, latest NAV, unrealized return and GIWA settlement state from the persistent fund ledger.</p></div>
+        <div><p className="section-kicker">MY PORTFOLIO / GIWA SHARE LEDGER</p><h1>Your funds, in one orbit.</h1><p>See settled shares, indicative NAV, cost basis and unrealized performance in one reconciled view.</p></div>
         <div className="portfolio-header-actions"><span><i /> KYC {data.investor?.kycStatus?.toUpperCase() ?? "UNVERIFIED"}</span><button type="button" className="is-primary" onClick={onBrowse}>ADD ETF</button></div>
       </header>
+      <section className="portfolio-constellation" aria-label="Portfolio performance overview">
+        <div className="portfolio-constellation-copy"><span>INDICATIVE PERFORMANCE</span><strong>{gain >= 0 ? "+" : ""}{(totalReturnBps / 100).toFixed(2)}%</strong><p>Since first settled subscription · based on the latest available NAV</p></div>
+        <div className="portfolio-signal" aria-hidden="true"><i /><i /><i /><i /><span /></div>
+        <div className="portfolio-periods" aria-label="Performance period"><button type="button">1M</button><button type="button">3M</button><button type="button" className="is-active">ALL</button></div>
+      </section>
       <dl className="portfolio-kpis">
         <div><dt>PORTFOLIO VALUE</dt><dd>{formatKrw(currentValue)}</dd><small>Cost basis {formatKrw(invested)}</small></div>
         <div><dt>TOTAL RETURN</dt><dd className={gain >= 0 ? "positive-value" : ""}>{gain >= 0 ? "+" : ""}{(totalReturnBps / 100).toFixed(2)}%</dd><small>{gain >= 0 ? "+" : ""}{formatKrw(gain)}</small></div>
@@ -257,7 +266,7 @@ function OperationsView({ data, loading, error, onRun }: { data: OperationsData 
   return (
     <main className="portfolio-page operations-page">
       <header className="portfolio-header operations-header">
-        <div><p className="section-kicker">FUND OPERATIONS / CONTROL PLANE</p><h1>Portfolio engine</h1><p>Five-minute strategy, NAV, rebalance, order, settlement and audit loop for passive and active mandates.</p></div>
+        <div><p className="section-kicker">AUTHORIZED CONTROL ROOM / PAPER ENVIRONMENT</p><h1>Fund operations observatory</h1><p>Exception-first monitoring for strategy, NAV, rebalance, order, settlement and audit cycles.</p></div>
         <button type="button" className="portfolio-browse-button" disabled={loading} onClick={onRun}>{loading ? "RUNNING…" : "RUN CONTROLLED CYCLE"}</button>
       </header>
       <dl className="portfolio-kpis operations-kpis">
@@ -290,6 +299,27 @@ function OperationsView({ data, loading, error, onRun }: { data: OperationsData 
   );
 }
 
+function ConfirmDialog({ eyebrow, title, copy, confirmLabel, danger = false, onCancel, onConfirm }: {
+  eyebrow: string;
+  title: string;
+  copy: string;
+  confirmLabel: string;
+  danger?: boolean;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  return (
+    <div className="confirm-backdrop" role="presentation" onKeyDown={(event) => { if (event.key === "Escape") onCancel(); }}>
+      <section className="confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="confirm-dialog-title" aria-describedby="confirm-dialog-copy">
+        <span>{eyebrow}</span>
+        <h2 id="confirm-dialog-title">{title}</h2>
+        <p id="confirm-dialog-copy">{copy}</p>
+        <div><button type="button" autoFocus onClick={onCancel}>CANCEL</button><button type="button" className={danger ? "is-danger" : "is-primary"} onClick={onConfirm}>{confirmLabel}</button></div>
+      </section>
+    </div>
+  );
+}
+
 export default function Home() {
   const [appOpen, setAppOpen] = useState(false);
   const [view, setView] = useState<View>("select");
@@ -302,6 +332,19 @@ export default function Home() {
   const [marketError, setMarketError] = useState("");
   const [portfolioError, setPortfolioError] = useState("");
   const [operationsError, setOperationsError] = useState("");
+  const [pendingRedeem, setPendingRedeem] = useState<PortfolioPosition | null>(null);
+  const [confirmCycle, setConfirmCycle] = useState(false);
+
+  const openView = useCallback((nextView: View) => {
+    setAppOpen(true);
+    setView(nextView);
+    window.history.pushState({ ganymedeView: nextView }, "", `/?app=${nextView}`);
+  }, []);
+
+  const openOverview = useCallback(() => {
+    setAppOpen(false);
+    window.history.pushState({ ganymedeView: "overview" }, "", "/");
+  }, []);
 
   const visibleEtfs = useMemo(() => activeFilter === "all" ? etfs : etfs.filter((etf) => etf.strategyStyle === activeFilter), [activeFilter]);
   const marketById = useMemo(() => new Map((market?.products ?? []).map((product) => [product.id, product])), [market]);
@@ -361,6 +404,20 @@ export default function Home() {
       if (savedFilter && filters.some((filter) => filter.id === savedFilter)) setActiveFilter(savedFilter);
     }, 0);
     return () => window.clearTimeout(initialize);
+  }, []);
+
+  useEffect(() => {
+    const restoreFromUrl = () => {
+      const appView = new URLSearchParams(window.location.search).get("app");
+      if (appView === "select" || appView === "portfolio" || appView === "operations") {
+        setAppOpen(true);
+        setView(appView);
+      } else {
+        setAppOpen(false);
+      }
+    };
+    window.addEventListener("popstate", restoreFromUrl);
+    return () => window.removeEventListener("popstate", restoreFromUrl);
   }, []);
 
   useEffect(() => {
@@ -426,42 +483,49 @@ export default function Home() {
   if (appOpen) {
     const totalAum = (market?.products ?? []).reduce((sum, product) => sum + asNumber(product.nav?.netAssetValueKrw), 0);
     return (
-      <div className="app-shell etf-platform-shell">
-        <AppNav view={view} onOverview={() => setAppOpen(false)} onViewChange={setView} />
+      <div className="app-shell etf-platform-shell ganymede-v4">
+        <AppNav view={view} onOverview={openOverview} onViewChange={openView} />
         {view === "select" ? (
           <main className="etf-select-page product-market-page">
             <header className="etf-page-intro product-market-intro">
-              <div><p className="section-kicker">GANYMEDE ETF MARKET / PASSIVE + ACTIVE</p><h1>Digital asset ETFs</h1><p>Two transparent index mandates and two systematic active mandates, operated by one persistent portfolio engine.</p></div>
-              <div className="market-snapshot" aria-label="Product market snapshot"><span><small>FUND AUM</small><b>{totalAum ? formatKrw(totalAum) : "INITIALIZING"}</b></span><span><small>STRATEGIES</small><b>02P / 02A</b></span><span><small>ENGINE</small><b>{market?.lastCycle ? `${market.lastCycle.mode.toUpperCase()} · ${market.lastCycle.marketDataQuality.toUpperCase()}` : marketError || "WAKING"}</b></span></div>
+              <div><p className="section-kicker">FOUR DIGITAL-ASSET STRATEGIES / ONE CONTROLLED ORBIT</p><h1>Find your fund.</h1><p>Compare two transparent index mandates and two systematic active strategies—each with a distinct risk, fee and allocation profile.</p><div className="market-truth-badges"><span><i /> PRE-LAUNCH</span><span>MODEL PERFORMANCE</span><span>GIWA TESTNET</span></div></div>
+              <div className="market-snapshot" aria-label="Product market snapshot"><span><small>INDICATIVE AUM</small><b>{totalAum ? formatKrw(totalAum) : "INITIALIZING"}</b></span><span><small>FUNDS</small><b>04 / 04</b></span><span><small>DATA STATUS</small><b>{market?.lastCycle ? `${market.lastCycle.marketDataQuality.toUpperCase()} · ${market.lastCycle.mode.toUpperCase()}` : marketError || "CONNECTING"}</b></span></div>
             </header>
             <div className="product-market-toolbar">
               <div className="etf-filters strategy-filters" role="group" aria-label="Filter ETF strategies">{filters.map((filter) => <button key={filter.id} type="button" className={activeFilter === filter.id ? "is-active" : ""} aria-pressed={activeFilter === filter.id} onClick={() => { setActiveFilter(filter.id); sessionStorage.setItem("ganymede-etf-filter", filter.id); }}>{filter.label}</button>)}</div>
-              <p>{market?.updatedAt ? `Engine updated ${displayTime(market.updatedAt)}` : "Connecting to fund engine"}</p>
+              <p>{market?.updatedAt ? `Indicative NAV updated ${displayTime(market.updatedAt)}` : "Connecting to the fund data rail"}</p>
             </div>
             <section className="etf-card-grid" aria-label="ETF products">{visibleEtfs.map((etf) => <EtfCard key={etf.id} etf={etf} liveProduct={marketById.get(etf.id)} onOpen={openEtfDetail} onNavigate={navigateCards} />)}</section>
           </main>
         ) : view === "portfolio" ? (
-          <PortfolioView data={portfolio} loading={portfolioLoading} error={portfolioError} onBrowse={() => setView("select")} onOpen={(position) => window.location.assign(`/etfs/${position.slug}`)} onRedeem={redeemPosition} />
+          <PortfolioView data={portfolio} loading={portfolioLoading} error={portfolioError} onBrowse={() => openView("select")} onOpen={(position) => window.location.assign(`/etfs/${position.slug}`)} onRedeem={async (position) => setPendingRedeem(position)} />
         ) : (
-          <OperationsView data={operations} loading={operationsLoading} error={operationsError} onRun={runOperationsCycle} />
+          <OperationsView data={operations} loading={operationsLoading} error={operationsError} onRun={async () => setConfirmCycle(true)} />
         )}
-        <footer className="app-disclaimer">ETF operating system · Upbit execution adapter · GIWA settlement ledger · Live mode remains disabled until licensed operations credentials are configured.</footer>
+        <footer className="app-disclaimer"><span>PRE-LAUNCH / SIMULATION</span><p>Returns are modelled and NAV is indicative. Public issuance remains disabled until licensed fund, custody, administration and distribution controls are active.</p><button type="button" onClick={() => openView("operations")}>SYSTEM STATUS ↗</button></footer>
+        {pendingRedeem && <ConfirmDialog eyebrow="REDEMPTION REQUEST / REVIEW" title={`Redeem all ${pendingRedeem.ticker} shares?`} copy={`This creates a paper redemption request for ${formatShares(pendingRedeem.sharesMicros)} fund shares. Final proceeds depend on the approved dealing NAV and settlement controls.`} confirmLabel="REQUEST REDEMPTION" danger onCancel={() => setPendingRedeem(null)} onConfirm={() => { const position = pendingRedeem; setPendingRedeem(null); void redeemPosition(position); }} />}
+        {confirmCycle && <ConfirmDialog eyebrow="CONTROL ROOM / PAPER MODE" title="Run one controlled engine cycle?" copy="The paper engine will evaluate four strategies, refresh indicative NAV, create any simulated rebalance orders and append the results to the audit ledger." confirmLabel="RUN PAPER CYCLE" onCancel={() => setConfirmCycle(false)} onConfirm={() => { setConfirmCycle(false); void runOperationsCycle(); }} />}
       </div>
     );
   }
 
   return (
-    <main className="ganymede-launch etf-platform-launch" aria-labelledby="hero-title">
+    <main className="ganymede-launch etf-platform-launch ganymede-v4" aria-labelledby="hero-title">
       <GanymedeScene />
-      <header className="platform-launch-nav"><div className="launch-wordmark"><span>G</span><b>GANYMEDE INDEX<small>ETF OPERATING SYSTEM</small></b></div><WalletConnect compact /></header>
+      <header className="platform-launch-nav"><div className="launch-wordmark"><span>G</span><b>GANYMEDE INDEX<small>CELESTIAL ASSET OBSERVATORY</small></b></div><nav className="launch-nav" aria-label="Landing navigation"><button type="button" onClick={() => openView("select")}>FUNDS</button><button type="button" onClick={() => openView("portfolio")}>PORTFOLIO</button><button type="button" onClick={() => openView("operations")}>SYSTEM</button></nav><WalletConnect compact /></header>
       <section className="launch-copy etf-launch-copy">
-        <p>PASSIVE + ACTIVE DIGITAL ASSET ETF OPERATIONS / GIWA</p>
-        <h1 id="hero-title"><span>INVEST WITH</span><span>A CLEAR ORBIT.</span></h1>
-        <p className="launch-description">Index construction, systematic alpha, NAV, execution, rebalancing and GIWA fund-share settlement in one controlled operating system.</p>
-        <div className="launch-market-stats"><span><small>PASSIVE</small><b>02 FUNDS</b></span><span><small>ACTIVE</small><b>02 FUNDS</b></span><span><small>ENGINE</small><b>5 MIN LOOP</b></span></div>
-        <div className="launch-actions"><button className="launch-app" type="button" onClick={() => { setView("select"); setAppOpen(true); }}>Explore ETFs <span aria-hidden="true">→</span></button><button className="launch-portfolio" type="button" onClick={() => { setView("operations"); setAppOpen(true); }}>View operations</button></div>
+        <div className="launch-status-line"><span><i /> OBSERVATORY ONLINE</span><b>PRE-LAUNCH · GIWA TESTNET</b></div>
+        <p>PASSIVE + ACTIVE DIGITAL-ASSET FUNDS</p>
+        <h1 id="hero-title"><span>FOUR FUNDS.</span><span>ONE CLEAR ORBIT.</span></h1>
+        <p className="launch-description">Choose rules-based exposure or systematic alpha, then follow every allocation, NAV and fund-share settlement through one transparent platform.</p>
+        <div className="launch-actions"><button className="launch-app" type="button" onClick={() => openView("select")}>EXPLORE THE FUNDS <span aria-hidden="true">↗</span></button><button className="launch-portfolio" type="button" onClick={() => openView("portfolio")}>VIEW PORTFOLIO</button></div>
+        <div className="launch-assurance"><span>04 DISTINCT STRATEGIES</span><span>INDICATIVE NAV</span><span>GIWA SHARE LEDGER</span></div>
       </section>
-      <p className="launch-disclosure">Live issuance requires licensed fund, custody, transfer-agent and venue integrations. The deployed engine defaults to controlled paper mode.</p>
+      <aside className="launch-fund-index" aria-label="Fund universe">
+        <span className="launch-fund-index-label">FUND UNIVERSE / 04</span>
+        {etfs.map((etf, index) => <button key={etf.id} type="button" onClick={() => { setActiveFilter(etf.strategyStyle); openView("select"); }}><i>{String(index + 1).padStart(2, "0")}</i><span><b>{etf.ticker.replace("GMD ", "")}</b><small>{etf.strategyStyle} · {etf.risk.toLowerCase()} risk</small></span><em>+{etf.oneYearReturn}</em></button>)}
+      </aside>
+      <p className="launch-disclosure"><span>SIMULATION NOTICE</span> Model performance is illustrative. Public issuance requires licensed fund, custody, administration, transfer-agent and distribution integrations.</p>
     </main>
   );
 }

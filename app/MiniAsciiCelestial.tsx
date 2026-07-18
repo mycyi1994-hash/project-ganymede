@@ -305,8 +305,10 @@ export default function MiniAsciiCelestial({ variant }: { variant: CelestialVari
     let height = 0;
     let glyphAtlas = makeGlyphAtlas(5.8);
     let animationFrame = 0;
+    let resizeFrame = 0;
     let lastFrame = 0;
     let visible = true;
+    let pageVisible = !document.hidden;
 
     const resize = () => {
       const bounds = canvas.getBoundingClientRect();
@@ -338,7 +340,7 @@ export default function MiniAsciiCelestial({ variant }: { variant: CelestialVari
 
     const draw = (now: number) => {
       animationFrame = requestAnimationFrame(draw);
-      if (!visible || (!reduceMotion && now - lastFrame < 40)) return;
+      if (!visible || !pageVisible || (!reduceMotion && now - lastFrame < 40)) return;
       lastFrame = now;
 
       const elapsed = reduceMotion ? 3200 : now;
@@ -461,20 +463,28 @@ export default function MiniAsciiCelestial({ variant }: { variant: CelestialVari
       if (reduceMotion) cancelAnimationFrame(animationFrame);
     };
 
-    const resizeObserver = new ResizeObserver(resize);
+    const scheduleResize = () => {
+      cancelAnimationFrame(resizeFrame);
+      resizeFrame = requestAnimationFrame(resize);
+    };
+    const resizeObserver = new ResizeObserver(scheduleResize);
     resizeObserver.observe(canvas);
     const visibilityObserver = new IntersectionObserver(([entry]) => {
       visible = entry.isIntersecting;
     }, { rootMargin: "100px" });
     visibilityObserver.observe(canvas);
+    const handleVisibility = () => { pageVisible = !document.hidden; };
+    document.addEventListener("visibilitychange", handleVisibility);
 
     resize();
     animationFrame = requestAnimationFrame(draw);
 
     return () => {
       cancelAnimationFrame(animationFrame);
+      cancelAnimationFrame(resizeFrame);
       resizeObserver.disconnect();
       visibilityObserver.disconnect();
+      document.removeEventListener("visibilitychange", handleVisibility);
     };
   }, [variant]);
 
