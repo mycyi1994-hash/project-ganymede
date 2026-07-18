@@ -1550,3 +1550,306 @@ body:has(.product-detail-page) { height: auto; min-height: 100%; overflow: auto;
   .wallet-connect > button,
   .position-return i { transition: none; }
 }
+
+/* Mystical legibility pass */
+:root {
+  --mystic: #cbc6dc;
+  --mystic-bright: #ddd8e9;
+  --mystic-soft: rgba(177, 164, 205, 0.22);
+  --mystic-faint: rgba(128, 108, 166, 0.09);
+}
+
+.etf-platform-launch::before,
+.etf-platform-shell::before,
+.product-detail-page::before {
+  content: "";
+  position: absolute;
+  inset: -18%;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse at 73% 23%, rgba(145, 126, 180, 0.13), transparent 25%),
+    radial-gradient(ellipse at 18% 70%, rgba(94, 111, 154, 0.09), transparent 28%),
+    radial-gradient(circle at 52% 45%, rgba(233, 229, 244, 0.05), transparent 20%);
+  filter: blur(10px);
+  animation: mystic-drift 22s ease-in-out infinite alternate;
+}
+
+.etf-platform-shell::before,
+.product-detail-page::before {
+  position: fixed;
+  inset: -22%;
+  opacity: 0.82;
+}
+
+.etf-platform-shell > main,
+.etf-platform-shell > footer,
+.product-detail-page > * {
+  position: relative;
+  z-index: 1;
+}
+
+.platform-launch-nav,
+.platform-topbar,
+.product-detail-topbar {
+  background: linear-gradient(180deg, rgba(8, 8, 11, 0.96), rgba(7, 7, 7, 0.86));
+  backdrop-filter: blur(18px);
+}
+
+.etf-platform-launch .scene,
+.etf-product-card .ascii-planet,
+.product-hero-visual .ascii-planet {
+  filter:
+    drop-shadow(0 0 15px rgba(238, 237, 232, 0.11))
+    drop-shadow(0 0 32px rgba(165, 149, 197, 0.12));
+}
+
+.etf-launch-copy h1,
+.product-market-intro h1,
+.portfolio-header h1,
+.product-detail-copy h1 {
+  text-shadow: 0 0 28px rgba(196, 187, 216, 0.09);
+}
+
+.platform-launch-nav .launch-wordmark b {
+  color: #e5e2ea;
+  font-size: 13px;
+}
+.platform-launch-nav .launch-wordmark small,
+.platform-topbar .app-identity small,
+.product-detail-topbar .detail-brand small {
+  color: #9893a2;
+  font-size: 9px;
+  line-height: 1.2;
+}
+.platform-topbar .app-identity strong,
+.product-detail-topbar .detail-brand strong { font-size: 13px; }
+.app-menu button { font-size: 11px; }
+.app-system-status { color: #96919f; font-size: 9px; }
+.app-disclaimer { color: #908c98; font-size: 12px; }
+
+.wallet-connect > button {
+  min-height: 42px;
+  border-color: rgba(203, 198, 220, 0.34);
+  font-size: 10px;
+  box-shadow: inset 0 0 20px rgba(177, 164, 205, 0.025);
+}
+.wallet-chain-label { color: #918b9c; font-size: 9px; line-height: 1.2; }
+.wallet-connect small[role="status"] { font-size: 10px; }
+.wallet-connect > button.is-connected .wallet-network-dot {
+  background: var(--mystic-bright);
+  box-shadow: 0 0 12px rgba(203, 198, 220, 0.86);
+}
+
+.etf-launch-copy > p:first-child {
+  color: #aaa4b4;
+  font-size: 11px;
+}
+.etf-launch-copy .launch-description {
+  color: #b2aebb;
+  font-size: clamp(16px, 1.25vw, 19px);
+  line-height: 1.6;
+}
+.launch-market-stats {
+  border-color: rgba(203, 198, 220, 0.22);
+  background: linear-gradient(90deg, rgba(164, 149, 196, 0.055), transparent);
+}
+.launch-market-stats small { color: #918b9b; font-size: 9px; }
+.launch-market-stats b { color: #dedbe4; font-size: 16px; }
+.launch-portfolio { min-height: 52px; font-size: 11px; }
+.etf-launch-copy .launch-app { min-height: 52px; font-size: 14px; }
+.launch-disclosure { color: #817c8a; font-size: 9px; line-height: 1.45; }
+
+.product-market-page,
+.holdings-portfolio-page {
+  overflow-y: auto;
+  scrollbar-color: rgba(203, 198, 220, 0.35) transparent;
+}
+.section-kicker { color: #9892a3; font-size: 10px; }
+.product-market-intro > div > p:last-child,
+.etf-page-intro > div > p:last-child,
+.portfolio-header > div > p:last-child {
+  color: #aaa6b0;
+  font-size: 14px;
+  line-height: 1.5;
+}
+.market-snapshot {
+  border-color: rgba(203, 198, 220, 0.23);
+  background: linear-gradient(135deg, rgba(23, 21, 28, 0.9), rgba(9, 9, 11, 0.88));
+  box-shadow: inset 0 0 38px rgba(145, 126, 180, 0.025);
+}
+.market-snapshot small { color: #9a94a4; font-size: 9px; }
+.market-snapshot b { color: #d9d5e0; font-size: 14px; }
+.product-market-toolbar > p { color: #8c8794; font-size: 9px; }
+.etf-filters button { color: #aaa5b1; font-size: 10px; }
+.etf-filters button.is-active {
+  color: var(--mystic-bright);
+  box-shadow: inset 0 0 0 1px rgba(221, 216, 233, 0.72), inset 0 0 26px rgba(177, 164, 205, 0.08);
+}
+
+.etf-product-card,
+.portfolio-positions,
+.portfolio-empty,
+.product-information-card,
+.product-order-card,
+.performance-summary,
+.return-chart-card,
+.basket-visual-v2,
+.holdings-table-v2,
+.methodology-panel-v2 article,
+.documents-panel > section,
+.documents-panel > aside,
+.product-market-data {
+  background:
+    radial-gradient(circle at 82% 18%, rgba(160, 144, 191, 0.075), transparent 30%),
+    linear-gradient(145deg, rgba(14, 13, 17, 0.94), rgba(8, 8, 10, 0.94));
+  box-shadow: inset 0 0 44px rgba(138, 119, 173, 0.025);
+}
+.etf-product-card {
+  min-height: 284px;
+  grid-template-rows: minmax(148px, 1fr) 72px 60px;
+  border-color: rgba(203, 198, 220, 0.22);
+}
+.etf-product-card:hover {
+  border-color: rgba(221, 216, 233, 0.52);
+  box-shadow: 0 10px 42px rgba(0, 0, 0, 0.42), 0 0 28px rgba(161, 145, 193, 0.08);
+  transform: translateY(-2px);
+}
+.etf-product-card.is-selected {
+  border-color: var(--mystic-bright);
+  box-shadow: 0 0 0 1px rgba(221, 216, 233, 0.45), 0 0 30px rgba(177, 164, 205, 0.17);
+}
+.etf-product-card .etf-card-copy h2 { font-size: clamp(22px, 1.7vw, 28px); }
+.etf-product-card .etf-card-copy p { color: #aaa6b0; font-size: 13px; line-height: 1.5; }
+.etf-product-card .etf-card-copy > small { color: #96909f; font-size: 9px; }
+.etf-ticker { color: #d7d3df; font-size: 10px; }
+.risk-badge { color: #aaa4b4; font-size: 9px; }
+.etf-metrics dt { color: #9b96a2; font-size: 9px; }
+.etf-metrics dd { font-size: clamp(18px, 1.45vw, 23px); }
+.product-card-metrics dd small { color: #bbb6c3; font-size: 9px; }
+.holding-chips span { color: #d0ccd6; font-size: 10px; }
+.etf-product-card .select-etf-button { min-height: 40px; font-size: 10px; }
+
+.portfolio-browse-button,
+.portfolio-header-actions button,
+.portfolio-empty button { min-height: 44px; font-size: 10px; }
+.portfolio-header-actions > span { color: #9993a2; font-size: 10px; }
+.portfolio-kpis dt { color: #9993a2; font-size: 9px; }
+.portfolio-kpis small { color: #8f8997; font-size: 11px; }
+.portfolio-positions > header > span { color: #948e9d; font-size: 9px; }
+.position-row { min-height: 68px; color: #bbb6c2; font-size: 12px; }
+.position-head { min-height: 40px; color: #8e8995; font-size: 9px; }
+.position-product b { font-size: 12px; }
+.position-product small { color: #918b99; font-size: 10px; }
+.position-row > span small { color: #8b8594; font-size: 10px; }
+.position-remove { color: #96909e; font-size: 9px; }
+.portfolio-positions > footer > p { color: #8d8794; font-size: 11px; }
+.portfolio-empty > p:not(.section-kicker) { color: #aaa5b1; font-size: 14px; }
+
+.giwa-testnet-notice { color: #9993a1; font-size: 9px; }
+.product-detail-labels { color: #b3adba; font-size: 10px; }
+.product-detail-copy h2 { color: #d0ccd6; }
+.product-detail-copy > p { color: #aaa5b1; font-size: 14px; line-height: 1.65; }
+.product-hero-actions button { min-height: 46px; font-size: 10px; }
+.product-market-data > span { color: #9993a1; font-size: 9px; }
+.product-nav small { color: #9993a1; font-size: 9px; }
+.product-nav em { color: #d1d7ce; font-size: 12px; }
+.product-market-data dt { color: #97919f; font-size: 9px; }
+.product-market-data dd { color: #d2ced8; font-size: 12px; }
+.product-tabs button { min-width: 164px; color: #9d97a5; font-size: 10px; }
+.product-tabs button.is-active { color: var(--mystic-bright); }
+.product-tabs button.is-active::after {
+  background: var(--mystic-bright);
+  box-shadow: 0 -2px 12px rgba(203, 198, 220, 0.45);
+}
+.product-detail-footer { color: #8f8997; font-size: 9px; line-height: 1.45; }
+
+.product-information-card > span,
+.product-order-card span,
+.documents-panel section > span,
+.documents-panel aside > span { color: #9993a1; font-size: 9px; }
+.product-information-card > p { color: #aaa5b1; font-size: 14px; }
+.objective-points b { font-size: 10px; }
+.objective-points p { color: #9e98a6; font-size: 12px; line-height: 1.5; }
+.product-facts-card dt { color: #96909e; font-size: 11px; }
+.product-facts-card dd { color: #d1cdd7; font-size: 10px; }
+.risk-summary-card ul { color: #9f99a7; font-size: 11px; line-height: 1.65; }
+.order-card-heading b { color: #a39dab; font-size: 9px; }
+.product-order-card > p { color: #aaa5b1; font-size: 12px; }
+.product-order-card dt { color: #96909e; font-size: 9px; }
+.product-order-card dd { font-size: 13px; }
+.product-add-button { min-height: 52px; font-size: 10px; }
+.product-order-card > small { color: #8f8997; font-size: 10px; }
+
+.performance-summary dt,
+.return-chart-card header span { color: #9993a1; font-size: 9px; }
+.return-chart-card header p { color: #8f8997; font-size: 9px; }
+.return-column > b { color: #aaa4b2; font-size: 9px; }
+.return-column > span { color: #8d8795; font-size: 8px; }
+.performance-disclosure { color: #948e9c; font-size: 11px; line-height: 1.5; }
+.basket-visual-v2 > div:last-child > span { color: #9993a1; font-size: 9px; }
+.basket-visual-v2 p { color: #aaa5b1; font-size: 13px; }
+.holding-row-v2 { min-height: 68px; color: #aaa5b1; font-size: 11px; }
+.holding-head-v2 { min-height: 42px; color: #8f8997; font-size: 9px; }
+.holding-asset-v2 b { font-size: 11px; }
+.holding-asset-v2 small { color: #928c9a; font-size: 10px; }
+.methodology-panel-v2 article > span { color: #918b99; font-size: 10px; }
+.methodology-panel-v2 b { font-size: 11px; }
+.methodology-panel-v2 p { color: #aaa5b1; font-size: 13px; }
+.documents-panel article > span { color: #918b99; font-size: 9px; }
+.documents-panel article b { font-size: 10px; }
+.documents-panel article p { color: #9993a1; font-size: 11px; }
+.documents-panel article small { color: #8e8896; font-size: 9px; }
+.documents-panel article button { min-height: 36px; font-size: 9px; }
+.documents-panel aside p { color: #aaa5b1; font-size: 12px; }
+
+@keyframes mystic-drift {
+  0% { transform: translate3d(-1.5%, -1%, 0) scale(1); opacity: 0.72; }
+  50% { opacity: 0.94; }
+  100% { transform: translate3d(2%, 1.5%, 0) scale(1.04); opacity: 0.8; }
+}
+
+@media (max-width: 1180px) {
+  .app-menu button { min-width: 116px; font-size: 10px; }
+  .etf-product-card { min-height: 300px; }
+  .product-detail-hero { min-height: 520px; }
+}
+
+@media (max-width: 900px) {
+  .product-market-page,
+  .holdings-portfolio-page { padding-bottom: 30px; }
+  .etf-card-grid { grid-auto-rows: minmax(330px, auto); }
+  .product-tabs button { min-width: 152px; }
+}
+
+@media (max-width: 700px) {
+  .platform-launch-nav .launch-wordmark b { font-size: 11px; }
+  .etf-launch-copy > p:first-child { font-size: 9px; }
+  .etf-launch-copy .launch-description { font-size: 15px; }
+  .launch-market-stats small { font-size: 8px; }
+  .launch-market-stats b { font-size: 12px; }
+  .launch-disclosure { font-size: 8px; }
+  .product-market-intro > div > p:last-child,
+  .etf-page-intro > div > p:last-child,
+  .portfolio-header > div > p:last-child { font-size: 13px; }
+  .market-snapshot small { font-size: 8px; }
+  .market-snapshot b { font-size: 11px; }
+  .product-market-toolbar .etf-filters button { font-size: 8px; }
+  .etf-product-card { min-height: 480px; }
+  .etf-product-card .etf-card-copy h2 { font-size: 23px; }
+  .etf-product-card .etf-card-copy p { font-size: 13px; }
+  .etf-product-card .select-etf-button { font-size: 9px; }
+  .giwa-testnet-notice { font-size: 8px; }
+  .product-detail-copy > p { font-size: 13px; }
+  .product-tabs button { min-width: 146px; font-size: 9px; }
+  .product-information-card > p,
+  .objective-points p,
+  .basket-visual-v2 p,
+  .methodology-panel-v2 p { font-size: 12px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .etf-platform-launch::before,
+  .etf-platform-shell::before,
+  .product-detail-page::before { animation: none; }
+}
