@@ -34,10 +34,10 @@ test("direct ETF detail URLs render product and basket data", async () => {
   assert.match(html, /PRE-LAUNCH TEST ENVIRONMENT/);
   assert.match(html, /INDICATIVE FUND DATA/);
   assert.match(html, /INDICATIVE NAV/);
-  assert.match(html, /PERFORMANCE/);
+  assert.match(html, /MODEL RESULTS/);
   assert.match(html, /HOLDINGS/);
   assert.match(html, /INVESTMENT OBJECTIVE/);
-  assert.match(html, /SIMULATE ALLOCATION/);
+  assert.match(html, /REVIEW SIMULATION/);
   assert.match(html, /THE FOUNDATION/);
   assert.match(html, /GIWA Sepolia/);
 });

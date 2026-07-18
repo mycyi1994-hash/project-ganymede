@@ -1,6 +1,6 @@
 "use client";
 
-import { KeyboardEvent, useEffect, useMemo, useState } from "react";
+import { KeyboardEvent as ReactKeyboardEvent, useEffect, useId, useMemo, useRef, useState } from "react";
 import MiniAsciiCelestial from "../../MiniAsciiCelestial";
 import WalletConnect from "../../WalletConnect";
 import type { BasketAsset, Etf } from "../../data/etfs";
@@ -56,10 +56,10 @@ async function currentWalletAddress() {
 
 const tabs: Array<{ id: ProductTab; label: string }> = [
   { id: "overview", label: "OVERVIEW" },
-  { id: "performance", label: "PERFORMANCE" },
+  { id: "performance", label: "MODEL RESULTS" },
   { id: "holdings", label: "HOLDINGS" },
-  { id: "methodology", label: "METHODOLOGY" },
-  { id: "documents", label: "DOCUMENTS & RISKS" },
+  { id: "methodology", label: "HOW IT WORKS" },
+  { id: "documents", label: "RISKS & DOCUMENTS" },
 ];
 
 const shades = ["#eeede8", "#aaa9a4", "#85847f", "#64635f", "#4d4c49", "#393936"];
@@ -87,7 +87,7 @@ function AssetMark({ asset }: { asset: BasketAsset }) {
 }
 
 function ProductTabs({ active, onChange }: { active: ProductTab; onChange: (tab: ProductTab) => void }) {
-  const handleKeyDown = (event: KeyboardEvent<HTMLButtonElement>, current: ProductTab) => {
+  const handleKeyDown = (event: ReactKeyboardEvent<HTMLButtonElement>, current: ProductTab) => {
     if (!(event.key === "ArrowLeft" || event.key === "ArrowRight" || event.key === "Home" || event.key === "End")) return;
     event.preventDefault();
     const currentIndex = tabs.findIndex((tab) => tab.id === current);
@@ -117,6 +117,65 @@ function ProductTabs({ active, onChange }: { active: ProductTab; onChange: (tab:
   );
 }
 
+function useLocalDialogFocus(onClose: () => void) {
+  const dialogRef = useRef<HTMLElement>(null);
+  useEffect(() => {
+    const previousFocus = document.activeElement as HTMLElement | null;
+    const dialog = dialogRef.current;
+    if (!dialog) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const getFocusable = () => Array.from(dialog.querySelectorAll<HTMLElement>('button:not([disabled]), a[href], input:not([disabled]), [tabindex]:not([tabindex="-1"])'));
+    getFocusable()[0]?.focus();
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") { event.preventDefault(); onClose(); return; }
+      if (event.key !== "Tab") return;
+      const focusable = getFocusable();
+      if (!focusable.length) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener("keydown", handleKeyDown);
+      previousFocus?.focus();
+    };
+  }, [onClose]);
+  return dialogRef;
+}
+
+function SimulationReviewDialog({ etf, amountKrw, nav, submitting, error, onCancel, onConfirm }: {
+  etf: Etf;
+  amountKrw: string;
+  nav: string;
+  submitting: boolean;
+  error: string;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  const titleId = useId();
+  const copyId = useId();
+  const dialogRef = useLocalDialogFocus(onCancel);
+  const navValue = asNumber(nav) / 1_000_000 || asNumber(etf.nav.replace("$", ""));
+  const estimatedShares = navValue > 0 ? asNumber(amountKrw) / navValue : 0;
+  return (
+    <div className="confirm-backdrop simulation-review-backdrop" role="presentation" onMouseDown={(event) => { if (!submitting && event.currentTarget === event.target) onCancel(); }}>
+      <section ref={dialogRef} className="simulation-review-dialog" role="dialog" aria-modal="true" aria-labelledby={titleId} aria-describedby={copyId} aria-busy={submitting}>
+        <span>STEP 02 / REVIEW ESTIMATE</span>
+        <h2 id={titleId}>Review your paper allocation.</h2>
+        <p id={copyId}>You are simulating {formatKrw(amountKrw)} in {etf.ticker}. No order will be placed and no funds will be transferred.</p>
+        <dl><div><dt>STRATEGY</dt><dd>{etf.name}</dd></div><div><dt>SAMPLE AMOUNT</dt><dd>{formatKrw(amountKrw)}</dd></div><div><dt>INDICATIVE VALUE / SHARE</dt><dd>{formatNav(nav, etf.nav)}</dd></div><div><dt>ESTIMATED PAPER SHARES</dt><dd>{estimatedShares.toLocaleString("en-US", { minimumFractionDigits: 3, maximumFractionDigits: 3 })}</dd></div><div><dt>ANNUAL MANAGEMENT FEE</dt><dd>{etf.fee}</dd></div></dl>
+        <div className="simulation-review-warning"><i /> TEST ENVIRONMENT · NO ECONOMIC ASSET IS ISSUED ON GIWA SEPOLIA</div>
+        {error && <p className="simulation-review-error" role="alert">{error}</p>}
+        <footer><button type="button" disabled={submitting} onClick={onCancel}>EDIT AMOUNT</button><button type="button" className="is-primary" disabled={submitting} aria-busy={submitting} onClick={onConfirm}>{submitting ? "SAVING SIMULATION…" : "SAVE TO PAPER PORTFOLIO"}</button></footer>
+      </section>
+    </div>
+  );
+}
+
 function OverviewPanel({ etf, liveProduct, engineMode, amountKrw, subscriptionStatus, submitting, orderError, onAmountChange, onSubscribe }: {
   etf: Etf;
   liveProduct: LiveProduct | null;
@@ -131,6 +190,9 @@ function OverviewPanel({ etf, liveProduct, engineMode, amountKrw, subscriptionSt
   const navPerShare = liveProduct?.nav ? asNumber(liveProduct.nav.navPerShareMicros) / 1_000_000 : asNumber(etf.nav.replace("$", ""));
   const estimatedShares = navPerShare > 0 ? asNumber(amountKrw) / navPerShare : 0;
   const hasRequest = Boolean(subscriptionStatus);
+  const amountHelpId = useId();
+  const amountErrorId = useId();
+  const amountError = !amountKrw ? "Enter a sample amount to continue." : asNumber(amountKrw) < 100_000 ? "Enter at least ₩100,000 to continue." : "";
   return (
     <div className="product-overview-panel">
       <div className="product-overview-main">
@@ -169,27 +231,29 @@ function OverviewPanel({ etf, liveProduct, engineMode, amountKrw, subscriptionSt
         </article>
       </div>
 
-      <aside className="product-order-card" aria-label="ETF allocation simulation">
-        <div className="order-card-heading"><span>ALLOCATION SIMULATOR</span><b>{engineMode === "live" ? "LIVE CONTROLLED" : "PAPER / TESTNET"}</b></div>
-        <ol className="subscription-steps" aria-label="Subscription steps"><li className="is-active"><b>01</b><span>AMOUNT</span></li><li><b>02</b><span>ELIGIBILITY</span></li><li><b>03</b><span>REVIEW</span></li><li><b>04</b><span>SETTLE</span></li></ol>
-        <p>Estimate fund shares using the latest indicative NAV. This simulation does not place an order or transfer funds.</p>
+      <aside className="product-order-card" aria-label="ETF allocation simulation" aria-busy={submitting}>
+        <div className="order-card-heading" tabIndex={-1}><span>ALLOCATION SIMULATOR</span><b>{engineMode === "live" ? "LIVE CONTROLLED" : "PAPER / TESTNET"}</b></div>
+        <ol className="subscription-steps" aria-label="Simulation steps"><li className={!hasRequest ? "is-active" : ""}><b>01</b><span>CHOOSE AMOUNT</span></li><li><b>02</b><span>REVIEW ESTIMATE</span></li><li className={hasRequest ? "is-active" : ""}><b>03</b><span>SAVE SIMULATION</span></li></ol>
+        <p>Try a sample amount using the latest indicative value. No real order is placed and no money moves.</p>
         <label className="subscription-amount">
-          <span>SUBSCRIPTION AMOUNT / KRW</span>
-          <input type="number" min="100000" step="100000" inputMode="numeric" value={amountKrw} onChange={(event) => onAmountChange(event.target.value)} aria-describedby="subscription-minimum" />
+          <span>SAMPLE AMOUNT / KRW</span>
+          <input type="number" min="100000" step="100000" inputMode="numeric" value={amountKrw} onChange={(event) => onAmountChange(event.target.value)} aria-invalid={Boolean(amountError)} aria-describedby={`${amountHelpId}${amountError ? ` ${amountErrorId}` : ""}`} />
         </label>
-        <div className="amount-presets" aria-label="Quick amount selection"><button type="button" onClick={() => onAmountChange("500000")}>₩500K</button><button type="button" onClick={() => onAmountChange("1000000")}>₩1M</button><button type="button" onClick={() => onAmountChange("5000000")}>₩5M</button></div>
+        <p className="amount-help" id={amountHelpId}>Minimum ₩100,000 · this is a paper estimate only.</p>
+        {amountError && <p className="amount-error" id={amountErrorId}>{amountError}</p>}
+        <div className="amount-presets" aria-label="Quick amount selection"><button type="button" aria-pressed={amountKrw === "500000"} onClick={() => onAmountChange("500000")}>₩500,000</button><button type="button" aria-pressed={amountKrw === "1000000"} onClick={() => onAmountChange("1000000")}>₩1,000,000</button><button type="button" aria-pressed={amountKrw === "5000000"} onClick={() => onAmountChange("5000000")}>₩5,000,000</button></div>
         <dl>
-          <div><dt>ORDER NOTIONAL</dt><dd>{formatKrw(amountKrw)}</dd></div>
-          <div><dt>{liveProduct?.nav ? "INDICATIVE NAV" : "REFERENCE NAV"}</dt><dd>{formatNav(liveProduct?.nav?.navPerShareMicros, etf.nav)}</dd></div>
-          <div><dt>EST. FUND SHARES</dt><dd>{estimatedShares.toLocaleString("en-US", { minimumFractionDigits: 3, maximumFractionDigits: 3 })}</dd></div>
-          <div><dt>EXPENSE RATIO</dt><dd>{etf.fee}</dd></div>
+          <div><dt>SAMPLE AMOUNT</dt><dd>{formatKrw(amountKrw)}</dd></div>
+          <div><dt>{liveProduct?.nav ? "INDICATIVE VALUE / SHARE" : "REFERENCE VALUE / SHARE"}</dt><dd>{formatNav(liveProduct?.nav?.navPerShareMicros, etf.nav)}</dd></div>
+          <div><dt>ESTIMATED PAPER SHARES</dt><dd>{estimatedShares.toLocaleString("en-US", { minimumFractionDigits: 3, maximumFractionDigits: 3 })}</dd></div>
+          <div><dt>ANNUAL MANAGEMENT FEE</dt><dd>{etf.fee}</dd></div>
         </dl>
         <div className="order-environment"><span><i /> SIMULATION ONLY</span><p>No economic asset is issued on GIWA Sepolia.</p></div>
-        <button type="button" disabled={submitting || asNumber(amountKrw) < 100_000} className={`product-add-button${hasRequest ? " is-added" : ""}`} onClick={onSubscribe}>{submitting ? "SIMULATING…" : hasRequest ? "VIEW PAPER ALLOCATION" : "SIMULATE ALLOCATION"}</button>
-        {subscriptionStatus && <p className="subscription-state" role="status">REQUEST STATUS <b>{subscriptionStatus.toUpperCase()}</b></p>}
+        <button type="button" disabled={submitting || Boolean(amountError)} aria-busy={submitting} className={`product-add-button${hasRequest ? " is-added" : ""}`} onClick={onSubscribe}>{submitting ? "SAVING SIMULATION…" : hasRequest ? "VIEW PAPER PORTFOLIO" : "REVIEW SIMULATION"}</button>
+        {subscriptionStatus && <div className="subscription-success" role="status"><b>SIMULATION SAVED.</b><p>No real order was placed. Review the allocation in your paper portfolio.</p></div>}
         {orderError && <p className="subscription-error" role="alert">{orderError}</p>}
         <WalletConnect />
-        <small id="subscription-minimum">Minimum ₩100,000. The displayed share estimate uses indicative or reference NAV and can change before any approved dealing point.</small>
+        <small>Test wallet connection is optional. Share estimates can change with the next indicative valuation.</small>
       </aside>
     </div>
   );
@@ -318,13 +382,26 @@ export default function EtfDetailClient({ etf }: { etf: Etf }) {
   const [subscriptionStatus, setSubscriptionStatus] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [orderError, setOrderError] = useState("");
+  const [reviewOpen, setReviewOpen] = useState(false);
+  const [simulatorVisible, setSimulatorVisible] = useState(false);
   const totalWeight = useMemo(() => etf.basket.reduce((sum, asset) => sum + asset.weight, 0), [etf.basket]);
   const liveTargetWeightBps = (liveProduct?.targets ?? []).reduce((sum, target) => sum + target.target_weight_bps, 0);
   const livePositionCount = (liveProduct?.targets?.length ?? 0) + (liveTargetWeightBps > 0 && liveTargetWeightBps < 10_000 ? 1 : 0);
 
   const openSubscription = () => {
     setActiveTab("overview");
-    window.setTimeout(() => document.querySelector<HTMLElement>(".product-order-card")?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
+    window.setTimeout(() => {
+      const simulator = document.querySelector<HTMLElement>(".product-order-card");
+      if (!simulator) return;
+      const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      simulator.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "start" });
+      simulator.querySelector<HTMLElement>(".order-card-heading")?.focus({ preventScroll: true });
+    }, 50);
+  };
+
+  const openMethodology = () => {
+    setActiveTab("methodology");
+    window.setTimeout(() => document.getElementById("product-tab-methodology")?.focus(), 0);
   };
 
   useEffect(() => {
@@ -343,18 +420,29 @@ export default function EtfDetailClient({ etf }: { etf: Etf }) {
         const portfolio = await portfolioResponse.json() as { subscriptions?: Array<{ product_id?: string; productId?: string; status?: string }> };
         const latest = portfolio.subscriptions?.find((subscription) => (subscription.product_id ?? subscription.productId) === etf.id);
         if (!cancelled && latest?.status) setSubscriptionStatus(latest.status);
-      } catch (error) {
-        if (!cancelled) setOrderError(error instanceof Error ? error.message : "Fund engine is unavailable");
+      } catch {
+        if (!cancelled) setOrderError("We couldn’t refresh the latest indicative data. Reference values are shown; no action is required.");
       }
     };
     void load();
     return () => { cancelled = true; };
   }, [etf.id]);
 
-  const subscribe = async () => {
+  useEffect(() => {
+    const simulator = document.querySelector<HTMLElement>(".product-order-card");
+    if (!simulator || activeTab !== "overview") {
+      const reset = window.setTimeout(() => setSimulatorVisible(false), 0);
+      return () => window.clearTimeout(reset);
+    }
+    const observer = new IntersectionObserver(([entry]) => setSimulatorVisible(entry.isIntersecting), { threshold: 0.2 });
+    observer.observe(simulator);
+    return () => observer.disconnect();
+  }, [activeTab]);
+
+  const subscribe = async (): Promise<boolean> => {
     if (subscriptionStatus) {
       window.location.assign("/?app=portfolio");
-      return;
+      return true;
     }
     setSubmitting(true);
     setOrderError("");
@@ -368,8 +456,10 @@ export default function EtfDetailClient({ etf }: { etf: Etf }) {
       const payload = await response.json() as { subscription?: { status?: string }; error?: string };
       if (!response.ok) throw new Error(payload.error || "Subscription request failed");
       setSubscriptionStatus(payload.subscription?.status ?? "submitted");
-    } catch (error) {
-      setOrderError(error instanceof Error ? error.message : "Subscription request failed");
+      return true;
+    } catch {
+      setOrderError("Your simulation was not saved. No order was placed and no funds moved. Please try again.");
+      return false;
     } finally {
       setSubmitting(false);
     }
@@ -394,7 +484,7 @@ export default function EtfDetailClient({ etf }: { etf: Etf }) {
           <h2>{etf.tagline}</h2>
           <p>{etf.description}</p>
           <div className="product-fit-strip"><div><span>WHY CHOOSE IT</span><p>{etf.whyChoose}</p></div><div><span>BEST FOR</span><p>{etf.bestFor}</p></div><div><span>MAY NOT SUIT</span><p>{etf.notFor}</p></div></div>
-          <div className="product-hero-actions"><button type="button" onClick={openSubscription}>{subscriptionStatus ? "VIEW PAPER ALLOCATION" : "SIMULATE ALLOCATION"}</button><button type="button" onClick={() => setActiveTab("methodology")}>REVIEW METHOD</button></div>
+          <div className="product-hero-actions"><button type="button" onClick={subscriptionStatus ? () => window.location.assign("/?app=portfolio") : openSubscription}>{subscriptionStatus ? "VIEW PAPER PORTFOLIO" : "TRY A SAMPLE AMOUNT"}</button><button type="button" onClick={openMethodology}>SEE HOW IT WORKS</button></div>
           <dl className="product-hero-facts"><div><dt>FEE</dt><dd>{etf.fee}</dd></div><div><dt>RISK</dt><dd>{etf.risk}</dd></div><div><dt>REBALANCE</dt><dd>{etf.rebalanceFrequency}</dd></div></dl>
         </div>
 
@@ -410,13 +500,17 @@ export default function EtfDetailClient({ etf }: { etf: Etf }) {
 
       <ProductTabs active={activeTab} onChange={setActiveTab} />
 
-      <section id={`product-panel-${activeTab}`} role="tabpanel" aria-labelledby={`product-tab-${activeTab}`} className="product-tab-panel">
-        {activeTab === "overview" && <OverviewPanel etf={etf} liveProduct={liveProduct} engineMode={engineMode} amountKrw={amountKrw} subscriptionStatus={subscriptionStatus} submitting={submitting} orderError={orderError} onAmountChange={setAmountKrw} onSubscribe={subscribe} />}
+      <section key={activeTab} id={`product-panel-${activeTab}`} role="tabpanel" aria-labelledby={`product-tab-${activeTab}`} className="product-tab-panel is-entering">
+        {activeTab === "overview" && <OverviewPanel etf={etf} liveProduct={liveProduct} engineMode={engineMode} amountKrw={amountKrw} subscriptionStatus={subscriptionStatus} submitting={submitting} orderError={orderError} onAmountChange={(value) => { setAmountKrw(value); setOrderError(""); }} onSubscribe={subscriptionStatus ? () => { void subscribe(); } : () => setReviewOpen(true)} />}
         {activeTab === "performance" && <PerformancePanel etf={etf} />}
         {activeTab === "holdings" && <HoldingsPanel etf={etf} liveProduct={liveProduct} />}
         {activeTab === "methodology" && <MethodologyPanel etf={etf} />}
         {activeTab === "documents" && <DocumentsPanel etf={etf} />}
       </section>
+
+      <button type="button" className={`mobile-allocation-cta${simulatorVisible ? " is-hidden" : ""}`} onClick={subscriptionStatus ? () => window.location.assign("/?app=portfolio") : openSubscription}><span>{subscriptionStatus ? "PAPER PORTFOLIO" : "REVIEW SAMPLE"}</span><b>{subscriptionStatus ? "VIEW SAVED ALLOCATION" : formatKrw(amountKrw)}</b></button>
+
+      {reviewOpen && <SimulationReviewDialog etf={etf} amountKrw={amountKrw} nav={liveProduct?.nav?.navPerShareMicros ?? ""} submitting={submitting} error={orderError} onCancel={() => { if (!submitting) setReviewOpen(false); }} onConfirm={() => { void subscribe().then((saved) => { if (saved) setReviewOpen(false); }); }} />}
 
       <footer className="product-detail-footer"><span>GANYMEDE INDEX / {etf.ticker}</span><p>Subscriptions remain subject to KYC, approved offering documents, funding and operational acceptance.</p><span>GIWA SEPOLIA / 91342</span></footer>
     </main>

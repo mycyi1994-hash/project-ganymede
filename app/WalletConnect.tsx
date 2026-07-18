@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 
 type EthereumProvider = {
   isMetaMask?: boolean;
@@ -33,6 +33,9 @@ export default function WalletConnect({ compact = false }: { compact?: boolean }
   const [chainId, setChainId] = useState("");
   const [status, setStatus] = useState("CONNECT METAMASK");
   const [error, setError] = useState("");
+  const [missingWallet, setMissingWallet] = useState(false);
+  const errorId = useId();
+  const statusId = useId();
 
   const onCorrectChain = chainId.toLowerCase() === GIWA_CHAIN.chainId.toLowerCase();
 
@@ -85,10 +88,11 @@ export default function WalletConnect({ compact = false }: { compact?: boolean }
   const connect = async () => {
     const provider = window.ethereum;
     setError("");
+    setMissingWallet(false);
 
     if (!provider?.isMetaMask) {
-      setError("MetaMask is required to connect.");
-      window.open("https://metamask.io/download/", "_blank", "noopener,noreferrer");
+      setMissingWallet(true);
+      setError("MetaMask is not installed. You can continue without a wallet.");
       return;
     }
 
@@ -102,7 +106,7 @@ export default function WalletConnect({ compact = false }: { compact?: boolean }
       setStatus("CONNECTED");
     } catch (walletError) {
       const code = (walletError as { code?: number }).code;
-      setError(code === 4001 ? "Connection request was declined." : "Could not connect to GIWA Testnet.");
+      setError(code === 4001 ? "Connection request was cancelled." : "Could not connect to GIWA Sepolia. Please try again.");
       setStatus("CONNECT METAMASK");
     }
   };
@@ -113,13 +117,16 @@ export default function WalletConnect({ compact = false }: { compact?: boolean }
         type="button"
         className={address && onCorrectChain ? "is-connected" : ""}
         onClick={connect}
-        aria-describedby={error ? "wallet-error" : undefined}
+        aria-describedby={`${statusId}${error ? ` ${errorId}` : ""}`}
+        aria-label={address && onCorrectChain ? `${shortAddress(address)}, connected to GIWA Sepolia` : address ? "Switch wallet to GIWA Sepolia" : "Connect optional MetaMask test wallet"}
+        disabled={status === "CONNECTING…"}
       >
         <span className="wallet-network-dot" />
         {address && onCorrectChain ? shortAddress(address) : address ? "SWITCH TO GIWA" : status}
       </button>
-      {!compact && <span className="wallet-chain-label">GIWA TESTNET · 91342</span>}
-      {error && <small id="wallet-error" role="status">{error}</small>}
+      {!compact && <span id={statusId} className="wallet-chain-label" aria-live="polite">OPTIONAL TEST WALLET · GIWA SEPOLIA 91342</span>}
+      {compact && <span id={statusId} className="sr-only" aria-live="polite">Optional GIWA Sepolia test wallet</span>}
+      {error && <small id={errorId} role="alert">{error}{missingWallet && !compact && <> <a href="https://metamask.io/download/" target="_blank" rel="noreferrer">INSTALL METAMASK ↗</a></>}</small>}
     </div>
   );
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { KeyboardEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { KeyboardEvent as ReactKeyboardEvent, useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import GanymedeScene from "./GanymedeScene";
 import MiniAsciiCelestial from "./MiniAsciiCelestial";
 import WalletConnect from "./WalletConnect";
@@ -79,9 +79,9 @@ type OperationsData = {
 };
 
 const filters: Array<{ id: Filter; label: string }> = [
-  { id: "all", label: "ALL PRODUCTS" },
-  { id: "passive", label: "PASSIVE" },
-  { id: "active", label: "ACTIVE" },
+  { id: "all", label: "ALL · 4" },
+  { id: "passive", label: "PASSIVE · 2" },
+  { id: "active", label: "ACTIVE · 2" },
 ];
 
 const emptyPortfolio: PortfolioData = { investor: null, positions: [], subscriptions: [], redemptions: [] };
@@ -132,11 +132,8 @@ function EtfCard({ etf, liveProduct, onOpen, onNavigate }: {
   onOpen: (id: string) => void;
   onNavigate: (id: string, direction: number) => void;
 }) {
-  const handleKeyDown = (event: KeyboardEvent<HTMLElement>) => {
-    if (event.key === "Enter" || event.key === " ") {
-      event.preventDefault();
-      onOpen(etf.id);
-    } else if (event.key === "ArrowRight" || event.key === "ArrowDown") {
+  const handleKeyDown = (event: ReactKeyboardEvent<HTMLElement>) => {
+    if (event.key === "ArrowRight" || event.key === "ArrowDown") {
       event.preventDefault();
       onNavigate(etf.id, 1);
     } else if (event.key === "ArrowLeft" || event.key === "ArrowUp") {
@@ -148,7 +145,7 @@ function EtfCard({ etf, liveProduct, onOpen, onNavigate }: {
   const targetHoldings = allTargetHoldings.slice(0, 3);
   return (
     <article className={`etf-card etf-product-card product-${etf.id}`}>
-      <a id={`etf-card-${etf.id}`} className="etf-card-hit" href={`/etfs/${etf.slug}`} aria-label={`View ${etf.name}, ${etf.roleName}, product details`} onClick={(event) => { event.preventDefault(); onOpen(etf.id); }} onKeyDown={handleKeyDown} />
+      <a id={`etf-card-${etf.id}`} className="etf-card-hit" href={`/etfs/${etf.slug}`} aria-label={`View ${etf.name}, ${etf.roleName}, ${etf.risk.toLowerCase()} risk, product details`} onClick={(event) => { if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return; event.preventDefault(); onOpen(etf.id); }} onKeyDown={handleKeyDown} />
       <div className="product-card-index" aria-hidden="true"><span>{String(etfs.findIndex((candidate) => candidate.id === etf.id) + 1).padStart(2, "0")}</span><i /></div>
       <div className="etf-card-hero">
         <div className="etf-card-copy">
@@ -176,7 +173,7 @@ function EtfCard({ etf, liveProduct, onOpen, onNavigate }: {
           {targetHoldings.map((holding) => <span key={holding.symbol}>{holding.symbol} <b>{(holding.target_weight_bps / 100).toFixed(1)}%</b></span>)}
           {allTargetHoldings.length > 3 && <span className="holding-more">+{allTargetHoldings.length - 3}</span>}
         </div>
-        <span className="select-etf-button" aria-hidden="true">EXPLORE FUND <span>↗</span></span>
+        <span className="select-etf-button" aria-hidden="true">VIEW STRATEGY <span>↗</span></span>
       </div>
     </article>
   );
@@ -191,7 +188,7 @@ function AppNav({ view, onOverview, onViewChange }: { view: View; onOverview: ()
         <button className={view === "select" ? "is-active" : ""} type="button" aria-current={view === "select" ? "page" : undefined} onClick={() => onViewChange("select")}>FUNDS</button>
         <button className={view === "portfolio" ? "is-active" : ""} type="button" aria-current={view === "portfolio" ? "page" : undefined} onClick={() => onViewChange("portfolio")}>MY PORTFOLIO</button>
       </nav>
-      <div className="app-utility-zone"><button type="button" className={`control-room-link${view === "operations" ? " is-active" : ""}`} onClick={() => onViewChange("operations")}><i /> CONTROL ROOM</button><WalletConnect compact /></div>
+      <div className="app-utility-zone"><WalletConnect compact /></div>
     </header>
   );
 }
@@ -204,15 +201,15 @@ function PortfolioView({ data, loading, error, onBrowse, onRedeem, onOpen }: {
   onRedeem: (position: PortfolioPosition) => Promise<void>;
   onOpen: (position: PortfolioPosition) => void;
 }) {
-  if (loading) return <main className="portfolio-page portfolio-empty-page"><section className="portfolio-empty"><p className="section-kicker">PORTFOLIO / LOADING</p><h1>Reconciling fund positions.</h1><p>Reading settled shares and the latest official or indicative NAV from the fund ledger.</p></section></main>;
+  if (loading) return <main className="portfolio-page portfolio-empty-page" aria-busy="true"><section className="portfolio-empty"><p className="section-kicker">PAPER PORTFOLIO / LOADING</p><h1>Preparing your simulated portfolio…</h1><p>We are applying the latest indicative values. No real funds are moving.</p></section></main>;
   if (!data.positions.length) {
     return (
       <main className="portfolio-page portfolio-empty-page">
         <section className="portfolio-empty">
-          <p className="section-kicker">PORTFOLIO / {data.subscriptions.length ? "SUBSCRIPTION PENDING" : "NO POSITIONS"}</p>
-          <h1>{data.subscriptions.length ? "Your subscription is in the settlement queue." : "Your ETF shares will appear here."}</h1>
-          <p>{error || (data.subscriptions.length ? "KYC, funding, execution and GIWA issuance must complete before shares are shown." : "Select a passive or active ETF and submit a subscription request.")}</p>
-          <button type="button" onClick={onBrowse}>BROWSE ETF PRODUCTS</button>
+          <p className="section-kicker">PAPER PORTFOLIO / {data.subscriptions.length ? "PREPARING" : "EMPTY"}</p>
+          <h1>{data.subscriptions.length ? "We’re adding your simulated allocation." : "Your paper portfolio is empty."}</h1>
+          <p>{error || (data.subscriptions.length ? "No real funds are moving. Your saved allocation will appear here when the paper ledger is ready." : "Choose a strategy and save a sample allocation to see how the funds could work together.")}</p>
+          <button type="button" onClick={onBrowse}>CHOOSE A STRATEGY</button>
         </section>
       </main>
     );
@@ -227,22 +224,22 @@ function PortfolioView({ data, loading, error, onBrowse, onRedeem, onOpen }: {
   return (
     <main className="portfolio-page holdings-portfolio-page">
       <header className="portfolio-header">
-        <div><p className="section-kicker">MY PORTFOLIO / GIWA SHARE LEDGER</p><h1>Your funds, in one orbit.</h1><p>See settled shares, indicative NAV, cost basis and unrealized performance in one reconciled view.</p></div>
-        <div className="portfolio-header-actions"><span><i /> KYC {data.investor?.kycStatus?.toUpperCase() ?? "UNVERIFIED"}</span><button type="button" className="is-primary" onClick={onBrowse}>ADD ETF</button></div>
+        <div><p className="section-kicker">PAPER PORTFOLIO / SIMULATED</p><h1>Your strategies, in one orbit.</h1><p>See how your selected strategies could work together. No real assets are held and no money has moved.</p></div>
+        <div className="portfolio-header-actions"><span><i /> PAPER MODE</span><button type="button" className="is-primary" onClick={onBrowse}>ADD STRATEGY</button></div>
       </header>
       <section className="portfolio-constellation" aria-label="Portfolio performance overview">
-        <div className="portfolio-constellation-copy"><span>INDICATIVE PERFORMANCE</span><strong>{gain >= 0 ? "+" : ""}{(totalReturnBps / 100).toFixed(2)}%</strong><p>Since first settled subscription · based on the latest available NAV</p></div>
+        <div className="portfolio-constellation-copy"><span>MODEL RETURN · SINCE FIRST SIMULATION</span><strong>{gain >= 0 ? "+" : ""}{(totalReturnBps / 100).toFixed(2)}%</strong><p>Based on the latest indicative values, not investor-earned performance</p></div>
         <div className="portfolio-signal" aria-hidden="true"><i /><i /><i /><i /><span /></div>
-        <div className="portfolio-periods" aria-label="Performance period"><button type="button">1M</button><button type="button">3M</button><button type="button" className="is-active">ALL</button></div>
+        <span className="portfolio-period-label">SINCE FIRST SAVED ALLOCATION</span>
       </section>
       <dl className="portfolio-kpis">
-        <div><dt>PORTFOLIO VALUE</dt><dd>{formatKrw(currentValue)}</dd><small>Cost basis {formatKrw(invested)}</small></div>
-        <div><dt>TOTAL RETURN</dt><dd className={gain >= 0 ? "positive-value" : ""}>{gain >= 0 ? "+" : ""}{(totalReturnBps / 100).toFixed(2)}%</dd><small>{gain >= 0 ? "+" : ""}{formatKrw(gain)}</small></div>
-        <div><dt>POSITIONS</dt><dd>{String(data.positions.length).padStart(2, "0")}</dd><small>Settled ETF share classes</small></div>
-        <div><dt>TOP CONTRIBUTOR</dt><dd>{best.ticker.replace("GMD ", "")}</dd><small>{best.returnBps >= 0 ? "+" : ""}{(best.returnBps / 100).toFixed(2)}%</small></div>
+        <div><dt>SIMULATED VALUE</dt><dd>{formatKrw(currentValue)}</dd><small>Sample amount {formatKrw(invested)}</small></div>
+        <div><dt>MODEL RETURN</dt><dd className={gain >= 0 ? "positive-value" : ""}>{gain >= 0 ? "+" : ""}{(totalReturnBps / 100).toFixed(2)}%</dd><small>{gain >= 0 ? "+" : ""}{formatKrw(gain)} illustrative</small></div>
+        <div><dt>STRATEGIES</dt><dd>{String(data.positions.length).padStart(2, "0")}</dd><small>Saved paper allocations</small></div>
+        <div><dt>TOP MODEL CONTRIBUTOR</dt><dd>{best.ticker.replace("GMD ", "")}</dd><small>{best.returnBps >= 0 ? "+" : ""}{(best.returnBps / 100).toFixed(2)}%</small></div>
       </dl>
       <section className="portfolio-positions" aria-labelledby="positions-title">
-        <header><div><p className="section-kicker">POSITIONS</p><h2 id="positions-title">Issued ETF shares</h2></div><span>SERVER LEDGER · NAV MARKED</span></header>
+        <header><div><p className="section-kicker">SAVED STRATEGIES</p><h2 id="positions-title">Paper allocations</h2></div><span>SIMULATED · INDICATIVE VALUES</span></header>
         <div className="position-table" role="table" aria-label="ETF fund share positions">
           <div className="position-row position-head" role="row"><span>PRODUCT</span><span>SHARES</span><span>COST BASIS</span><span>NAV VALUE / RETURN</span><span>STYLE</span><span>ACTION</span></div>
           {data.positions.map((position) => (
@@ -252,11 +249,11 @@ function PortfolioView({ data, loading, error, onBrowse, onRedeem, onOpen }: {
               <span><b>{formatKrw(position.costBasisKrw)}</b><small>settled cash</small></span>
               <span className="position-return"><b>{formatKrw(position.currentValueKrw)} · {position.returnBps >= 0 ? "+" : ""}{(position.returnBps / 100).toFixed(2)}%</b><i style={{ width: `${Math.min(100, Math.max(3, Math.abs(position.returnBps) / 30))}%` }} /></span>
               <span>{position.strategyStyle.toUpperCase()}</span>
-              <button type="button" className="position-remove" onClick={() => onRedeem(position)} aria-label={`Redeem ${position.name}`}>REDEEM</button>
+              <button type="button" className="position-remove" onClick={() => onRedeem(position)} aria-label={`Remove ${position.name} from this simulation`}>REMOVE</button>
             </div>
           ))}
         </div>
-        <footer><p>Subscriptions and redemptions pass through KYC, funding, execution and GIWA settlement states. A pending request is not an issued fund share.</p><WalletConnect /></footer>
+        <footer><p>All values and returns are simulated. This is not a brokerage account, and connecting a GIWA Sepolia test wallet is optional.</p><WalletConnect /></footer>
       </section>
     </main>
   );
@@ -301,6 +298,66 @@ function OperationsView({ data, loading, error, onRun }: { data: OperationsData 
   );
 }
 
+function useDialogFocus(onClose: () => void) {
+  const dialogRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    const previousFocus = document.activeElement as HTMLElement | null;
+    const dialog = dialogRef.current;
+    if (!dialog) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const getFocusable = () => Array.from(dialog.querySelectorAll<HTMLElement>('button:not([disabled]), a[href], input:not([disabled]), [tabindex]:not([tabindex="-1"])'));
+    getFocusable()[0]?.focus();
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        onClose();
+        return;
+      }
+      if (event.key !== "Tab") return;
+      const focusable = getFocusable();
+      if (!focusable.length) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener("keydown", handleKeyDown);
+      previousFocus?.focus();
+    };
+  }, [onClose]);
+
+  return dialogRef;
+}
+
+function ChoiceGuide({ onClose, onOpen }: { onClose: () => void; onOpen: (id: string) => void }) {
+  const titleId = useId();
+  const copyId = useId();
+  const dialogRef = useDialogFocus(onClose);
+  const options = [
+    ["core-20", "BUILD A CORE POSITION", "Start with GMD CORE", "A rules-based foundation for broad digital-asset exposure."],
+    ["digital-income", "REDUCE VOLATILITY", "Start with GMD YIELD", "A lower-risk stabilizer designed for steadier participation."],
+    ["tech-leaders", "TARGET INFRASTRUCTURE GROWTH", "Start with GMD TECH", "Focused exposure to networks building digital infrastructure."],
+    ["next-frontier", "EXPLORE EMERGING NETWORKS", "Start with GMD ALPHA", "A higher-risk strategy for early-stage network growth."],
+  ];
+  return (
+    <div className="confirm-backdrop choice-guide-backdrop" role="presentation" onMouseDown={(event) => { if (event.currentTarget === event.target) onClose(); }}>
+      <section ref={dialogRef} className="choice-guide-dialog" role="dialog" aria-modal="true" aria-labelledby={titleId} aria-describedby={copyId}>
+        <header><div><span>20-SECOND STRATEGY FINDER</span><h2 id={titleId}>What should this strategy do in your portfolio?</h2><p id={copyId}>Choose one goal. You can still compare all four strategies at any time.</p></div><button type="button" className="choice-guide-close" onClick={onClose} aria-label="Close strategy finder">×</button></header>
+        <div className="choice-guide-options">
+          {options.map(([id, goal, title, copy], index) => <button key={id} type="button" className={`product-${id}`} onClick={() => onOpen(id)}><i>{String(index + 1).padStart(2, "0")}</i><span>{goal}</span><b>{title}</b><small>{copy}</small><em>VIEW STRATEGY ↗</em></button>)}
+        </div>
+        <div className="plain-language-guide"><span>TERMS, MADE SIMPLE</span><dl><div><dt>PASSIVE</dt><dd>Follows published rules and changes holdings at scheduled reviews.</dd></div><div><dt>ACTIVE</dt><dd>Uses systematic signals to adjust holdings within fixed limits.</dd></div><div><dt>INDICATIVE NAV</dt><dd>An estimate of one fund share’s value, not an independently verified price.</dd></div><div><dt>MODEL RETURN</dt><dd>A simulated result, not money earned by investors.</dd></div></dl></div>
+        <footer><button type="button" onClick={onClose}>COMPARE ALL FOUR</button><p>PAPER MODE means no real order is placed and no money moves.</p></footer>
+      </section>
+    </div>
+  );
+}
+
 function ConfirmDialog({ eyebrow, title, copy, confirmLabel, danger = false, onCancel, onConfirm }: {
   eyebrow: string;
   title: string;
@@ -310,13 +367,16 @@ function ConfirmDialog({ eyebrow, title, copy, confirmLabel, danger = false, onC
   onCancel: () => void;
   onConfirm: () => void;
 }) {
+  const titleId = useId();
+  const copyId = useId();
+  const dialogRef = useDialogFocus(onCancel);
   return (
-    <div className="confirm-backdrop" role="presentation" onKeyDown={(event) => { if (event.key === "Escape") onCancel(); }}>
-      <section className="confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="confirm-dialog-title" aria-describedby="confirm-dialog-copy">
+    <div className="confirm-backdrop" role="presentation" onMouseDown={(event) => { if (event.currentTarget === event.target) onCancel(); }}>
+      <section ref={dialogRef} className="confirm-dialog" role="dialog" aria-modal="true" aria-labelledby={titleId} aria-describedby={copyId}>
         <span>{eyebrow}</span>
-        <h2 id="confirm-dialog-title">{title}</h2>
-        <p id="confirm-dialog-copy">{copy}</p>
-        <div><button type="button" autoFocus onClick={onCancel}>CANCEL</button><button type="button" className={danger ? "is-danger" : "is-primary"} onClick={onConfirm}>{confirmLabel}</button></div>
+        <h2 id={titleId}>{title}</h2>
+        <p id={copyId}>{copy}</p>
+        <div><button type="button" onClick={onCancel}>KEEP IT</button><button type="button" className={danger ? "is-danger" : "is-primary"} onClick={onConfirm}>{confirmLabel}</button></div>
       </section>
     </div>
   );
@@ -336,6 +396,8 @@ export default function Home() {
   const [operationsError, setOperationsError] = useState("");
   const [pendingRedeem, setPendingRedeem] = useState<PortfolioPosition | null>(null);
   const [confirmCycle, setConfirmCycle] = useState(false);
+  const [guideOpen, setGuideOpen] = useState(false);
+  const [actionNotice, setActionNotice] = useState("");
 
   const openView = useCallback((nextView: View) => {
     setAppOpen(true);
@@ -438,6 +500,12 @@ export default function Home() {
     return () => window.clearTimeout(initial);
   }, [appOpen, view, refreshOperations, refreshPortfolio]);
 
+  useEffect(() => {
+    if (!actionNotice) return;
+    const timer = window.setTimeout(() => setActionNotice(""), 7000);
+    return () => window.clearTimeout(timer);
+  }, [actionNotice]);
+
   const openEtfDetail = (id: string) => {
     const etf = etfs.find((candidate) => candidate.id === id);
     if (!etf) return;
@@ -463,6 +531,7 @@ export default function Home() {
       const payload = await response.json() as { error?: string };
       if (!response.ok) throw new Error(payload.error || "Redemption request failed");
       await refreshPortfolio();
+      setActionNotice("Paper allocation removed. No real shares or funds were affected.");
     } catch (error) {
       setPortfolioError(error instanceof Error ? error.message : "Redemption request failed");
       setPortfolioLoading(false);
@@ -476,6 +545,7 @@ export default function Home() {
       const payload = await response.json() as { error?: string };
       if (!response.ok) throw new Error(payload.error || "Engine cycle failed");
       await Promise.all([refreshOperations(), refreshMarket()]);
+      setActionNotice("Paper engine cycle completed and the indicative data was refreshed.");
     } catch (error) {
       setOperationsError(error instanceof Error ? error.message : "Engine cycle failed");
       setOperationsLoading(false);
@@ -497,9 +567,9 @@ export default function Home() {
             </header>
             <div className="product-market-toolbar">
               <div className="etf-filters strategy-filters" role="group" aria-label="Filter ETF strategies">{filters.map((filter) => <button key={filter.id} type="button" className={activeFilter === filter.id ? "is-active" : ""} aria-pressed={activeFilter === filter.id} onClick={() => { setActiveFilter(filter.id); sessionStorage.setItem("ganymede-etf-filter", filter.id); }}>{filter.label}</button>)}</div>
-              <p><b>{String(visibleEtfs.length).padStart(2, "0")} STRATEGIES</b>{market?.updatedAt ? ` · Indicative NAV ${displayTime(market.updatedAt)}` : marketError ? " · DATA UNAVAILABLE" : totalAum ? ` · Reference universe ${formatKrw(totalAum)}` : " · Reference data initializing"}</p>
+              <div className="market-toolbar-status"><button type="button" className="choice-guide-trigger" onClick={() => setGuideOpen(true)}>HELP ME CHOOSE <span>?</span></button><p aria-live="polite" aria-atomic="true"><b>{String(visibleEtfs.length).padStart(2, "0")} {activeFilter === "all" ? "STRATEGIES" : `${activeFilter.toUpperCase()} STRATEGIES`}</b>{market?.updatedAt ? ` · Indicative NAV ${displayTime(market.updatedAt)}` : marketError ? " · REFERENCE DATA SHOWN" : totalAum ? ` · Reference universe ${formatKrw(totalAum)}` : " · Preparing strategy data…"}{marketError && <button type="button" onClick={() => void refreshMarket()}>TRY AGAIN</button>}</p></div>
             </div>
-            <section className="etf-card-grid" aria-label="ETF products">{visibleEtfs.map((etf) => <EtfCard key={etf.id} etf={etf} liveProduct={marketById.get(etf.id)} onOpen={openEtfDetail} onNavigate={navigateCards} />)}</section>
+            <section key={activeFilter} className="etf-card-grid is-filtered" aria-label="ETF products">{visibleEtfs.map((etf) => <EtfCard key={etf.id} etf={etf} liveProduct={marketById.get(etf.id)} onOpen={openEtfDetail} onNavigate={navigateCards} />)}</section>
           </main>
         ) : view === "portfolio" ? (
           <PortfolioView data={portfolio} loading={portfolioLoading} error={portfolioError} onBrowse={() => openView("select")} onOpen={(position) => window.location.assign(`/etfs/${position.slug}`)} onRedeem={async (position) => setPendingRedeem(position)} />
@@ -507,8 +577,10 @@ export default function Home() {
           <OperationsView data={operations} loading={operationsLoading} error={operationsError} onRun={async () => setConfirmCycle(true)} />
         )}
         <footer className="app-disclaimer"><span>PRE-LAUNCH / SIMULATION</span><p>Returns are modelled and NAV is indicative. Public issuance remains disabled until licensed fund, custody, administration and distribution controls are active.</p><button type="button" onClick={() => openView("operations")}>SYSTEM STATUS ↗</button></footer>
-        {pendingRedeem && <ConfirmDialog eyebrow="REDEMPTION REQUEST / REVIEW" title={`Redeem all ${pendingRedeem.ticker} shares?`} copy={`This creates a paper redemption request for ${formatShares(pendingRedeem.sharesMicros)} fund shares. Final proceeds depend on the approved dealing NAV and settlement controls.`} confirmLabel="REQUEST REDEMPTION" danger onCancel={() => setPendingRedeem(null)} onConfirm={() => { const position = pendingRedeem; setPendingRedeem(null); void redeemPosition(position); }} />}
+        {pendingRedeem && <ConfirmDialog eyebrow="PAPER PORTFOLIO / REVIEW" title={`Remove ${pendingRedeem.ticker} from this simulation?`} copy="This removes the saved paper allocation only. No real shares, assets or funds will be affected." confirmLabel="REMOVE" danger onCancel={() => setPendingRedeem(null)} onConfirm={() => { const position = pendingRedeem; setPendingRedeem(null); void redeemPosition(position); }} />}
         {confirmCycle && <ConfirmDialog eyebrow="CONTROL ROOM / PAPER MODE" title="Run one controlled engine cycle?" copy="The paper engine will evaluate four strategies, refresh indicative NAV, create any simulated rebalance orders and append the results to the audit ledger." confirmLabel="RUN PAPER CYCLE" onCancel={() => setConfirmCycle(false)} onConfirm={() => { setConfirmCycle(false); void runOperationsCycle(); }} />}
+        {guideOpen && <ChoiceGuide onClose={() => setGuideOpen(false)} onOpen={(id) => { setGuideOpen(false); openEtfDetail(id); }} />}
+        {actionNotice && <div className="action-toast" role="status"><i>✓</i><p>{actionNotice}</p><button type="button" onClick={() => setActionNotice("")} aria-label="Dismiss notification">×</button></div>}
       </div>
     );
   }
@@ -522,7 +594,7 @@ export default function Home() {
         <p>PASSIVE + ACTIVE DIGITAL-ASSET STRATEGIES</p>
         <h1 id="hero-title"><span>FOUR STRATEGIES.</span><span>ONE CLEAR ORBIT.</span></h1>
         <p className="launch-description">Choose a foundation, a stabilizer, focused growth or frontier growth—then inspect every rule, holding and risk before launch.</p>
-        <div className="launch-actions"><button className="launch-app" type="button" onClick={() => openView("select")}>COMPARE STRATEGIES <span aria-hidden="true">↗</span></button><button className="launch-portfolio" type="button" onClick={() => openView("portfolio")}>VIEW PORTFOLIO</button></div>
+        <div className="launch-actions"><button className="launch-app" type="button" onClick={() => openView("select")}>COMPARE STRATEGIES <span aria-hidden="true">↗</span></button><button className="launch-portfolio" type="button" onClick={() => setGuideOpen(true)}>HELP ME CHOOSE</button></div>
         <div className="launch-assurance"><span>METHODOLOGY PUBLISHED</span><span>HOLDINGS DISCLOSED</span><span>LIMITS ENFORCED</span></div>
       </section>
       <aside className="launch-fund-index" aria-label="Fund universe">
@@ -530,6 +602,7 @@ export default function Home() {
         {etfs.map((etf, index) => <button key={etf.id} type="button" className={`product-${etf.id}`} onClick={() => { setActiveFilter(etf.strategyStyle); openView("select"); }}><i>{String(index + 1).padStart(2, "0")}</i><span><b>{etf.ticker.replace("GMD ", "")}</b><small>{etf.roleName}</small></span><em>{etf.fee} FEE</em></button>)}
       </aside>
       <p className="launch-disclosure"><span>PRIVATE PRE-LAUNCH</span> No public offering is active. Model, reference and indicative figures are not administrator-verified.</p>
+      {guideOpen && <ChoiceGuide onClose={() => setGuideOpen(false)} onOpen={(id) => { setGuideOpen(false); openEtfDetail(id); }} />}
     </main>
   );
 }
