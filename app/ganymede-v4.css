@@ -1689,10 +1689,24 @@ body:has(.ganymede-v4.etf-platform-launch) {
   .ganymede-v4 .etf-product-card .ascii-planet { transition: none !important; }
 }
 
-/* Compact-height layouts must shrink the canvas with the hero instead of clipping it. */
+/* Compact-height layouts scroll instead of crushing the celestial artwork. */
 @media (min-width: 1100px) and (max-height: 920px) {
+  .ganymede-v4 .product-market-page {
+    overflow-y: auto;
+  }
+
+  .ganymede-v4 .etf-card-grid {
+    grid-template-rows: repeat(2, 454px);
+    grid-auto-rows: 454px;
+  }
+
+  .ganymede-v4 .etf-product-card {
+    min-height: 454px;
+    grid-template-rows: 320px 76px 58px;
+  }
+
   .ganymede-v4 .etf-product-card .ascii-planet {
-    height: calc(100% - 28px);
+    height: clamp(184px, 20.4vw, 269px);
     top: 50%;
   }
 }
