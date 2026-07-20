@@ -821,6 +821,28 @@ button { color: inherit; font: inherit; }
   .select-etf-button { transition: none; }
 }
 
+/* Keep product celestial bodies fully visible above the metrics rail. */
+.etf-product-card .ascii-planet {
+  opacity: 1;
+  filter:
+    brightness(1.28)
+    contrast(1.16)
+    drop-shadow(0 0 18px rgba(238, 237, 232, 0.2))
+    drop-shadow(0 0 38px rgba(177, 164, 205, 0.16));
+}
+
+@media (max-width: 700px) {
+  .etf-product-card .etf-card-hero {
+    padding-bottom: 205px;
+  }
+
+  .etf-product-card .ascii-planet {
+    width: min(410px, calc(100vw - 20px));
+    height: 210px;
+    bottom: 14px;
+  }
+}
+
 /* ETF basket detail */
 .etf-detail-shell {
   width: 100vw;
