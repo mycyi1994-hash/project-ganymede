@@ -1688,3 +1688,11 @@ body:has(.ganymede-v4.etf-platform-launch) {
   .mobile-allocation-cta,
   .ganymede-v4 .etf-product-card .ascii-planet { transition: none !important; }
 }
+
+/* Compact-height layouts must shrink the canvas with the hero instead of clipping it. */
+@media (min-width: 1100px) and (max-height: 920px) {
+  .ganymede-v4 .etf-product-card .ascii-planet {
+    height: calc(100% - 28px);
+    top: 50%;
+  }
+}
