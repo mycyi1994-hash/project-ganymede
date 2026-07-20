@@ -1188,10 +1188,17 @@ body:has(.ganymede-v4.etf-platform-launch) {
 .ganymede-v4 .product-card-metrics > div:first-child dd,
 .ganymede-v4 .product-card-metrics > div:nth-child(2) dd { color: color-mix(in srgb, var(--product-accent) 74%, var(--obs-text)); }
 
-.ganymede-v4 .product-core-20 .ascii-planet { right: 3%; width: 45%; transform: scale(1.03); }
-.ganymede-v4 .product-tech-leaders .ascii-planet { right: -4%; width: 58%; transform: rotate(-3deg) scale(1.04); }
-.ganymede-v4 .product-digital-income .ascii-planet { right: 2%; width: 48%; transform: scale(1.12); }
-.ganymede-v4 .product-next-frontier .ascii-planet { right: -1%; width: 52%; transform: rotate(3deg) scale(.96); }
+.ganymede-v4 .product-core-20 .ascii-planet { right: 3%; width: 45%; transform: translateY(-50%) scale(1.03); }
+.ganymede-v4 .product-tech-leaders .ascii-planet { right: -4%; width: 58%; transform: translateY(-50%) rotate(-3deg) scale(1.04); }
+.ganymede-v4 .product-digital-income .ascii-planet { right: 2%; width: 48%; transform: translateY(-50%) scale(1.12); }
+.ganymede-v4 .product-next-frontier .ascii-planet { right: -1%; width: 52%; transform: translateY(-50%) rotate(3deg) scale(.96); }
+
+@media (max-width: 700px) {
+  .ganymede-v4 .product-core-20 .ascii-planet { transform: translateX(50%) scale(1.03); }
+  .ganymede-v4 .product-tech-leaders .ascii-planet { transform: translateX(50%) rotate(-3deg) scale(1.04); }
+  .ganymede-v4 .product-digital-income .ascii-planet { transform: translateX(50%) scale(1.08); }
+  .ganymede-v4 .product-next-frontier .ascii-planet { transform: translateX(50%) rotate(3deg) scale(.96); }
+}
 
 .ganymede-v4 .product-detail-hero {
   min-height: 650px;
