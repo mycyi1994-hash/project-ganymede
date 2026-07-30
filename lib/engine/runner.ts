@@ -273,7 +273,8 @@ export async function runEngineCycle(
       const nav = await repo.calculateAndSaveNav(product.id, ticks, quality === "live" ? "indicative" : "stale");
       const request: GiwaSettlementRequest = {
         entityType: "nav", entityId: `${product.id}:${nav.asOf}`, action: "publish_nav", productId: product.id,
-        navPerShareMicros: nav.navPerShareMicros.toString(), holdingsHash: nav.holdingsHash, effectiveAt: nav.asOf,
+        navPerShareMicros: nav.navPerShareMicros.toString(), sharesOutstandingMicros: nav.sharesOutstandingMicros.toString(),
+        holdingsHash: nav.holdingsHash, effectiveAt: nav.asOf,
       };
       const settlement = await giwa.settle(request);
       await repo.saveGiwaSettlement(request, settlement);

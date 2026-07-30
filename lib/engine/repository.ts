@@ -346,7 +346,7 @@ export class EngineRepository {
     await this.audit("order.executed", "order", intent.id, "ENGINE", { intent: { ...intent, requestedNotionalKrw: intent.requestedNotionalKrw.toString(), requestedUnitsAtomic: intent.requestedUnitsAtomic?.toString() }, result: { ...result, executedPriceKrw: result.executedPriceKrw?.toString(), executedUnitsAtomic: result.executedUnitsAtomic?.toString(), feeKrw: result.feeKrw.toString() }, referencePrice: tick.priceKrw });
   }
 
-  async calculateAndSaveNav(productId: string, ticks: Map<string, MarketTick>, quality: "official" | "indicative" | "stale" | "blocked" = "indicative"): Promise<{ navPerShareMicros: bigint; netAssetValueKrw: bigint; holdingsHash: string; asOf: string }> {
+  async calculateAndSaveNav(productId: string, ticks: Map<string, MarketTick>, quality: "official" | "indicative" | "stale" | "blocked" = "indicative"): Promise<{ navPerShareMicros: bigint; netAssetValueKrw: bigint; sharesOutstandingMicros: bigint; holdingsHash: string; asOf: string }> {
     const product = await this.getProduct(productId);
     if (!product) throw new Error(`Unknown product ${productId}`);
     const positions = await this.getPositions(productId);
@@ -380,7 +380,7 @@ export class EngineRepository {
         tracking_error_bps, quality, holdings_hash, as_of
       ) VALUES (?, ?, ?, ?, '0', ?, ?, 0, ?, ?, ?)
     `).bind(productId, navPerShareMicros.toString(), net.toString(), gross.toString(), shares.toString(), dailyReturnBps, quality, holdingsHash, asOf).run();
-    return { navPerShareMicros, netAssetValueKrw: net, holdingsHash, asOf };
+    return { navPerShareMicros, netAssetValueKrw: net, sharesOutstandingMicros: shares, holdingsHash, asOf };
   }
 
   async latestNav(productId: string): Promise<NavRow | null> {

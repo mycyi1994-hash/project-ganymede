@@ -1,0 +1,30 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "ganymede-giwa-relayer",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-07-01",
+  "compatibility_flags": ["nodejs_compat"],
+
+  // Deployed separately from the application on purpose: this is the only
+  // component that holds an EVM private key.
+  "vars": {
+    "GIWA_RPC_URL": "https://sepolia-rpc.giwa.io"
+    // GIWA_FUND_SHARE_ADDRESS / GIWA_NAV_REGISTRY_ADDRESS are set after deploy:
+    //   npx wrangler secret put GIWA_FUND_SHARE_ADDRESS
+    // RELAYER_API_TOKEN and RELAYER_PRIVATE_KEY are secrets, never vars.
+  },
+
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "ganymede-relayer",
+      "database_id": "PLACEHOLDER_RUN_WRANGLER_D1_CREATE"
+    }
+  ],
+
+  "durable_objects": {
+    "bindings": [{ "name": "SUBMITTER", "class_name": "Submitter" }]
+  },
+
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Submitter"] }]
+}
