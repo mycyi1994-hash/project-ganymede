@@ -17,6 +17,8 @@ export type GiwaSettlementRequest = {
   productId: string;
   amount?: string;
   navPerShareMicros?: string;
+  /** Required by GanymedeNavRegistry.publishNav; omitted the relayer publishes 0. */
+  sharesOutstandingMicros?: string;
   sharesMicros?: string;
   holdingsHash?: string;
   effectiveAt: string;

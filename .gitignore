@@ -2,6 +2,8 @@
 
 # dependencies
 /node_modules
+onchain/node_modules
+relayer/node_modules
 /.pnp
 .pnp.*
 .yarn/*
@@ -42,3 +44,10 @@ next-env.d.ts
 /.wrangler/
 /outputs/
 /work/
+
+# solidity toolchain (onchain/) — build output is reproducible from sources.
+# deployments/ is intentionally NOT ignored: the deployed addresses are a record.
+onchain/artifacts/
+onchain/cache/
+relayer/.wrangler/
+relayer/.dev.vars

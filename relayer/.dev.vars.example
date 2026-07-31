@@ -1,0 +1,17 @@
+# Local `wrangler dev` values. Never commit the real file (.dev.vars is ignored).
+# In production every one of these is a `wrangler secret`, not a var.
+
+# Bearer token the application presents. Must equal the app's GIWA_RELAYER_TOKEN.
+RELAYER_API_TOKEN=local-dev-relayer-token
+
+# Hot key holding issuer + publisher. NEVER the administrator key.
+RELAYER_PRIVATE_KEY=
+
+# Written by `cd onchain && npm run deploy`.
+GIWA_FUND_SHARE_ADDRESS=
+GIWA_NAV_REGISTRY_ADDRESS=
+
+GIWA_RPC_URL=https://sepolia-rpc.giwa.io
+
+# Wallets treated as Dojang-verified on testnet, comma separated.
+DOJANG_TESTNET_ALLOWLIST=
