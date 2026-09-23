@@ -19,7 +19,7 @@ which tokens, how many units, or which prices produced that number.
 | --- | --- |
 | Hold a fixed number of xStocks units per fund share (AAPLx, MSFTx, NVDAx, AMZNx, METAx, TSLAx), equal-weight, re-fixed quarterly at the prevailing NAV | `lib/xstocks/basket.ts` |
 | Price each constituent from live X Layer liquidity through OKX OnchainOS (DEX market price, chainIndex 196) | `lib/xstocks/prices.ts` |
-| Refuse to publish when any price is missing or stale. There is no fallback to reference prices | `evaluateBasket` |
+| Refuse to publish when any price is missing or unreadable, or the price API fails. There is no fallback to reference prices | `evaluateBasket` |
 | Publish `publishNav(productId, nav, holdingsHash, effectiveAt)` to `GanymedeNavRegistry` on X Layer through a key-isolated relayer, with `holdingsHash = sha256(canonical composition JSON)` | `lib/xstocks/cycle.ts`, `relayer/` |
 | **Proof of NAV** page reads `latestNav` straight from the chain, re-hashes the composition in the browser, and checks the arithmetic | `app/proof` |
 
@@ -52,7 +52,7 @@ Existing projects are allowed; this is what was added for Dev Day:
   verification, network-aware deploy/status/allowlist scripts.
 - **GMD US TECH x basket:** fixed-unit composition with WAD precision,
   inception fixing from live prices, quarterly re-fixing with NAV continuity, and
-  a publication gate on stale or missing prices.
+  a publication gate on missing prices.
 - **OnchainOS pricing adapter:** signed requests plus `npm run xstocks:check` to
   discover, verify and price constituents.
 - **Proof of NAV page:** in-browser verification against the registry's
@@ -99,7 +99,7 @@ proxy implementation.
 4. **(0:50)** Click the transaction. "Every five minutes the engine publishes a NAV
    and its composition hash on chain through a relayer that holds no admin
    rights."
-5. **(1:10)** "If any price is stale, nothing is published. No reference-price
+5. **(1:10)** "If any price is missing, nothing is published. No reference-price
    fallback, no silent gaps."
 6. **(1:20)** "The same rails run subscriptions and redemptions against a
    permissioned share ledger. This is issuer infrastructure for tokenized-stock
@@ -112,3 +112,7 @@ proxy implementation.
 - The contracts are unaudited.
 - Prices come from one source (OnchainOS DEX market price). Production would add a
   second source, such as Chainlink tokenized-equity feeds, and deviation checks.
+- OnchainOS stamps each price with the time of the response, not of the last
+  trade, so the quote-age limit cannot tell that a pool has stopped trading.
+  Production would also require recent trades or a liquidity floor before
+  publishing.

@@ -23,6 +23,7 @@ export const STATE_BASKET = "xstocks:basket";
 export const STATE_LATEST = "xstocks:latest";
 export const STATE_HISTORY = "xstocks:history";
 const HISTORY_LIMIT = 12;
+/** OnchainOS stamps each quote with the response time, so this bounds the quote's age, not the last trade's. */
 const DEFAULT_MAX_QUOTE_AGE_MINUTES = 360;
 
 export type Publication = {

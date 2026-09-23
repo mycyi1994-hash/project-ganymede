@@ -241,7 +241,7 @@ export default function ProofClient() {
             {data.latest.blockers.map((blocker) => <li key={blocker}>Not published: {blocker}</li>)}
           </ul>
         )}
-        <p className="proof-footnote">Prices: OKX OnchainOS DEX market price, X Layer (chainIndex {data?.pricing.chainIndex ?? "196"}). A NAV is published only when every constituent has a fresh live price; there is no fallback to reference prices.</p>
+        <p className="proof-footnote">Prices: OKX OnchainOS DEX market price, X Layer (chainIndex {data?.pricing.chainIndex ?? "196"}). A NAV is published only when every constituent is priced in the same pass; there is no fallback to reference prices.</p>
       </section>
 
       <section className="proof-section" aria-labelledby="proof-history">
