@@ -9,6 +9,8 @@ export type EngineEnv = {
   LIVE_TRADING_CONFIRMATION?: string;
   OPERATOR_TOKEN?: string;
   OPERATIONS_ALLOW_EMAILS?: string;
+  /** "true" only where the platform sets oai-authenticated-user-email itself (a private Sites deployment). */
+  IDENTITY_HEADER_TRUSTED?: string;
   /** `xlayer-testnet` (default) or `giwa-sepolia`. See lib/chains.ts. */
   SETTLEMENT_CHAIN?: string;
   SETTLEMENT_RPC_URL?: string;

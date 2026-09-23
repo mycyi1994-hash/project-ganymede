@@ -60,7 +60,7 @@ npm run db:generate
 - `POST /api/operations/run` — authorized controlled cycle
 - `POST /api/operations/actions` — KYC, funding, redemption and product pause/resume controls
 
-Investor writes use the private Sites identity header or a browser wallet (OKX Wallet or any EIP-1193 wallet) in paper mode. Live mode requires authenticated investor identity. Operator writes require an allowlisted identity or bearer token.
+Investor writes use the private Sites identity header (only with `IDENTITY_HEADER_TRUSTED=true`, since outside Sites a client can send that header itself) or a browser wallet (OKX Wallet or any EIP-1193 wallet) in paper mode. Live mode requires authenticated investor identity. Operator writes require an allowlisted identity or bearer token.
 
 ## Settlement contracts on X Layer
 
