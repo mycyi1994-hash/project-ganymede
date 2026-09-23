@@ -35,7 +35,8 @@ which tokens, how many units, or which prices produced that number.
 ## OKX integrations
 
 - **X Layer testnet (1952):** `GanymedeNavRegistry` + `GanymedeFundShare`, deployed
-  and source-verified via OKLink.
+  and source-verified on the OKX explorer (Standard JSON input from
+  `npm run verify:export`).
 - **xStocks on X Layer mainnet (196):** the basket's constituents.
 - **OKX OnchainOS Market API:** live constituent prices (signed REST, HMAC-SHA256).
 - **OKX Wallet:** the preferred injected wallet; adds X Layer testnet in one click.
