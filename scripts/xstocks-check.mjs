@@ -15,6 +15,19 @@ import { fetchXStockQuotes, onchainOsCredentials, signedHeaders } from "../lib/x
 const command = process.argv[2] ?? "all";
 const credentials = onchainOsCredentials(process.env);
 
+// Trial-tier OnchainOS keys allow 1 request per second, so space every call.
+const ONCHAINOS_SPACING_MS = 1_100;
+let lastOnchainOsCall = 0;
+async function paced(call) {
+  const wait = lastOnchainOsCall + ONCHAINOS_SPACING_MS - Date.now();
+  if (wait > 0) await new Promise((resolve) => setTimeout(resolve, wait));
+  try {
+    return await call();
+  } finally {
+    lastOnchainOsCall = Date.now();
+  }
+}
+
 function decodeAbiString(hex) {
   const data = hex.startsWith("0x") ? hex.slice(2) : hex;
   if (data.length === 64) return Buffer.from(data, "hex").toString("utf8").replace(/\0+$/, "");
@@ -39,7 +52,7 @@ async function discover() {
   const suggestions = [];
   for (const constituent of XSTOCKS_CONSTITUENTS) {
     const requestPath = `/api/v6/dex/market/token/search?chains=${XSTOCKS_CHAIN.chainIndex}&search=${encodeURIComponent(constituent.symbol)}`;
-    const response = await fetch(`${credentials.baseUrl}${requestPath}`, { headers: await signedHeaders(credentials, "GET", requestPath) });
+    const response = await paced(async () => fetch(`${credentials.baseUrl}${requestPath}`, { headers: await signedHeaders(credentials, "GET", requestPath) }));
     const payload = await response.json().catch(() => ({}));
     if (String(payload.code) !== "0") {
       console.log(`  ${constituent.symbol.padEnd(6)} error ${response.status}: ${payload.msg ?? JSON.stringify(payload).slice(0, 160)}`);
@@ -80,7 +93,7 @@ async function verify() {
 
 async function prices() {
   console.log("\n── prices: OnchainOS DEX market price (as the engine calls it) ──");
-  const { quotes, warnings } = await fetchXStockQuotes(credentials, constituentsWithAddresses(process.env.XSTOCKS_ADDRESSES));
+  const { quotes, warnings } = await paced(() => fetchXStockQuotes(credentials, constituentsWithAddresses(process.env.XSTOCKS_ADDRESSES)));
   for (const quote of quotes.values()) {
     const age = Math.round((Date.now() - Date.parse(quote.time)) / 60_000);
     console.log(`  ${quote.symbol.padEnd(6)} $${formatMicros(quote.priceMicros, 4).padStart(12)}  ${quote.time} (${age} min old)`);
