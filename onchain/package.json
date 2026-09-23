@@ -11,7 +11,9 @@
     "status": "hardhat run scripts/status.ts --network xlayerTestnet",
     "deploy:giwa": "hardhat run scripts/deploy.ts --network giwaSepolia",
     "allowlist:giwa": "hardhat run scripts/allowlist.ts --network giwaSepolia",
-    "status:giwa": "hardhat run scripts/status.ts --network giwaSepolia"
+    "status:giwa": "hardhat run scripts/status.ts --network giwaSepolia",
+    "verify:export": "hardhat run scripts/export-verification.ts --network xlayerTestnet",
+    "verify:export:giwa": "hardhat run scripts/export-verification.ts --network giwaSepolia"
   },
   "dependencies": {
     "@nomicfoundation/hardhat-toolbox-viem": "^3.0.0",

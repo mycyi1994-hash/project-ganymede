@@ -59,19 +59,33 @@ The share ledger carries one fund's name and symbol, so it is deployed for
 
 ## Verify the sources
 
-Source verification is what makes the contract readable on the explorer. Run the
-two commands the deploy step printed:
+Source verification makes the contract readable on the explorer. Pick either option.
+
+**Option A: manual upload (no API key).**
+
+```bash
+npm run verify:export
+```
+
+This writes `deployments/verification/xlayer-testnet/` with, per contract, the
+exact solc **Standard JSON input** and a `.txt` holding the address, compiler
+version, optimizer settings and ABI-encoded constructor arguments. Open the
+contract on the OKX explorer
+(`https://www.okx.com/web3/explorer/xlayer-test/address/<address>`), go to the
+**Contract** tab → verify and publish, choose "Standard JSON input", upload the
+file and paste the constructor arguments. The exported input recompiles to
+byte-identical runtime code (checked against a local deployment).
+
+The compiler field needs the full version string, for example
+`v0.8.28+commit.7893614a`.
+
+**Option B: the plugin with an OKLink API key.** Set `OKLINK_API_KEY`, then run
+the two commands the deploy step printed:
 
 ```bash
 npx hardhat verify --network xlayerTestnet <fundShare> "Ganymede Core 20" "GMDCORE" <admin>
 npx hardhat verify --network xlayerTestnet <navRegistry> <admin> <relayer>
 ```
-
-Verified sources appear under the `Contract` tab at
-OKLink (`https://www.oklink.com/xlayer-test/address/<address>`) and the OKX
-explorer (`https://www.okx.com/web3/explorer/xlayer-test/address/<address>`).
-X Layer verification goes through OKLink and needs `OKLINK_API_KEY` — a free
-key from oklink.com → API management.
 
 ## Allowlist an investor
 
