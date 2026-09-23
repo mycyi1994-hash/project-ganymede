@@ -4,6 +4,7 @@ import { KeyboardEvent as ReactKeyboardEvent, useEffect, useId, useRef, useState
 import Link from "next/link";
 import MiniAsciiCelestial from "../../MiniAsciiCelestial";
 import WalletConnect from "../../WalletConnect";
+import DataNotice from "../../DataNotice";
 import { DEFAULT_SETTLEMENT_CHAIN } from "@/lib/chains";
 import { estimatePaperAllocation } from "@/lib/simulation";
 import type { BasketAsset, Etf } from "../../data/etfs";
@@ -173,7 +174,7 @@ function SimulationReviewDialog({ etf, amountKrw, nav, submitting, error, onCanc
         <dl><div><dt>STRATEGY</dt><dd>{etf.name}</dd></div><div><dt>INDICATIVE VALUE / SHARE</dt><dd>{formatNav(nav, "—")}</dd></div><div><dt>ANNUAL FEE RATE</dt><dd>{etf.fee}</dd></div><div><dt>ILLUSTRATIVE YEARLY FEE</dt><dd>{estimate.annualFeeKrw === null ? "—" : formatKrw(estimate.annualFeeKrw)}</dd></div></dl>
         <p className="fee-assumption">Fee illustration assumes the sample value stays unchanged for one year. It is not deducted upfront; taxes, spreads and other costs are excluded.</p>
         <div className="simulation-review-warning"><i /> TEST ENVIRONMENT · NO ECONOMIC ASSET IS ISSUED ON {DEFAULT_SETTLEMENT_CHAIN.label}</div>
-        {error && <p className="simulation-review-error" role="alert">{error}</p>}
+        {error && <div className="simulation-review-error" role="alert"><p>{error}</p><Link href="/?app=portfolio">CHECK PAPER PORTFOLIO ↗</Link></div>}
         <footer><button type="button" disabled={submitting} onClick={onCancel}>EDIT AMOUNT</button><button type="button" className="is-primary" disabled={submitting || estimate.shares === null} aria-busy={submitting} onClick={onConfirm}>{submitting ? "SAVING SIMULATION…" : "SAVE TO PAPER PORTFOLIO"}</button></footer>
       </section>
     </div>
@@ -230,7 +231,7 @@ function OverviewPanel({ etf, liveProduct, engineMode, amountKrw, subscriptionSt
         <h3>Try the numbers.</h3>
         <p>See what a sample allocation could look like. No real order is placed and no money moves.</p>
         <ol className="subscription-steps" aria-label="Simulation steps"><li className={!hasRequest ? "is-active" : ""} aria-current={!hasRequest ? "step" : undefined}><b>01</b><span>AMOUNT</span></li><li><b>02</b><span>REVIEW</span></li><li className={hasRequest ? "is-active" : ""} aria-current={hasRequest ? "step" : undefined}><b>03</b><span>SAVE</span></li></ol>
-        {hasRequest ? <div className="subscription-success" role="status"><b>SIMULATION SAVED.</b><p>Your paper allocation is ready in your portfolio.</p></div> : <>
+        {hasRequest ? <div className="subscription-success" role="status"><b>SIMULATION SAVED.</b><p>{subscriptionStatus === "settled" ? "Your paper allocation is ready in your portfolio." : "Your request is saved. Follow its progress in your portfolio."}</p></div> : <>
           <label className="subscription-amount"><span>SAMPLE AMOUNT / KRW</span><input type="number" min="100000" step="1" inputMode="numeric" value={amountKrw} onChange={(event) => onAmountChange(event.target.value)} aria-invalid={Boolean(estimate.amountError)} aria-describedby={`${amountHelpId}${estimate.amountError ? ` ${amountErrorId}` : ""}`} /></label>
           <p className="amount-help" id={amountHelpId}>Minimum ₩100,000 · whole KRW amounts.</p>
           {estimate.amountError && <p className="amount-error" id={amountErrorId}>{estimate.amountError}</p>}
@@ -367,6 +368,8 @@ export default function EtfDetailClient({ etf }: { etf: Etf }) {
   const [activeTab, setActiveTab] = useState<ProductTab>("overview");
   const [liveProduct, setLiveProduct] = useState<LiveProduct | null>(null);
   const [marketLoading, setMarketLoading] = useState(true);
+  const [marketError, setMarketError] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
   const [engineMode, setEngineMode] = useState<"paper" | "live">("paper");
   const [amountKrw, setAmountKrw] = useState("1000000");
   const [subscriptionStatus, setSubscriptionStatus] = useState("");
@@ -396,6 +399,7 @@ export default function EtfDetailClient({ etf }: { etf: Etf }) {
   useEffect(() => {
     let cancelled = false;
     const load = async () => {
+      setMarketLoading(true);
       try {
         const [marketResponse, walletAddress] = await Promise.all([fetch("/api/market", { cache: "no-store" }), currentWalletAddress()]);
         const market = await marketResponse.json() as MarketPayload & { error?: string };
@@ -403,21 +407,23 @@ export default function EtfDetailClient({ etf }: { etf: Etf }) {
         if (!cancelled) {
           setLiveProduct(market.products.find((product) => product.id === etf.id) ?? null);
           setEngineMode(market.lastCycle?.mode ?? "paper");
+          setMarketError(false);
         }
         const portfolioResponse = await fetch("/api/portfolio", { cache: "no-store", headers: walletAddress ? { "x-ganymede-wallet": walletAddress } : undefined });
         if (!portfolioResponse.ok) return;
-        const portfolio = await portfolioResponse.json() as { subscriptions?: Array<{ product_id?: string; productId?: string; status?: string }> };
-        const latest = portfolio.subscriptions?.find((subscription) => (subscription.product_id ?? subscription.productId) === etf.id);
-        if (!cancelled && latest?.status) setSubscriptionStatus(latest.status);
+        const portfolio = await portfolioResponse.json() as { positions?: Array<{ productId: string }>; subscriptions?: Array<{ product_id?: string; productId?: string; status?: string }> };
+        const latest = portfolio.subscriptions?.find((subscription) => (subscription.product_id ?? subscription.productId) === etf.id && ["requested", "approved", "locked", "executing"].includes(subscription.status ?? ""));
+        const held = portfolio.positions?.some((position) => position.productId === etf.id);
+        if (!cancelled) setSubscriptionStatus(held ? "settled" : latest?.status ?? "");
       } catch {
-        if (!cancelled) setOrderError("We couldn’t refresh the latest data. Reload this page to try again.");
+        if (!cancelled) setMarketError(true);
       } finally {
         if (!cancelled) setMarketLoading(false);
       }
     };
     void load();
     return () => { cancelled = true; };
-  }, [etf.id]);
+  }, [etf.id, reloadKey]);
 
   useEffect(() => {
     const simulator = document.querySelector<HTMLElement>(".product-order-card");
@@ -449,7 +455,7 @@ export default function EtfDetailClient({ etf }: { etf: Etf }) {
       setSubscriptionStatus(payload.subscription?.status ?? "submitted");
       return true;
     } catch {
-      setOrderError("Your simulation was not saved. No order was placed and no funds moved. Please try again.");
+      setOrderError("We couldn’t confirm that your simulation was saved. Your amount is kept here. Check your portfolio before retrying to avoid saving it twice.");
       return false;
     } finally {
       setSubmitting(false);
@@ -478,12 +484,14 @@ export default function EtfDetailClient({ etf }: { etf: Etf }) {
 
         <aside className="product-market-data">
           <div className="detail-nav-planet" aria-hidden="true"><MiniAsciiCelestial variant={etf.visual} /></div>
-          <span>INDICATIVE FUND DATA / {liveProduct?.nav?.quality?.toUpperCase() ?? (marketLoading ? "LOADING" : "UNAVAILABLE")}</span>
+          <span>INDICATIVE FUND DATA / {marketError && liveProduct?.nav ? "LAST LOADED" : liveProduct?.nav?.quality?.toUpperCase() ?? (marketLoading ? "LOADING" : "UNAVAILABLE")}</span>
           <div className="product-nav"><small>INDICATIVE NAV / KRW</small><b>{formatNav(liveProduct?.nav?.navPerShareMicros, "—")}</b><em>{liveProduct?.status?.toUpperCase() ?? (marketLoading ? "LOADING DATA" : "DATA UNAVAILABLE")}</em></div>
           <p className="product-nav-time">AS OF {liveProduct?.nav?.asOf ? new Date(liveProduct.nav.asOf).toLocaleString("ko-KR", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }) : "AWAITING DATA"}</p>
           <dl><div><dt>MODEL AUM</dt><dd>{liveProduct?.nav ? formatKrw(liveProduct.nav.netAssetValueKrw) : "—"}</dd></div><div><dt>TARGET POSITIONS</dt><dd>{liveProduct?.targets?.length ? livePositionCount : etf.assetCount}</dd></div></dl>
         </aside>
       </section>
+
+      {marketError && <div className="detail-data-notice"><DataNotice title={liveProduct?.nav ? "NAV refresh is unavailable." : "Pricing is temporarily unavailable."} onRetry={() => setReloadKey((key) => key + 1)} loading={marketLoading}>{liveProduct?.nav ? "Showing the last loaded values. Estimates may change when pricing returns." : "You can still explore this strategy and enter a sample amount. Share estimates and saving will be available when pricing returns."}</DataNotice></div>}
 
       <ProductTabs active={activeTab} onChange={setActiveTab} />
 

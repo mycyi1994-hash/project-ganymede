@@ -3,6 +3,9 @@
 import { KeyboardEvent as ReactKeyboardEvent, useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import GanymedeScene from "./GanymedeScene";
 import NavPreview from "./NavPreview";
+import PortfolioView from "./PortfolioView";
+import DataNotice from "./DataNotice";
+import type { PortfolioData, PortfolioPosition } from "@/lib/portfolio-display";
 import MiniAsciiCelestial from "./MiniAsciiCelestial";
 import { DEFAULT_SETTLEMENT_CHAIN } from "@/lib/chains";
 import WalletConnect from "./WalletConnect";
@@ -41,28 +44,6 @@ type MarketOverview = {
   updatedAt: string | null;
 };
 
-type PortfolioPosition = {
-  productId: string;
-  slug: string;
-  ticker: string;
-  name: string;
-  strategyStyle: "passive" | "active";
-  sharesMicros: string;
-  costBasisKrw: string;
-  currentValueKrw: string;
-  unrealizedPnlKrw: string;
-  returnBps: number;
-  navPerShareMicros: string;
-  navAsOf: string;
-};
-
-type PortfolioData = {
-  investor: null | { id: string; kycStatus: string; walletAddress: string | null };
-  positions: PortfolioPosition[];
-  subscriptions: Array<Record<string, unknown>>;
-  redemptions: Array<Record<string, unknown>>;
-};
-
 type OperationsData = {
   actor?: string;
   error?: string;
@@ -86,7 +67,6 @@ const filters: Array<{ id: Filter; label: string }> = [
   { id: "active", label: "ACTIVE" },
 ];
 
-const emptyPortfolio: PortfolioData = { investor: null, positions: [], subscriptions: [], redemptions: [] };
 
 function asNumber(value: string | number | bigint | null | undefined): number {
   try {
@@ -102,10 +82,6 @@ function formatKrw(value: string | number | bigint): string {
 
 function formatNav(value: string): string {
   return `₩${(asNumber(value) / 1_000_000).toLocaleString("ko-KR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-}
-
-function formatShares(value: string): string {
-  return (asNumber(value) / 1_000_000).toLocaleString("en-US", { minimumFractionDigits: 3, maximumFractionDigits: 3 });
 }
 
 function displayTime(value: unknown): string {
@@ -165,7 +141,7 @@ function EtfCard({ etf, liveProduct, dataState, onOpen, onNavigate }: {
         <AsciiPlanet variant={etf.visual} />
       </div>
       <dl className="etf-metrics product-card-metrics">
-        <div><dt>INDICATIVE NAV / KRW</dt><dd>{liveProduct?.nav ? formatNav(liveProduct.nav.navPerShareMicros) : "—"}<small>{liveProduct?.nav?.quality?.toUpperCase() ?? (dataState === "loading" ? "LOADING" : "UNAVAILABLE")}</small></dd></div>
+        <div><dt>INDICATIVE NAV / KRW</dt><dd>{liveProduct?.nav ? formatNav(liveProduct.nav.navPerShareMicros) : "—"}<small>{dataState === "error" && liveProduct?.nav ? "LAST LOADED" : liveProduct?.nav?.quality?.toUpperCase() ?? (dataState === "loading" ? "LOADING" : "UNAVAILABLE")}</small></dd></div>
         <div><dt>ANNUAL FEE</dt><dd>{etf.fee}</dd></div>
         <div><dt>MODEL RETURN · 1Y</dt><dd>+{etf.oneYearReturn}</dd></div>
       </dl>
@@ -192,72 +168,6 @@ function AppNav({ view, onOverview, onViewChange }: { view: View; onOverview: ()
       </nav>
       <div className="app-utility-zone"><WalletConnect compact /></div>
     </header>
-  );
-}
-
-function PortfolioView({ data, loading, error, onBrowse, onRedeem, onOpen }: {
-  data: PortfolioData;
-  loading: boolean;
-  error: string;
-  onBrowse: () => void;
-  onRedeem: (position: PortfolioPosition) => Promise<void>;
-  onOpen: (position: PortfolioPosition) => void;
-}) {
-  if (loading) return <main className="portfolio-page portfolio-empty-page" aria-busy="true"><section className="portfolio-empty"><p className="section-kicker">PAPER PORTFOLIO / LOADING</p><h1>Preparing your simulated portfolio…</h1><p>We are applying the latest indicative values. No real funds are moving.</p></section></main>;
-  if (!data.positions.length) {
-    return (
-      <main className="portfolio-page portfolio-empty-page">
-        <section className="portfolio-empty">
-          <p className="section-kicker">PAPER PORTFOLIO / {data.subscriptions.length ? "PREPARING" : "EMPTY"}</p>
-          <h1>{data.subscriptions.length ? "We’re adding your simulated allocation." : "Your paper portfolio is empty."}</h1>
-          <p>{error || (data.subscriptions.length ? "No real funds are moving. Your saved allocation will appear here when the paper ledger is ready." : "Choose a strategy and save a sample allocation to see how the funds could work together.")}</p>
-          <button type="button" onClick={onBrowse}>CHOOSE A STRATEGY</button>
-        </section>
-      </main>
-    );
-  }
-
-  const invested = data.positions.reduce((sum, position) => sum + asNumber(position.costBasisKrw), 0);
-  const currentValue = data.positions.reduce((sum, position) => sum + asNumber(position.currentValueKrw), 0);
-  const gain = currentValue - invested;
-  const totalReturnBps = invested > 0 ? Math.round(gain / invested * 10_000) : 0;
-  const best = [...data.positions].sort((a, b) => b.returnBps - a.returnBps)[0];
-
-  return (
-    <main className="portfolio-page holdings-portfolio-page">
-      <header className="portfolio-header">
-        <div><p className="section-kicker">PAPER PORTFOLIO / SIMULATED</p><h1>Your strategies, in one orbit.</h1><p>See how your selected strategies could work together. No real assets are held and no money has moved.</p></div>
-        <div className="portfolio-header-actions"><span><i /> PAPER MODE</span><button type="button" className="is-primary" onClick={onBrowse}>ADD STRATEGY</button></div>
-      </header>
-      <section className="portfolio-constellation" aria-label="Portfolio performance overview">
-        <div className="portfolio-constellation-copy"><span>MODEL RETURN · SINCE FIRST SIMULATION</span><strong>{gain >= 0 ? "+" : ""}{(totalReturnBps / 100).toFixed(2)}%</strong><p>Based on the latest indicative values, not investor-earned performance</p></div>
-        <div className="portfolio-signal" aria-hidden="true"><i /><i /><i /><i /><span /></div>
-        <span className="portfolio-period-label">SINCE FIRST SAVED ALLOCATION</span>
-      </section>
-      <dl className="portfolio-kpis">
-        <div><dt>SIMULATED VALUE</dt><dd>{formatKrw(currentValue)}</dd><small>Sample amount {formatKrw(invested)}</small></div>
-        <div><dt>MODEL RETURN</dt><dd className={gain >= 0 ? "positive-value" : ""}>{gain >= 0 ? "+" : ""}{(totalReturnBps / 100).toFixed(2)}%</dd><small>{gain >= 0 ? "+" : ""}{formatKrw(gain)} illustrative</small></div>
-        <div><dt>STRATEGIES</dt><dd>{String(data.positions.length).padStart(2, "0")}</dd><small>Saved paper allocations</small></div>
-        <div><dt>TOP MODEL CONTRIBUTOR</dt><dd>{best.ticker.replace("GMD ", "")}</dd><small>{best.returnBps >= 0 ? "+" : ""}{(best.returnBps / 100).toFixed(2)}%</small></div>
-      </dl>
-      <section className="portfolio-positions" aria-labelledby="positions-title">
-        <header><div><p className="section-kicker">SAVED STRATEGIES</p><h2 id="positions-title">Paper allocations</h2></div><span>SIMULATED · INDICATIVE VALUES</span></header>
-        <div className="position-table" role="table" aria-label="ETF fund share positions">
-          <div className="position-row position-head" role="row"><span>PRODUCT</span><span>SHARES</span><span>COST BASIS</span><span>NAV VALUE / RETURN</span><span>STYLE</span><span>ACTION</span></div>
-          {data.positions.map((position) => (
-            <div className="position-row" role="row" key={position.productId}>
-              <button type="button" className="position-product" onClick={() => onOpen(position)}><span className="position-orbit" aria-hidden="true"><i /></span><span><b>{position.ticker}</b><small>{position.name}</small></span></button>
-              <span><b>{formatShares(position.sharesMicros)}</b><small>fund shares</small></span>
-              <span><b>{formatKrw(position.costBasisKrw)}</b><small>settled cash</small></span>
-              <span className="position-return"><b>{formatKrw(position.currentValueKrw)} · {position.returnBps >= 0 ? "+" : ""}{(position.returnBps / 100).toFixed(2)}%</b><i style={{ width: `${Math.min(100, Math.max(3, Math.abs(position.returnBps) / 30))}%` }} /></span>
-              <span>{position.strategyStyle.toUpperCase()}</span>
-              <button type="button" className="position-remove" onClick={() => onRedeem(position)} aria-label={`Remove ${position.name} from this simulation`}>REMOVE</button>
-            </div>
-          ))}
-        </div>
-        <footer><p>All values and returns are simulated. This is not a brokerage account, and connecting a {DEFAULT_SETTLEMENT_CHAIN.name} test wallet is optional.</p><WalletConnect /></footer>
-      </section>
-    </main>
   );
 }
 
@@ -389,10 +299,13 @@ export default function Home() {
   const [view, setView] = useState<View>("select");
   const [activeFilter, setActiveFilter] = useState<Filter>("all");
   const [market, setMarket] = useState<MarketOverview | null>(null);
-  const [portfolio, setPortfolio] = useState<PortfolioData>(emptyPortfolio);
+  const [portfolio, setPortfolio] = useState<PortfolioData | null>(null);
   const [operations, setOperations] = useState<OperationsData | null>(null);
   const [portfolioLoading, setPortfolioLoading] = useState(false);
   const [operationsLoading, setOperationsLoading] = useState(false);
+  const [marketLoading, setMarketLoading] = useState(false);
+  const [removing, setRemoving] = useState(false);
+  const [removeError, setRemoveError] = useState("");
   const [marketError, setMarketError] = useState("");
   const [portfolioError, setPortfolioError] = useState("");
   const [operationsError, setOperationsError] = useState("");
@@ -416,6 +329,7 @@ export default function Home() {
   const marketById = useMemo(() => new Map((market?.products ?? []).map((product) => [product.id, product])), [market]);
 
   const refreshMarket = useCallback(async () => {
+    setMarketLoading(true);
     try {
       const response = await fetch("/api/market", { cache: "no-store" });
       const payload = await response.json() as MarketOverview & { error?: string };
@@ -424,6 +338,8 @@ export default function Home() {
       setMarketError("");
     } catch (error) {
       setMarketError(error instanceof Error ? error.message : "Market engine is unavailable");
+    } finally {
+      setMarketLoading(false);
     }
   }, []);
 
@@ -436,6 +352,7 @@ export default function Home() {
       if (!response.ok) throw new Error(payload.error || "Portfolio ledger is unavailable");
       setPortfolio(payload);
       setPortfolioError("");
+      setRemoveError("");
     } catch (error) {
       setPortfolioError(error instanceof Error ? error.message : "Portfolio ledger is unavailable");
     } finally {
@@ -487,11 +404,11 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    if (!appOpen) return;
+    if (!appOpen || view !== "select") return;
     const initial = window.setTimeout(() => void refreshMarket(), 0);
     const timer = window.setInterval(refreshMarket, 60_000);
     return () => { window.clearTimeout(initial); window.clearInterval(timer); };
-  }, [appOpen, refreshMarket]);
+  }, [appOpen, view, refreshMarket]);
 
   useEffect(() => {
     if (!appOpen) return;
@@ -522,7 +439,8 @@ export default function Home() {
   };
 
   const redeemPosition = async (position: PortfolioPosition) => {
-    setPortfolioLoading(true);
+    setRemoving(true);
+    setRemoveError("");
     try {
       const walletAddress = await currentWalletAddress();
       const response = await fetch("/api/portfolio", {
@@ -533,10 +451,11 @@ export default function Home() {
       const payload = await response.json() as { error?: string };
       if (!response.ok) throw new Error(payload.error || "Redemption request failed");
       await refreshPortfolio();
-      setActionNotice("Paper allocation removed. No real shares or funds were affected.");
+      setActionNotice("Removal request saved. Your allocation will update after processing.");
     } catch (error) {
-      setPortfolioError(error instanceof Error ? error.message : "Redemption request failed");
-      setPortfolioLoading(false);
+      setRemoveError(error instanceof Error ? error.message : "Removal could not be confirmed");
+    } finally {
+      setRemoving(false);
     }
   };
 
@@ -566,17 +485,18 @@ export default function Home() {
             </header>
             <div className="product-market-toolbar">
               <div className="etf-filters strategy-filters" role="group" aria-label="Filter ETF strategies">{filters.map((filter) => <button key={filter.id} type="button" className={activeFilter === filter.id ? "is-active" : ""} aria-pressed={activeFilter === filter.id} onClick={() => { setActiveFilter(filter.id); sessionStorage.setItem("ganymede-etf-filter", filter.id); }}>{filter.label}</button>)}</div>
-              <div className="market-toolbar-status"><button type="button" className="choice-guide-trigger" onClick={() => setGuideOpen(true)}>HELP ME CHOOSE <span>?</span></button><p aria-live="polite" aria-atomic="true">{market?.updatedAt ? `NAV updated ${displayTime(market.updatedAt)}` : marketError ? "NAV unavailable" : "Loading indicative NAV…"}{marketError && <button type="button" onClick={() => void refreshMarket()}>TRY AGAIN</button>}</p></div>
+              <div className="market-toolbar-status"><button type="button" className="choice-guide-trigger" onClick={() => setGuideOpen(true)}>HELP ME CHOOSE <span>?</span></button><p aria-live="polite" aria-atomic="true">{marketError ? market ? "Showing last loaded NAV" : "NAV unavailable" : market?.updatedAt ? `NAV updated ${displayTime(market.updatedAt)}` : "Loading indicative NAV…"}</p></div>
             </div>
+            <>{marketError && <DataNotice title={market ? "NAV refresh is unavailable." : "Prices are temporarily unavailable."} onRetry={() => void refreshMarket()} loading={marketLoading}>{market ? "The values below are from the last successful load. You can still compare strategy details." : "You can still compare each strategy’s role, risk and fee. Share estimates will return when pricing is available."}</DataNotice>}</>
             <section key={activeFilter} className="etf-card-grid is-filtered" aria-label="ETF products">{visibleEtfs.map((etf) => <EtfCard key={etf.id} etf={etf} liveProduct={marketById.get(etf.id)} dataState={marketError ? "error" : market ? "ready" : "loading"} onOpen={openEtfDetail} onNavigate={navigateCards} />)}</section>
           </main>
         ) : view === "portfolio" ? (
-          <PortfolioView data={portfolio} loading={portfolioLoading} error={portfolioError} onBrowse={() => openView("select")} onOpen={(position) => window.location.assign(`/etfs/${position.slug}`)} onRedeem={async (position) => setPendingRedeem(position)} />
+          <PortfolioView data={portfolio} loading={portfolioLoading} error={portfolioError} actionError={removeError} removing={removing} onRetry={() => void refreshPortfolio()} onBrowse={() => openView("select")} onOpen={(position) => window.location.assign(`/etfs/${position.slug}`)} onRedeem={(position) => setPendingRedeem(position)} />
         ) : (
           <OperationsView data={operations} loading={operationsLoading} error={operationsError} onRun={async () => setConfirmCycle(true)} />
         )}
         <footer className="app-disclaimer"><span>PRE-LAUNCH / SIMULATION</span><p>Returns are modelled and NAV is indicative. Public issuance remains disabled until licensed fund, custody, administration and distribution controls are active.</p><button type="button" onClick={() => openView("operations")}>SYSTEM STATUS ↗</button></footer>
-        {pendingRedeem && <ConfirmDialog eyebrow="PAPER PORTFOLIO / REVIEW" title={`Remove ${pendingRedeem.ticker} from this simulation?`} copy="This removes the saved paper allocation only. No real shares, assets or funds will be affected." confirmLabel="REMOVE" danger onCancel={() => setPendingRedeem(null)} onConfirm={() => { const position = pendingRedeem; setPendingRedeem(null); void redeemPosition(position); }} />}
+        {pendingRedeem && <ConfirmDialog eyebrow="PAPER PORTFOLIO / REVIEW" title={`Remove ${pendingRedeem.ticker} from this simulation?`} copy="This requests removal of your saved paper allocation. It remains visible until processing is complete. No real shares, assets or funds will be affected." confirmLabel="REMOVE" danger onCancel={() => setPendingRedeem(null)} onConfirm={() => { const position = pendingRedeem; setPendingRedeem(null); void redeemPosition(position); }} />}
         {confirmCycle && <ConfirmDialog eyebrow="CONTROL ROOM / PAPER MODE" title="Run one controlled engine cycle?" copy="The paper engine will evaluate four strategies, refresh indicative NAV, create any simulated rebalance orders and append the results to the audit ledger." confirmLabel="RUN PAPER CYCLE" onCancel={() => setConfirmCycle(false)} onConfirm={() => { setConfirmCycle(false); void runOperationsCycle(); }} />}
         {guideOpen && <ChoiceGuide onClose={() => setGuideOpen(false)} onOpen={(id) => { setGuideOpen(false); openEtfDetail(id); }} />}
         {actionNotice && <div className="action-toast" role="status"><i>✓</i><p>{actionNotice}</p><button type="button" onClick={() => setActionNotice("")} aria-label="Dismiss notification">×</button></div>}
