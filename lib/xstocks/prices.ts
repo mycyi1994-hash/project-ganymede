@@ -69,11 +69,16 @@ export function normalizeQuoteTime(value: unknown): string {
 }
 
 type PriceRow = { chainIndex?: string; tokenContractAddress?: string; price?: string; time?: string | number };
+type PricePayload = { code?: string | number; msg?: string; data?: PriceRow[] };
+
+/** Trial keys allow one request per second, so a retry waits at least that long. */
+const PRICE_RETRY_DELAY_MS = 1_500;
 
 export async function fetchXStockQuotes(
   credentials: OnchainOsCredentials | null,
   constituents: Array<{ symbol: string; address: string | null }>,
   fetcher: typeof fetch = fetch,
+  retryDelayMs = PRICE_RETRY_DELAY_MS,
 ): Promise<{ quotes: Map<string, Quote>; warnings: string[] }> {
   const quotes = new Map<string, Quote>();
   const priced = constituents.filter((constituent): constituent is { symbol: string; address: string } => Boolean(constituent.address));
@@ -81,13 +86,30 @@ export async function fetchXStockQuotes(
   if (priced.length === 0) return { quotes, warnings: ["No xStocks addresses configured"] };
 
   const body = JSON.stringify(priced.map((constituent) => ({ chainIndex: XSTOCKS_CHAIN.chainIndex, tokenContractAddress: constituent.address.toLowerCase() })));
-  try {
+  const request = async () => {
     const response = await fetcher(`${credentials.baseUrl}${PRICE_PATH}`, {
       method: "POST",
       headers: await signedHeaders(credentials, "POST", PRICE_PATH, body),
       body,
     });
-    const payload = await response.json() as { code?: string | number; msg?: string; data?: PriceRow[] };
+    const text = await response.text();
+    let payload: PricePayload | null = null;
+    try {
+      payload = JSON.parse(text) as PricePayload;
+    } catch {
+      // The rate limiter in front of the API answers with an HTML page.
+    }
+    return { response, payload, text };
+  };
+  try {
+    let attempt = await request();
+    if (!attempt.response.ok || !attempt.payload) {
+      // One paced retry: the limiter in front of OKX occasionally rejects a first request.
+      await new Promise((resolve) => setTimeout(resolve, retryDelayMs));
+      attempt = await request();
+    }
+    const { response, payload, text } = attempt;
+    if (!payload) return { quotes, warnings: [`OnchainOS price API ${response.status}: ${text.trim().slice(0, 80) || "empty response"}`] };
     if (!response.ok || String(payload.code) !== "0") {
       return { quotes, warnings: [`OnchainOS price API ${response.status}: ${payload.msg || `code ${payload.code}`}`] };
     }
