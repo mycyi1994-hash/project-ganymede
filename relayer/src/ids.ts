@@ -18,7 +18,7 @@ export function productKey(productId: string): Hex {
  * bytes32 settlement id used by GanymedeFundShare.processedSettlement.
  *
  * Derived from `entityType:entityId:action` — the exact string the engine
- * already sends as its Idempotency-Key (lib/engine/giwa.ts). That makes an app
+ * already sends as its Idempotency-Key (lib/engine/settlement.ts). That makes an app
  * retry, a relayer retry and a queue redelivery all collapse onto one id, so
  * the contract's own `SettlementAlreadyProcessed` guard is the final backstop.
  *

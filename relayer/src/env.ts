@@ -7,14 +7,17 @@ export interface Env {
   /** Hot key holding issuer + publisher. Secret. Never the administrator key. */
   RELAYER_PRIVATE_KEY: string;
 
-  GIWA_RPC_URL?: string;
-  GIWA_FUND_SHARE_ADDRESS?: string;
-  GIWA_NAV_REGISTRY_ADDRESS?: string;
+  /** `xlayer-testnet` (default) or `giwa-sepolia`. See src/chain.ts. */
+  SETTLEMENT_CHAIN?: string;
+  /** Overrides the chain's public RPC. */
+  SETTLEMENT_RPC_URL?: string;
+  FUND_SHARE_ADDRESS?: string;
+  NAV_REGISTRY_ADDRESS?: string;
 
   /**
-   * Comma-separated wallets treated as Dojang-verified while on testnet, where
-   * no real Upbit Korea attestation exists. Replaced by an on-chain attestation
-   * read against the Dojang scroll before any mainnet use.
+   * GIWA Sepolia only. Comma-separated wallets treated as Dojang-verified while
+   * on testnet, where no real Upbit Korea attestation exists. Replaced by an
+   * on-chain attestation read against the Dojang scroll before any mainnet use.
    */
   DOJANG_TESTNET_ALLOWLIST?: string;
 }

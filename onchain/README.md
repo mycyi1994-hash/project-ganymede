@@ -1,6 +1,7 @@
 # Ganymede on-chain tooling
 
-Deploys, verifies and inspects the GIWA settlement contracts in `../contracts`.
+Deploys, verifies and inspects the settlement contracts in `../contracts` on
+**X Layer testnet** (chain 1952, default) or GIWA Sepolia (`:giwa` scripts).
 
 Requires Node.js `>=22.13.0`. Build output stays in this directory; the Solidity
 sources stay in `contracts/`.
@@ -32,8 +33,13 @@ cp .env.example .env
 # then fill in ADMIN_PRIVATE_KEY and RELAYER_PRIVATE_KEY
 ```
 
-Fund `ADMIN` and `RELAYER` with GIWA Sepolia ETH before deploying — both send
-transactions.
+Fund `ADMIN` and `RELAYER` with testnet OKB from the X Layer faucet
+(https://web3.okx.com/xlayer/faucet) before deploying — both send transactions.
+For GIWA Sepolia, fund them with GIWA Sepolia ETH instead.
+
+Optional `.env` values: `XLAYER_RPC_URL` (overrides the public
+`https://testrpc.xlayer.tech/terigon`), `OKLINK_API_KEY` (source verification on
+X Layer), `GIWA_RPC_URL` and `EXPLORER_API_KEY` (GIWA only).
 
 ## Deploy
 
@@ -43,7 +49,8 @@ npm run deploy
 
 Deploys `GanymedeFundShare` and `GanymedeNavRegistry`, hands issuance to the
 relayer key, asserts every role landed as intended, and writes
-`deployments/giwa-sepolia.json`. It prints the two `hardhat verify` commands and
+`deployments/xlayer-testnet.json` (or `deployments/giwa-sepolia.json` with
+`npm run deploy:giwa`). It prints the two `hardhat verify` commands and
 the `.env` lines for the application.
 
 One NAV registry serves all four products — the product id is a `bytes32` key.
@@ -52,16 +59,33 @@ The share ledger carries one fund's name and symbol, so it is deployed for
 
 ## Verify the sources
 
-Source verification is what makes the contract readable on the explorer. Run the
-two commands the deploy step printed:
+Source verification makes the contract readable on the explorer. Pick either option.
+
+**Option A: manual upload (no API key).**
 
 ```bash
-npx hardhat verify --network giwaSepolia <fundShare> "Ganymede Core 20" "GMDCORE" <admin>
-npx hardhat verify --network giwaSepolia <navRegistry> <admin> <relayer>
+npm run verify:export
 ```
 
-Verified sources appear under the `Contract` tab at
-`https://sepolia-explorer.giwa.io/address/<address>`.
+This writes `deployments/verification/xlayer-testnet/` with, per contract, the
+exact solc **Standard JSON input** and a `.txt` holding the address, compiler
+version, optimizer settings and ABI-encoded constructor arguments. Open the
+contract on the OKX explorer
+(`https://www.okx.com/web3/explorer/xlayer-test/address/<address>`), go to the
+**Contract** tab → verify and publish, choose "Standard JSON input", upload the
+file and paste the constructor arguments. The exported input recompiles to
+byte-identical runtime code (checked against a local deployment).
+
+The compiler field needs the full version string, for example
+`v0.8.28+commit.7893614a`.
+
+**Option B: the plugin with an OKLink API key.** Set `OKLINK_API_KEY`, then run
+the two commands the deploy step printed:
+
+```bash
+npx hardhat verify --network xlayerTestnet <fundShare> "Ganymede Core 20" "GMDCORE" <admin>
+npx hardhat verify --network xlayerTestnet <navRegistry> <admin> <relayer>
+```
 
 ## Allowlist an investor
 
@@ -91,5 +115,5 @@ than hand-made demo transactions.
 
 ## Status
 
-Source-verified on the explorer, **unaudited**. GIWA Sepolia is a settlement test
+Source-verified on the explorer, **unaudited**. X Layer testnet and GIWA Sepolia are settlement test
 rail; it is not proof of custody, licensing or an Upbit mainnet relationship.

@@ -1,6 +1,6 @@
 /**
- * Deploys the Ganymede settlement contracts to GIWA Sepolia and hands the
- * hot-key roles to the relayer.
+ * Deploys the Ganymede settlement contracts to a settlement rail (X Layer
+ * testnet by default) and hands the hot-key roles to the relayer.
  *
  * Role wiring performed here:
  *
@@ -15,11 +15,13 @@
  * compliance decision, not something an internet-facing relayer should be able
  * to do. The relayer can mint, burn and publish. Nothing else.
  *
- * Run: npm run deploy
+ * Run: npm run deploy          (X Layer testnet)
+ *      npm run deploy:giwa     (GIWA Sepolia)
  */
 import hre from "hardhat";
 import { writeFileSync, mkdirSync } from "node:fs";
-import { join } from "node:path";
+import { dirname } from "node:path";
+import { deploymentPath, railFor } from "./_deployment";
 
 const FUND_NAME = process.env.FUND_SHARE_NAME ?? "Ganymede Core 20";
 const FUND_SYMBOL = process.env.FUND_SHARE_SYMBOL ?? "GMDCORE";
@@ -29,6 +31,7 @@ const FUND_SYMBOL = process.env.FUND_SHARE_SYMBOL ?? "GMDCORE";
 const FUND_PRODUCT_ID = process.env.FUND_SHARE_PRODUCT_ID ?? "core-20";
 
 async function main() {
+  const rail = railFor(hre.network.name);
   const clients = await hre.viem.getWalletClients();
   if (clients.length < 2) {
     throw new Error(
@@ -47,10 +50,14 @@ async function main() {
 
   const adminBalance = await publicClient.getBalance({ address: adminAddress });
   if (adminBalance === 0n) {
-    throw new Error(`Admin ${adminAddress} has no GIWA Sepolia ETH. Fund it from the faucet first.`);
+    throw new Error(`Admin ${adminAddress} has no ${rail.name} ${rail.gasToken}. Fund it from the faucet first.`);
   }
 
-  console.log(`network      chainId ${await publicClient.getChainId()}`);
+  const chainId = await publicClient.getChainId();
+  if (chainId !== rail.chainId) {
+    throw new Error(`RPC reports chain ${chainId}, expected ${rail.name} (${rail.chainId}).`);
+  }
+  console.log(`network      ${rail.name} (chainId ${chainId})`);
   console.log(`admin        ${adminAddress}`);
   console.log(`relayer      ${relayerAddress}\n`);
 
@@ -72,24 +79,25 @@ async function main() {
 
   console.log("\nhanding issuance to the relayer key...");
   const setIssuerTx = await fundShare.write.setIssuer([relayerAddress], { account: admin.account });
-  await publicClient.waitForTransactionReceipt({ hash: setIssuerTx });
+  const setIssuerReceipt = await publicClient.waitForTransactionReceipt({ hash: setIssuerTx });
+  if (setIssuerReceipt.status !== "success") throw new Error(`setIssuer reverted: ${setIssuerTx}`);
   console.log(`  setIssuer  ${setIssuerTx}`);
 
-  // Verify the wiring landed rather than trusting the receipts.
-  const [onChainIssuer, onChainAdmin, onChainAgent, onChainPublisher] = await Promise.all([
-    fundShare.read.issuer(),
-    fundShare.read.administrator(),
-    fundShare.read.transferAgent(),
-    navRegistry.read.publisher(),
-  ]);
-
-  const checks: Array<[string, string, string]> = [
-    ["fundShare.issuer", onChainIssuer, relayerAddress],
-    ["fundShare.administrator", onChainAdmin, adminAddress],
-    ["fundShare.transferAgent", onChainAgent, adminAddress],
-    ["navRegistry.publisher", onChainPublisher, relayerAddress],
+  // Verify the wiring landed rather than trusting the receipts. The public RPC
+  // is load-balanced, so a read right after a receipt can land on a node that
+  // has not seen that block yet: retry for a few seconds before failing.
+  const checks: Array<[string, () => Promise<string>, string]> = [
+    ["fundShare.issuer", () => fundShare.read.issuer(), relayerAddress],
+    ["fundShare.administrator", () => fundShare.read.administrator(), adminAddress],
+    ["fundShare.transferAgent", () => fundShare.read.transferAgent(), adminAddress],
+    ["navRegistry.publisher", () => navRegistry.read.publisher(), relayerAddress],
   ];
-  for (const [label, actual, expected] of checks) {
+  for (const [label, read, expected] of checks) {
+    let actual = await read();
+    for (let attempt = 1; attempt < 10 && actual.toLowerCase() !== expected.toLowerCase(); attempt += 1) {
+      await new Promise((resolve) => setTimeout(resolve, 1_000));
+      actual = await read();
+    }
     if (actual.toLowerCase() !== expected.toLowerCase()) {
       throw new Error(`role wiring failed: ${label} is ${actual}, expected ${expected}`);
     }
@@ -97,9 +105,9 @@ async function main() {
   }
 
   const record = {
-    chainId: 91342,
-    network: "giwa-sepolia",
-    explorer: "https://sepolia-explorer.giwa.io",
+    chainId: rail.chainId,
+    network: rail.key,
+    explorer: rail.explorer,
     deployedAt: new Date().toISOString(),
     admin: adminAddress,
     relayer: relayerAddress,
@@ -118,24 +126,24 @@ async function main() {
     },
   };
 
-  const outDir = join(__dirname, "..", "deployments");
-  mkdirSync(outDir, { recursive: true });
-  const outFile = join(outDir, "giwa-sepolia.json");
+  const outFile = deploymentPath(rail);
+  mkdirSync(dirname(outFile), { recursive: true });
   writeFileSync(outFile, `${JSON.stringify(record, null, 2)}\n`);
 
   console.log(`\nwrote ${outFile}\n`);
   console.log("── next: verify the sources on the explorer ──────────────────");
   console.log(
-    `npx hardhat verify --network giwaSepolia ${fundShare.address} ` +
+    `npx hardhat verify --network ${hre.network.name} ${fundShare.address} ` +
       `"${FUND_NAME}" "${FUND_SYMBOL}" ${adminAddress}`,
   );
   console.log(
-    `npx hardhat verify --network giwaSepolia ${navRegistry.address} ` +
+    `npx hardhat verify --network ${hre.network.name} ${navRegistry.address} ` +
       `${adminAddress} ${relayerAddress}`,
   );
-  console.log("\n── then: put these in the app's .env ─────────────────────────");
-  console.log(`GIWA_FUND_SHARE_ADDRESS=${fundShare.address}`);
-  console.log(`GIWA_NAV_REGISTRY_ADDRESS=${navRegistry.address}`);
+  console.log("\n── then: put these in the app's and the relayer's env ───────");
+  console.log(`SETTLEMENT_CHAIN=${rail.key}`);
+  console.log(`FUND_SHARE_ADDRESS=${fundShare.address}`);
+  console.log(`NAV_REGISTRY_ADDRESS=${navRegistry.address}`);
 }
 
 main().catch((error) => {

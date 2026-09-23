@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useId, useState } from "react";
+import { DEFAULT_SETTLEMENT_CHAIN } from "@/lib/chains";
 
 type EthereumProvider = {
-  isMetaMask?: boolean;
   request: (request: { method: string; params?: unknown[] }) => Promise<unknown>;
   on?: (event: string, listener: (...args: unknown[]) => void) => void;
   removeListener?: (event: string, listener: (...args: unknown[]) => void) => void;
@@ -12,16 +12,22 @@ type EthereumProvider = {
 declare global {
   interface Window {
     ethereum?: EthereumProvider;
+    okxwallet?: EthereumProvider;
   }
 }
 
-export const GIWA_CHAIN = {
-  chainId: "0x164CE",
-  chainIdDecimal: 91342,
-  chainName: "GIWA Sepolia",
-  rpcUrls: ["https://sepolia-rpc.giwa.io"],
-  nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 },
-  blockExplorerUrls: ["https://sepolia-explorer.giwa.io"],
+/** OKX Wallet first — it is the native wallet for X Layer — then any injected EIP-1193 wallet. */
+function injectedProvider(): EthereumProvider | undefined {
+  return window.okxwallet ?? window.ethereum;
+}
+
+/** EIP-3085 parameters for wallet_addEthereumChain. */
+export const WALLET_CHAIN = {
+  chainId: `0x${DEFAULT_SETTLEMENT_CHAIN.chainId.toString(16)}`,
+  chainName: DEFAULT_SETTLEMENT_CHAIN.name,
+  rpcUrls: [DEFAULT_SETTLEMENT_CHAIN.rpcUrl],
+  nativeCurrency: DEFAULT_SETTLEMENT_CHAIN.nativeCurrency,
+  blockExplorerUrls: [DEFAULT_SETTLEMENT_CHAIN.explorerUrl],
 };
 
 function shortAddress(address: string) {
@@ -31,16 +37,16 @@ function shortAddress(address: string) {
 export default function WalletConnect({ compact = false }: { compact?: boolean }) {
   const [address, setAddress] = useState("");
   const [chainId, setChainId] = useState("");
-  const [status, setStatus] = useState("CONNECT METAMASK");
+  const [status, setStatus] = useState("CONNECT WALLET");
   const [error, setError] = useState("");
   const [missingWallet, setMissingWallet] = useState(false);
   const errorId = useId();
   const statusId = useId();
 
-  const onCorrectChain = chainId.toLowerCase() === GIWA_CHAIN.chainId.toLowerCase();
+  const onCorrectChain = chainId.toLowerCase() === WALLET_CHAIN.chainId.toLowerCase();
 
   useEffect(() => {
-    const provider = window.ethereum;
+    const provider = injectedProvider();
     if (!provider) return;
 
     const syncWallet = async () => {
@@ -68,31 +74,31 @@ export default function WalletConnect({ compact = false }: { compact?: boolean }
     };
   }, []);
 
-  const ensureGiwaChain = async (provider: EthereumProvider) => {
+  const ensureSettlementChain = async (provider: EthereumProvider) => {
     try {
       await provider.request({
         method: "wallet_switchEthereumChain",
-        params: [{ chainId: GIWA_CHAIN.chainId }],
+        params: [{ chainId: WALLET_CHAIN.chainId }],
       });
     } catch (switchError) {
       const code = (switchError as { code?: number }).code;
       if (code !== 4902) throw switchError;
       await provider.request({
         method: "wallet_addEthereumChain",
-        params: [GIWA_CHAIN],
+        params: [WALLET_CHAIN],
       });
     }
-    setChainId(GIWA_CHAIN.chainId);
+    setChainId(WALLET_CHAIN.chainId);
   };
 
   const connect = async () => {
-    const provider = window.ethereum;
+    const provider = injectedProvider();
     setError("");
     setMissingWallet(false);
 
-    if (!provider?.isMetaMask) {
+    if (!provider) {
       setMissingWallet(true);
-      setError("MetaMask is not installed. You can continue without a wallet.");
+      setError("No browser wallet found. You can continue without a wallet.");
       return;
     }
 
@@ -101,13 +107,13 @@ export default function WalletConnect({ compact = false }: { compact?: boolean }
       const accounts = await provider.request({ method: "eth_requestAccounts" }) as string[];
       setAddress(accounts[0] ?? "");
       const currentChain = await provider.request({ method: "eth_chainId" }) as string;
-      if (currentChain.toLowerCase() !== GIWA_CHAIN.chainId.toLowerCase()) await ensureGiwaChain(provider);
+      if (currentChain.toLowerCase() !== WALLET_CHAIN.chainId.toLowerCase()) await ensureSettlementChain(provider);
       else setChainId(currentChain);
       setStatus("CONNECTED");
     } catch (walletError) {
       const code = (walletError as { code?: number }).code;
-      setError(code === 4001 ? "Connection request was cancelled." : "Could not connect to GIWA Sepolia. Please try again.");
-      setStatus("CONNECT METAMASK");
+      setError(code === 4001 ? "Connection request was cancelled." : `Could not connect to ${DEFAULT_SETTLEMENT_CHAIN.name}. Please try again.`);
+      setStatus("CONNECT WALLET");
     }
   };
 
@@ -118,15 +124,15 @@ export default function WalletConnect({ compact = false }: { compact?: boolean }
         className={address && onCorrectChain ? "is-connected" : ""}
         onClick={connect}
         aria-describedby={`${statusId}${error ? ` ${errorId}` : ""}`}
-        aria-label={address && onCorrectChain ? `${shortAddress(address)}, connected to GIWA Sepolia` : address ? "Switch wallet to GIWA Sepolia" : "Connect optional MetaMask test wallet"}
+        aria-label={address && onCorrectChain ? `${shortAddress(address)}, connected to ${DEFAULT_SETTLEMENT_CHAIN.name}` : address ? `Switch wallet to ${DEFAULT_SETTLEMENT_CHAIN.name}` : "Connect optional test wallet"}
         disabled={status === "CONNECTING…"}
       >
         <span className="wallet-network-dot" />
-        {address && onCorrectChain ? shortAddress(address) : address ? "SWITCH TO GIWA" : status}
+        {address && onCorrectChain ? shortAddress(address) : address ? "SWITCH NETWORK" : status}
       </button>
-      {!compact && <span id={statusId} className="wallet-chain-label" aria-live="polite">OPTIONAL TEST WALLET · GIWA SEPOLIA 91342</span>}
-      {compact && <span id={statusId} className="sr-only" aria-live="polite">Optional GIWA Sepolia test wallet</span>}
-      {error && <small id={errorId} role="alert">{error}{missingWallet && !compact && <> <a href="https://metamask.io/download/" target="_blank" rel="noreferrer">INSTALL METAMASK ↗</a></>}</small>}
+      {!compact && <span id={statusId} className="wallet-chain-label" aria-live="polite">OPTIONAL TEST WALLET · {DEFAULT_SETTLEMENT_CHAIN.label} {DEFAULT_SETTLEMENT_CHAIN.chainId}</span>}
+      {compact && <span id={statusId} className="sr-only" aria-live="polite">Optional {DEFAULT_SETTLEMENT_CHAIN.name} test wallet</span>}
+      {error && <small id={errorId} role="alert">{error}{missingWallet && !compact && <> <a href="https://web3.okx.com/download" target="_blank" rel="noreferrer">INSTALL OKX WALLET ↗</a></>}</small>}
     </div>
   );
 }

@@ -1,18 +1,21 @@
 /**
- * Ganymede GIWA settlement relayer.
+ * Ganymede settlement relayer.
  *
- * Implements exactly the API the engine already expects (lib/engine/giwa.ts):
+ * Implements exactly the API the engine already expects (lib/engine/settlement.ts):
  *
  *   POST /v1/settlements                        Bearer + Idempotency-Key
- *   GET  /v1/dojang/verified-address/{address}  Bearer
+ *   GET  /v1/eligibility/{address}              Bearer
+ *   GET  /v1/dojang/verified-address/{address}  Bearer (alias of the above)
+ *
+ * Signs for the chain named by SETTLEMENT_CHAIN — X Layer testnet by default.
  *
  * This is the only component in the system that holds an EVM private key. It is
  * deployed separately from the application for that reason.
  */
-import { createPublicClient, http } from "viem";
-import { giwaSepolia } from "./chain";
+import { createPublicClient, http, type Address } from "viem";
+import { settlementChain } from "./chain";
 import type { Env } from "./env";
-import { RequestError, type SettlementRequest } from "./contracts";
+import { FUND_SHARE_ABI, RequestError, type SettlementRequest } from "./contracts";
 import { idempotencyKey } from "./ids";
 import { readSettlement } from "./store";
 
@@ -52,9 +55,9 @@ export default {
       return handleSettlement(request, env);
     }
 
-    const dojang = url.pathname.match(/^\/v1\/dojang\/verified-address\/(0x[a-fA-F0-9]{40})$/);
-    if (dojang && request.method === "GET") {
-      return handleDojang(dojang[1], env);
+    const eligibility = url.pathname.match(/^\/v1\/(?:eligibility|dojang\/verified-address)\/(0x[a-fA-F0-9]{40})$/);
+    if (eligibility && request.method === "GET") {
+      return handleEligibility(eligibility[1] as Address, env);
     }
 
     return Response.json({ error: "Not found" }, { status: 404 });
@@ -88,11 +91,12 @@ async function handleSettlement(request: Request, env: Env): Promise<Response> {
   // Fast path: already settled, no need to wake the submitter.
   const existing = await readSettlement(env.DB, key);
   if (existing && existing.status !== "failed") {
-    return Response.json(toResponse(existing), { status: 200 });
+    return Response.json(toResponse(existing, env), { status: 200 });
   }
 
   // All submissions funnel through one Durable Object so nonces stay ordered.
-  const id = env.SUBMITTER.idFromName("giwa-submitter-v1");
+  // One submitter per chain: a nonce belongs to a (signer, chain) pair.
+  const id = env.SUBMITTER.idFromName(`submitter-${settlementChain(env.SETTLEMENT_CHAIN).chain.id}`);
   const stub = env.SUBMITTER.get(id);
   const response = await stub.fetch("https://submitter/submit", {
     method: "POST",
@@ -102,60 +106,100 @@ async function handleSettlement(request: Request, env: Env): Promise<Response> {
 
   if (!response.ok) return response;
   const record = (await response.json()) as Awaited<ReturnType<typeof readSettlement>>;
-  return Response.json(toResponse(record!), { status: 200 });
+  return Response.json(toResponse(record!, env), { status: 200 });
 }
 
-function toResponse(record: NonNullable<Awaited<ReturnType<typeof readSettlement>>>) {
+function toResponse(record: NonNullable<Awaited<ReturnType<typeof readSettlement>>>, env: Env) {
+  const { chain } = settlementChain(env.SETTLEMENT_CHAIN);
   return {
     status: record.status,
     txHash: record.txHash,
     blockNumber: record.blockNumber,
     note: record.note,
-    explorer: record.txHash ? `${giwaSepolia.blockExplorers.default.url}/tx/${record.txHash}` : null,
+    explorer: record.txHash && chain.blockExplorers ? `${chain.blockExplorers.default.url}/tx/${record.txHash}` : null,
   };
 }
 
+function publicClient(env: Env) {
+  const { chain } = settlementChain(env.SETTLEMENT_CHAIN);
+  return createPublicClient({ chain, transport: http(env.SETTLEMENT_RPC_URL || chain.rpcUrls.default.http[0]) });
+}
+
 /**
- * Testnet Dojang stub.
+ * Can this wallet receive fund shares?
  *
- * GIWA Sepolia carries no real Upbit Korea Verified Address attestation, so
- * there is nothing truthful to read. Returns an explicit `source` so a caller
- * can never mistake this for a real attestation check. Mainnet replaces this
+ * X Layer: reads the share ledger's own allowlist. That is the exact check a
+ * mint enforces, so the answer is truthful rather than a stub.
+ *
+ * GIWA Sepolia: carries no real Upbit Korea Verified Address attestation, so it
+ * checks DOJANG_TESTNET_ALLOWLIST and reports `source: "testnet-stub"` so a
+ * caller can never mistake it for a real attestation. Mainnet replaces this
  * with a read against the Dojang scroll.
  */
-async function handleDojang(address: string, env: Env): Promise<Response> {
-  const allowlist = (env.DOJANG_TESTNET_ALLOWLIST ?? "")
-    .split(",")
-    .map((entry) => entry.trim().toLowerCase())
-    .filter(Boolean);
-  const verified = allowlist.includes(address.toLowerCase());
-  return Response.json({
-    verified,
-    source: "testnet-stub",
-    reason: verified ? null : "not in the testnet Dojang allowlist",
-  });
+async function handleEligibility(address: Address, env: Env): Promise<Response> {
+  const { key } = settlementChain(env.SETTLEMENT_CHAIN);
+
+  if (key === "giwa-sepolia") {
+    const allowlist = (env.DOJANG_TESTNET_ALLOWLIST ?? "")
+      .split(",")
+      .map((entry) => entry.trim().toLowerCase())
+      .filter(Boolean);
+    const verified = allowlist.includes(address.toLowerCase());
+    return Response.json({
+      verified,
+      source: "testnet-stub",
+      reason: verified ? null : "not in the testnet Dojang allowlist",
+    });
+  }
+
+  const shareAddress = env.FUND_SHARE_ADDRESS ?? "";
+  if (!/^0x[a-fA-F0-9]{40}$/.test(shareAddress)) {
+    return Response.json({ error: "FUND_SHARE_ADDRESS is not configured", code: "contract_unconfigured" }, { status: 500 });
+  }
+  try {
+    const verified = await publicClient(env).readContract({
+      address: shareAddress as Address,
+      abi: FUND_SHARE_ABI,
+      functionName: "isAllowed",
+      args: [address],
+    });
+    return Response.json({
+      verified,
+      source: "onchain-allowlist",
+      reason: verified ? null : "not allowlisted on the fund share ledger",
+    });
+  } catch (error) {
+    return Response.json(
+      { error: error instanceof Error ? error.message : "RPC unreachable", code: "rpc_unavailable" },
+      { status: 503 },
+    );
+  }
 }
 
 async function handleHealth(env: Env): Promise<Response> {
-  const client = createPublicClient({
-    chain: giwaSepolia,
-    transport: http(env.GIWA_RPC_URL || giwaSepolia.rpcUrls.default.http[0]),
-  });
+  let key: string;
+  try {
+    key = settlementChain(env.SETTLEMENT_CHAIN).key;
+  } catch (error) {
+    return Response.json({ ready: false, error: (error as Error).message }, { status: 503 });
+  }
+  const client = publicClient(env);
   try {
     const [blockNumber, chainId] = await Promise.all([client.getBlockNumber(), client.getChainId()]);
     return Response.json({
       ready: true,
+      chain: key,
       chainId,
       blockNumber: blockNumber.toString(),
       contracts: {
-        fundShare: env.GIWA_FUND_SHARE_ADDRESS ?? null,
-        navRegistry: env.GIWA_NAV_REGISTRY_ADDRESS ?? null,
+        fundShare: env.FUND_SHARE_ADDRESS ?? null,
+        navRegistry: env.NAV_REGISTRY_ADDRESS ?? null,
       },
       signerConfigured: /^0x[0-9a-fA-F]{64}$/.test(env.RELAYER_PRIVATE_KEY ?? ""),
     });
   } catch (error) {
     return Response.json(
-      { ready: false, error: error instanceof Error ? error.message : "RPC unreachable" },
+      { ready: false, chain: key, error: error instanceof Error ? error.message : "RPC unreachable" },
       { status: 503 },
     );
   }

@@ -3,6 +3,7 @@
 import { KeyboardEvent as ReactKeyboardEvent, useEffect, useId, useMemo, useRef, useState } from "react";
 import MiniAsciiCelestial from "../../MiniAsciiCelestial";
 import WalletConnect from "../../WalletConnect";
+import { DEFAULT_SETTLEMENT_CHAIN } from "@/lib/chains";
 import type { BasketAsset, Etf } from "../../data/etfs";
 
 type ProductTab = "overview" | "performance" | "holdings" | "methodology" | "documents";
@@ -168,7 +169,7 @@ function SimulationReviewDialog({ etf, amountKrw, nav, submitting, error, onCanc
         <h2 id={titleId}>Review your paper allocation.</h2>
         <p id={copyId}>You are simulating {formatKrw(amountKrw)} in {etf.ticker}. No order will be placed and no funds will be transferred.</p>
         <dl><div><dt>STRATEGY</dt><dd>{etf.name}</dd></div><div><dt>SAMPLE AMOUNT</dt><dd>{formatKrw(amountKrw)}</dd></div><div><dt>INDICATIVE VALUE / SHARE</dt><dd>{formatNav(nav, etf.nav)}</dd></div><div><dt>ESTIMATED PAPER SHARES</dt><dd>{estimatedShares.toLocaleString("en-US", { minimumFractionDigits: 3, maximumFractionDigits: 3 })}</dd></div><div><dt>ANNUAL MANAGEMENT FEE</dt><dd>{etf.fee}</dd></div></dl>
-        <div className="simulation-review-warning"><i /> TEST ENVIRONMENT · NO ECONOMIC ASSET IS ISSUED ON GIWA SEPOLIA</div>
+        <div className="simulation-review-warning"><i /> TEST ENVIRONMENT · NO ECONOMIC ASSET IS ISSUED ON {DEFAULT_SETTLEMENT_CHAIN.label}</div>
         {error && <p className="simulation-review-error" role="alert">{error}</p>}
         <footer><button type="button" disabled={submitting} onClick={onCancel}>EDIT AMOUNT</button><button type="button" className="is-primary" disabled={submitting} aria-busy={submitting} onClick={onConfirm}>{submitting ? "SAVING SIMULATION…" : "SAVE TO PAPER PORTFOLIO"}</button></footer>
       </section>
@@ -248,7 +249,7 @@ function OverviewPanel({ etf, liveProduct, engineMode, amountKrw, subscriptionSt
           <div><dt>ESTIMATED PAPER SHARES</dt><dd>{estimatedShares.toLocaleString("en-US", { minimumFractionDigits: 3, maximumFractionDigits: 3 })}</dd></div>
           <div><dt>ANNUAL MANAGEMENT FEE</dt><dd>{etf.fee}</dd></div>
         </dl>
-        <div className="order-environment"><span><i /> SIMULATION ONLY</span><p>No economic asset is issued on GIWA Sepolia.</p></div>
+        <div className="order-environment"><span><i /> SIMULATION ONLY</span><p>No economic asset is issued on {DEFAULT_SETTLEMENT_CHAIN.name}.</p></div>
         <button type="button" disabled={submitting || Boolean(amountError)} aria-busy={submitting} className={`product-add-button${hasRequest ? " is-added" : ""}`} onClick={onSubscribe}>{submitting ? "SAVING SIMULATION…" : hasRequest ? "VIEW PAPER PORTFOLIO" : "REVIEW SIMULATION"}</button>
         {subscriptionStatus && <div className="subscription-success" role="status"><b>SIMULATION SAVED.</b><p>No real order was placed. Review the allocation in your paper portfolio.</p></div>}
         {orderError && <p className="subscription-error" role="alert">{orderError}</p>}
@@ -367,7 +368,7 @@ function DocumentsPanel({ etf }: { etf: Etf }) {
         <span>IMPORTANT INFORMATION</span>
         <h3>Controlled product launch</h3>
         <p>The strategy, NAV, order, rebalance, investor and audit services are implemented as an operating system. Public offering remains disabled until the fund, custody, transfer-agent, venue and distribution approvals are configured.</p>
-        <p>GIWA Sepolia is the current share-settlement rail. Testnet assets have no economic value and the relayer remains isolated from fund custody.</p>
+        <p>{DEFAULT_SETTLEMENT_CHAIN.name} is the current share-settlement rail. Testnet assets have no economic value and the relayer remains isolated from fund custody.</p>
         <p>Performance history shown in this interface is illustrative until an administrator-verified live track record is available. Review the approved prospectus before investing.</p>
       </aside>
     </div>
@@ -473,7 +474,7 @@ export default function EtfDetailClient({ etf }: { etf: Etf }) {
         <WalletConnect compact />
       </header>
 
-      <div className="giwa-testnet-notice"><span><i /> PRE-LAUNCH TEST ENVIRONMENT</span><p>GIWA Sepolia · Chain ID 91342 · Simulated fund-share registry</p><a href="https://sepolia-explorer.giwa.io" target="_blank" rel="noreferrer">OPEN EXPLORER ↗</a></div>
+      <div className="chain-testnet-notice"><span><i /> PRE-LAUNCH TEST ENVIRONMENT</span><p>{DEFAULT_SETTLEMENT_CHAIN.name} · Chain ID {DEFAULT_SETTLEMENT_CHAIN.chainId} · Simulated fund-share registry</p><a href={DEFAULT_SETTLEMENT_CHAIN.explorerUrl} target="_blank" rel="noreferrer">OPEN EXPLORER ↗</a></div>
 
       <section className="product-detail-hero" aria-labelledby="detail-product-name">
         <div className="product-detail-copy">
@@ -512,7 +513,7 @@ export default function EtfDetailClient({ etf }: { etf: Etf }) {
 
       {reviewOpen && <SimulationReviewDialog etf={etf} amountKrw={amountKrw} nav={liveProduct?.nav?.navPerShareMicros ?? ""} submitting={submitting} error={orderError} onCancel={() => { if (!submitting) setReviewOpen(false); }} onConfirm={() => { void subscribe().then((saved) => { if (saved) setReviewOpen(false); }); }} />}
 
-      <footer className="product-detail-footer"><span>GANYMEDE INDEX / {etf.ticker}</span><p>Subscriptions remain subject to KYC, approved offering documents, funding and operational acceptance.</p><span>GIWA SEPOLIA / 91342</span></footer>
+      <footer className="product-detail-footer"><span>GANYMEDE INDEX / {etf.ticker}</span><p>Subscriptions remain subject to KYC, approved offering documents, funding and operational acceptance.</p><span>{DEFAULT_SETTLEMENT_CHAIN.label} / {DEFAULT_SETTLEMENT_CHAIN.chainId}</span></footer>
     </main>
   );
 }

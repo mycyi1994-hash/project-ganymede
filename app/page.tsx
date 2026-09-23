@@ -3,6 +3,7 @@
 import { KeyboardEvent as ReactKeyboardEvent, useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import GanymedeScene from "./GanymedeScene";
 import MiniAsciiCelestial from "./MiniAsciiCelestial";
+import { DEFAULT_SETTLEMENT_CHAIN } from "@/lib/chains";
 import WalletConnect from "./WalletConnect";
 import { etfs, type Etf, type Filter } from "./data/etfs";
 
@@ -253,7 +254,7 @@ function PortfolioView({ data, loading, error, onBrowse, onRedeem, onOpen }: {
             </div>
           ))}
         </div>
-        <footer><p>All values and returns are simulated. This is not a brokerage account, and connecting a GIWA Sepolia test wallet is optional.</p><WalletConnect /></footer>
+        <footer><p>All values and returns are simulated. This is not a brokerage account, and connecting a {DEFAULT_SETTLEMENT_CHAIN.name} test wallet is optional.</p><WalletConnect /></footer>
       </section>
     </main>
   );
@@ -272,7 +273,7 @@ function OperationsView({ data, loading, error, onRun }: { data: OperationsData 
         <div><dt>ENGINE MODE</dt><dd>{cycle?.mode?.toUpperCase() ?? "PAPER"}</dd><small>{cycle?.marketDataQuality?.toUpperCase() ?? "WAITING FOR DATA"}</small></div>
         <div><dt>PRODUCTS</dt><dd>{String(data?.counts?.operational_products ?? 4).padStart(2, "0")}</dd><small>02 passive · 02 active</small></div>
         <div><dt>OPEN ORDERS</dt><dd>{String(data?.counts?.open_orders ?? 0).padStart(2, "0")}</dd><small>{cycle?.ordersCreated ?? 0} created last cycle</small></div>
-        <div><dt>GIWA QUEUE</dt><dd>{String(data?.counts?.pending_settlements ?? 0).padStart(2, "0")}</dd><small>Mint · burn · NAV · rebalance</small></div>
+        <div><dt>SETTLEMENT QUEUE</dt><dd>{String(data?.counts?.pending_settlements ?? 0).padStart(2, "0")}</dd><small>Mint · burn · NAV · rebalance</small></div>
       </dl>
       <section className="operations-workspace">
         <article className="operations-cycle-card">
@@ -560,7 +561,7 @@ export default function Home() {
         {view === "select" ? (
           <main className="etf-select-page product-market-page">
             <header className="etf-page-intro product-market-intro">
-              <div><p className="section-kicker">CHOOSE BY PORTFOLIO ROLE / PRIVATE PRE-LAUNCH</p><h1>Build your orbit.</h1><p>Start with a foundation, a stabilizer, focused growth or frontier growth—then compare the mandate behind each strategy.</p><div className="market-truth-badges"><span><i /> PAPER MODE</span><span>MODEL PERFORMANCE</span><span>GIWA SEPOLIA</span></div></div>
+              <div><p className="section-kicker">CHOOSE BY PORTFOLIO ROLE / PRIVATE PRE-LAUNCH</p><h1>Build your orbit.</h1><p>Start with a foundation, a stabilizer, focused growth or frontier growth—then compare the mandate behind each strategy.</p><div className="market-truth-badges"><span><i /> PAPER MODE</span><span>MODEL PERFORMANCE</span><span>{DEFAULT_SETTLEMENT_CHAIN.label}</span></div></div>
               <div className="portfolio-role-map" aria-label="Four portfolio roles">
                 {etfs.map((etf, index) => <span key={etf.id} className={`product-${etf.id}`}><i>{String(index + 1).padStart(2, "0")}</i><b>{etf.portfolioRole}</b><small>{etf.ticker} · {etf.risk} RISK</small></span>)}
               </div>
@@ -588,9 +589,9 @@ export default function Home() {
   return (
     <main className="ganymede-launch etf-platform-launch ganymede-v4" aria-labelledby="hero-title">
       <GanymedeScene />
-      <header className="platform-launch-nav"><div className="launch-wordmark"><span>G</span><b>GANYMEDE INDEX<small>CELESTIAL ASSET OBSERVATORY</small></b></div><nav className="launch-nav" aria-label="Landing navigation"><button type="button" onClick={() => openView("select")}>STRATEGIES</button><button type="button" onClick={() => openView("portfolio")}>PORTFOLIO</button></nav><WalletConnect compact /></header>
+      <header className="platform-launch-nav"><div className="launch-wordmark"><span>G</span><b>GANYMEDE INDEX<small>CELESTIAL ASSET OBSERVATORY</small></b></div><nav className="launch-nav" aria-label="Landing navigation"><button type="button" onClick={() => openView("select")}>STRATEGIES</button><button type="button" onClick={() => openView("portfolio")}>PORTFOLIO</button><a href="/proof">PROOF OF NAV</a></nav><WalletConnect compact /></header>
       <section className="launch-copy etf-launch-copy">
-        <div className="launch-status-line"><span><i /> PRIVATE PRE-LAUNCH</span><b>PAPER MODE · GIWA SEPOLIA</b></div>
+        <div className="launch-status-line"><span><i /> PRIVATE PRE-LAUNCH</span><b>PAPER MODE · {DEFAULT_SETTLEMENT_CHAIN.label}</b></div>
         <p>PASSIVE + ACTIVE DIGITAL-ASSET STRATEGIES</p>
         <h1 id="hero-title"><span>FOUR STRATEGIES.</span><span>ONE CLEAR ORBIT.</span></h1>
         <p className="launch-description">Choose a foundation, a stabilizer, focused growth or frontier growth—then inspect every rule, holding and risk before launch.</p>

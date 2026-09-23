@@ -1,5 +1,5 @@
 import { engineEnv, jsonError, noStoreJson } from "@/lib/engine/api-helpers";
-import { GiwaSettlementClient } from "@/lib/engine/giwa";
+import { SettlementClient } from "@/lib/engine/settlement";
 import { EngineRepository } from "@/lib/engine/repository";
 import { UpbitExecutionClient } from "@/lib/engine/upbit";
 
@@ -10,13 +10,13 @@ export async function GET() {
   try {
     const repo = new EngineRepository(currentEnv.DB);
     await repo.seed();
-    const [upbit, giwa, database] = await Promise.all([
+    const [upbit, settlement, database] = await Promise.all([
       new UpbitExecutionClient(currentEnv).health(),
-      new GiwaSettlementClient(currentEnv).health(),
+      new SettlementClient(currentEnv).health(),
       repo.operationsStatus(),
     ]);
-    const ready = Boolean(database) && upbit.configured && giwa.connected;
-    return noStoreJson({ ready, mode: currentEnv.TRADING_MODE === "live" ? "live" : "paper", upbit, giwa, database: { connected: true, lastCycleAt: database.lastCycleAt ?? null } }, { status: ready ? 200 : 503 });
+    const ready = Boolean(database) && upbit.configured && settlement.connected;
+    return noStoreJson({ ready, mode: currentEnv.TRADING_MODE === "live" ? "live" : "paper", upbit, settlement, database: { connected: true, lastCycleAt: database.lastCycleAt ?? null } }, { status: ready ? 200 : 503 });
   } catch (error) {
     return jsonError(error, 503);
   }

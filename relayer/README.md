@@ -1,17 +1,18 @@
-# Ganymede GIWA settlement relayer
+# Ganymede settlement relayer
 
-Signs and submits the engine's settlement intents to GIWA. **This is the only
+Signs and submits the engine's settlement intents to X Layer testnet (or GIWA
+Sepolia, via `SETTLEMENT_CHAIN`). **This is the only
 component in the system that holds an EVM private key** — the application never
 accepts one, which is why the relayer is deployed separately.
 
 ## API
 
-Exactly the contract `lib/engine/giwa.ts` already expects:
+Exactly the contract `lib/engine/settlement.ts` already expects:
 
 | Endpoint | Purpose |
 | --- | --- |
 | `POST /v1/settlements` | Submit a settlement. Bearer auth + `Idempotency-Key`. |
-| `GET /v1/dojang/verified-address/{address}` | Wallet eligibility check. |
+| `GET /v1/eligibility/{address}` | Wallet eligibility check. `/v1/dojang/verified-address/{address}` is an alias. |
 | `GET /v1/health` | RPC reachability, configured contracts, signer presence. Unauthenticated. |
 
 ## How a settlement becomes a transaction
@@ -19,7 +20,7 @@ Exactly the contract `lib/engine/giwa.ts` already expects:
 ```
 engine → POST /v1/settlements → Worker (auth, validate, replay check)
                               → Submitter Durable Object (nonce queue, sign, send)
-                              → GIWA Sepolia
+                              → X Layer testnet (SETTLEMENT_CHAIN)
 ```
 
 Three properties matter:
@@ -61,14 +62,15 @@ cd relayer
 npm install
 npm run typecheck
 
+# wrangler.jsonc already names the deployed `ganymede-settlement-relayer`
+# database. On a fresh Cloudflare account, create one and put its id there:
 npm run db:create          # note the returned database_id
-# put it in wrangler.jsonc, replacing PLACEHOLDER_RUN_WRANGLER_D1_CREATE
 npm run db:migrate
 
 npx wrangler secret put RELAYER_API_TOKEN         # shared with the app
 npx wrangler secret put RELAYER_PRIVATE_KEY       # hot key, issuer + publisher
-npx wrangler secret put GIWA_FUND_SHARE_ADDRESS   # from onchain deploy
-npx wrangler secret put GIWA_NAV_REGISTRY_ADDRESS
+npx wrangler secret put FUND_SHARE_ADDRESS        # from onchain deploy
+npx wrangler secret put NAV_REGISTRY_ADDRESS
 
 npm run deploy
 curl https://<worker>.workers.dev/v1/health
@@ -77,13 +79,14 @@ curl https://<worker>.workers.dev/v1/health
 Then point the application at it:
 
 ```
-GIWA_RELAYER_URL=https://<worker>.workers.dev
-GIWA_RELAYER_TOKEN=<RELAYER_API_TOKEN>
-GIWA_FUND_SHARE_ADDRESS=0x...
-GIWA_NAV_REGISTRY_ADDRESS=0x...
+SETTLEMENT_CHAIN=xlayer-testnet
+SETTLEMENT_RELAYER_URL=https://<worker>.workers.dev
+SETTLEMENT_RELAYER_TOKEN=<RELAYER_API_TOKEN>
+FUND_SHARE_ADDRESS=0x...
+NAV_REGISTRY_ADDRESS=0x...
 ```
 
-No application code changes are needed — `lib/engine/giwa.ts` already branches on
+No application code changes are needed — `lib/engine/settlement.ts` already branches on
 these being present. With them unset every settlement stays `simulated`.
 
 Trigger a cycle and the contracts start receiving real traffic:
@@ -94,17 +97,24 @@ curl -X POST -H "Authorization: Bearer $OPERATOR_TOKEN" \
      https://<app>/api/operations/run
 ```
 
-## Dojang verification is a testnet stub
+## Eligibility
 
-GIWA Sepolia carries no real Upbit Korea Verified Address attestation, so
-`/v1/dojang/verified-address/{address}` checks `DOJANG_TESTNET_ALLOWLIST` and
-always reports `"source": "testnet-stub"` so a caller cannot mistake it for a
-real attestation. Mainnet replaces it with a read against the Dojang scroll
-(`0xd5077b67dcb56caC8b270C7788FC3E6ee03F17B9`).
+`/v1/eligibility/{address}` answers "can this wallet receive fund shares?"
+
+- **X Layer:** reads `isAllowed(address)` on the share ledger — the exact check a
+  mint enforces — and reports `"source": "onchain-allowlist"`.
+- **GIWA Sepolia:** carries no real Upbit Korea Verified Address attestation, so
+  it checks `DOJANG_TESTNET_ALLOWLIST` and always reports
+  `"source": "testnet-stub"` so a caller cannot mistake it for a real
+  attestation. Mainnet replaces it with a read against the Dojang scroll
+  (`0xd5077b67dcb56caC8b270C7788FC3E6ee03F17B9`).
+
+Each chain gets its own submitter Durable Object (`submitter-<chainId>`), since a
+nonce belongs to a signer on one chain.
 
 ## Operational notes
 
-- Keep the relayer key funded with GIWA Sepolia ETH — an unfunded signer fails
+- Keep the relayer key funded with gas (OKB on X Layer, ETH on GIWA) — an unfunded signer fails
   every submission.
 - Rotating the hot key needs no redeploy: `setIssuer` / `setPublisher` from the
   admin key, then update the Worker secret.

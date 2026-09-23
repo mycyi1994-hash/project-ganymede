@@ -12,7 +12,7 @@ export async function generateMetadata(): Promise<Metadata> {
   const protocol = requestHeaders.get("x-forwarded-proto") ?? "https";
   const imageUrl = `${protocol}://${host}/og-v4.png`;
   const title = "Ganymede Index — Four Strategies. One Clear Orbit.";
-  const description = "Compare Foundation, Builder, Stabilizer and Explorer—four private pre-launch digital-asset strategies with transparent mandates and GIWA testnet settlement.";
+  const description = "Compare Foundation, Builder, Stabilizer and Explorer—four private pre-launch digital-asset strategies with transparent mandates and X Layer testnet settlement.";
 
   return {
     title,

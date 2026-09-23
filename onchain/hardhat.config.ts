@@ -1,6 +1,7 @@
 import "@nomicfoundation/hardhat-toolbox-viem";
 import "dotenv/config";
 import type { HardhatUserConfig } from "hardhat/config";
+import { RAILS } from "./scripts/_deployment";
 
 /**
  * Two independent keys, by design (see contracts/README.md):
@@ -39,20 +40,37 @@ const config: HardhatUserConfig = {
     artifacts: "onchain/artifacts",
   },
   networks: {
+    xlayerTestnet: {
+      url: process.env.XLAYER_RPC_URL || RAILS.xlayerTestnet.rpcUrl,
+      chainId: RAILS.xlayerTestnet.chainId,
+      accounts,
+    },
     giwaSepolia: {
-      url: process.env.GIWA_RPC_URL ?? "https://sepolia-rpc.giwa.io",
-      chainId: 91342,
+      url: process.env.GIWA_RPC_URL || RAILS.giwaSepolia.rpcUrl,
+      chainId: RAILS.giwaSepolia.chainId,
       accounts,
     },
   },
   etherscan: {
-    // GIWA's explorer is Blockscout; it ignores the key but hardhat-verify
-    // requires the field to be present.
-    apiKey: { giwaSepolia: process.env.EXPLORER_API_KEY ?? "blockscout" },
+    apiKey: {
+      // OKLink verifies X Layer sources. Free key: oklink.com → API management.
+      xlayerTestnet: process.env.OKLINK_API_KEY ?? "",
+      // GIWA's explorer is Blockscout; it ignores the key but hardhat-verify
+      // requires the field to be present.
+      giwaSepolia: process.env.EXPLORER_API_KEY ?? "blockscout",
+    },
     customChains: [
       {
+        network: "xlayerTestnet",
+        chainId: RAILS.xlayerTestnet.chainId,
+        urls: {
+          apiURL: "https://www.oklink.com/api/v5/explorer/contract/verify-source-code-plugin/XLAYER_TESTNET",
+          browserURL: "https://www.oklink.com/xlayer-test",
+        },
+      },
+      {
         network: "giwaSepolia",
-        chainId: 91342,
+        chainId: RAILS.giwaSepolia.chainId,
         urls: {
           apiURL: "https://sepolia-explorer.giwa.io/api",
           browserURL: "https://sepolia-explorer.giwa.io",
