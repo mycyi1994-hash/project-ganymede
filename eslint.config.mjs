@@ -12,6 +12,12 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Build output and Hardhat's generated artifacts.
+    "dist/**",
+    ".wrangler/**",
+    "onchain/artifacts/**",
+    "onchain/cache/**",
+    "relayer/.wrangler/**",
   ]),
 ]);
 
