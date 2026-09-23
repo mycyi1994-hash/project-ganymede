@@ -10,7 +10,7 @@ import type {
   ProductDefinition,
   StrategyResult,
 } from "./types";
-import type { GiwaSettlementRequest, GiwaSettlementResult } from "./giwa";
+import type { SettlementRequest, SettlementResult } from "./settlement";
 
 type ProductRow = {
   id: string;
@@ -387,7 +387,7 @@ export class EngineRepository {
     return await this.db.prepare("SELECT * FROM nav_snapshots WHERE product_id = ? ORDER BY as_of DESC LIMIT 1").bind(productId).first<NavRow>();
   }
 
-  async saveGiwaSettlement(request: GiwaSettlementRequest, result: GiwaSettlementResult): Promise<void> {
+  async saveSettlement(request: SettlementRequest, result: SettlementResult): Promise<void> {
     await this.db.prepare(`
       INSERT INTO giwa_settlements (
         id, entity_type, entity_id, action, payload_hash, status,
@@ -452,17 +452,17 @@ export class EngineRepository {
     `).all<SubscriptionRow>()).results;
   }
 
-  async settleSubscription(row: SubscriptionRow, giwa: GiwaSettlementResult | null, paperMode: boolean): Promise<{ sharesMicros: bigint; navPerShareMicros: bigint }> {
+  async settleSubscription(row: SubscriptionRow, settlement: SettlementResult | null, paperMode: boolean): Promise<{ sharesMicros: bigint; navPerShareMicros: bigint }> {
     const nav = await this.latestNav(row.product_id);
     const navPerShareMicros = nav ? asBigInt(nav.nav_per_share_micros) : INITIAL_NAV_PER_SHARE_MICROS;
     const shares = sharesForSubscription(asBigInt(row.amount_krw), navPerShareMicros);
-    const status = paperMode || giwa?.status === "confirmed" ? "settled" : giwa?.status === "failed" ? "rejected" : "executing";
+    const status = paperMode || settlement?.status === "confirmed" ? "settled" : settlement?.status === "failed" ? "rejected" : "executing";
     if (status !== "settled") {
-      await this.db.prepare("UPDATE subscriptions SET status = ?, giwa_tx_hash = COALESCE(?, giwa_tx_hash) WHERE id = ?").bind(status, giwa?.txHash ?? null, row.id).run();
+      await this.db.prepare("UPDATE subscriptions SET status = ?, giwa_tx_hash = COALESCE(?, giwa_tx_hash) WHERE id = ?").bind(status, settlement?.txHash ?? null, row.id).run();
       return { sharesMicros: shares, navPerShareMicros };
     }
     await this.db.batch([
-      this.db.prepare("UPDATE subscriptions SET status = 'settled', issued_shares_micros = ?, giwa_tx_hash = ?, settled_at = CURRENT_TIMESTAMP WHERE id = ?").bind(shares.toString(), giwa?.txHash ?? null, row.id),
+      this.db.prepare("UPDATE subscriptions SET status = 'settled', issued_shares_micros = ?, giwa_tx_hash = ?, settled_at = CURRENT_TIMESTAMP WHERE id = ?").bind(shares.toString(), settlement?.txHash ?? null, row.id),
       this.db.prepare(`
         INSERT INTO investor_positions (investor_id, product_id, shares_micros, cost_basis_krw)
         VALUES (?, ?, ?, ?)
@@ -507,18 +507,18 @@ export class EngineRepository {
     `).all<RedemptionRow>()).results;
   }
 
-  async settleRedemption(row: RedemptionRow, giwa: GiwaSettlementResult | null, paperMode: boolean): Promise<{ proceedsKrw: bigint }> {
+  async settleRedemption(row: RedemptionRow, settlement: SettlementResult | null, paperMode: boolean): Promise<{ proceedsKrw: bigint }> {
     const nav = await this.latestNav(row.product_id);
     const navPerShareMicros = nav ? asBigInt(nav.nav_per_share_micros) : INITIAL_NAV_PER_SHARE_MICROS;
     const shares = asBigInt(row.requested_shares_micros);
     const proceeds = krwForShares(shares, navPerShareMicros);
-    const status = paperMode || giwa?.status === "confirmed" ? "settled" : giwa?.status === "failed" ? "rejected" : "executing";
+    const status = paperMode || settlement?.status === "confirmed" ? "settled" : settlement?.status === "failed" ? "rejected" : "executing";
     if (status !== "settled") {
-      await this.db.prepare("UPDATE redemptions SET status = ?, giwa_tx_hash = COALESCE(?, giwa_tx_hash) WHERE id = ?").bind(status, giwa?.txHash ?? null, row.id).run();
+      await this.db.prepare("UPDATE redemptions SET status = ?, giwa_tx_hash = COALESCE(?, giwa_tx_hash) WHERE id = ?").bind(status, settlement?.txHash ?? null, row.id).run();
       return { proceedsKrw: proceeds };
     }
     await this.db.batch([
-      this.db.prepare("UPDATE redemptions SET status = 'settled', proceeds_krw = ?, giwa_tx_hash = ?, settled_at = CURRENT_TIMESTAMP WHERE id = ?").bind(proceeds.toString(), giwa?.txHash ?? null, row.id),
+      this.db.prepare("UPDATE redemptions SET status = 'settled', proceeds_krw = ?, giwa_tx_hash = ?, settled_at = CURRENT_TIMESTAMP WHERE id = ?").bind(proceeds.toString(), settlement?.txHash ?? null, row.id),
       this.db.prepare(`
         UPDATE investor_positions SET
           shares_micros = CAST(MAX(0, CAST(shares_micros AS INTEGER) - CAST(? AS INTEGER)) AS TEXT),

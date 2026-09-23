@@ -1,6 +1,6 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "ganymede-giwa-relayer",
+  "name": "ganymede-settlement-relayer",
   "main": "src/index.ts",
   "compatibility_date": "2026-07-01",
   "compatibility_flags": ["nodejs_compat"],
@@ -8,9 +8,11 @@
   // Deployed separately from the application on purpose: this is the only
   // component that holds an EVM private key.
   "vars": {
-    "GIWA_RPC_URL": "https://sepolia-rpc.giwa.io"
-    // GIWA_FUND_SHARE_ADDRESS / GIWA_NAV_REGISTRY_ADDRESS are set after deploy:
-    //   npx wrangler secret put GIWA_FUND_SHARE_ADDRESS
+    // xlayer-testnet (default) or giwa-sepolia. See src/chain.ts.
+    "SETTLEMENT_CHAIN": "xlayer-testnet"
+    // SETTLEMENT_RPC_URL overrides the chain's public RPC when set.
+    // FUND_SHARE_ADDRESS / NAV_REGISTRY_ADDRESS are set after deploy:
+    //   npx wrangler secret put FUND_SHARE_ADDRESS
     // RELAYER_API_TOKEN and RELAYER_PRIVATE_KEY are secrets, never vars.
   },
 

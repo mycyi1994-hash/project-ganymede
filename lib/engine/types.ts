@@ -9,11 +9,13 @@ export type EngineEnv = {
   LIVE_TRADING_CONFIRMATION?: string;
   OPERATOR_TOKEN?: string;
   OPERATIONS_ALLOW_EMAILS?: string;
-  GIWA_RPC_URL?: string;
-  GIWA_RELAYER_URL?: string;
-  GIWA_RELAYER_TOKEN?: string;
-  GIWA_FUND_SHARE_ADDRESS?: string;
-  GIWA_NAV_REGISTRY_ADDRESS?: string;
+  /** `xlayer-testnet` (default) or `giwa-sepolia`. See lib/chains.ts. */
+  SETTLEMENT_CHAIN?: string;
+  SETTLEMENT_RPC_URL?: string;
+  SETTLEMENT_RELAYER_URL?: string;
+  SETTLEMENT_RELAYER_TOKEN?: string;
+  FUND_SHARE_ADDRESS?: string;
+  NAV_REGISTRY_ADDRESS?: string;
 };
 
 export type AssetDefinition = {

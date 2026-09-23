@@ -1,6 +1,6 @@
 # Ganymede ETF Operating System
 
-Ganymede is a full-stack operating system for passive and systematic-active digital-asset ETF products. It combines the investor product surface with portfolio construction, market data, NAV, rebalancing, execution, subscriptions, redemptions, GIWA settlement evidence and an append-only audit trail.
+Ganymede is a full-stack operating system for passive and systematic-active digital-asset ETF products. It combines the investor product surface with portfolio construction, market data, NAV, rebalancing, execution, subscriptions, redemptions, on-chain settlement evidence on X Layer and an append-only audit trail.
 
 The deployed system defaults to `paper` mode. Live public issuance is deliberately gated until licensed fund, custody, transfer-agent, venue, administrator, distribution and approved offering-document integrations are configured.
 
@@ -26,14 +26,14 @@ The Cloudflare Worker runs every five minutes and may also wake opportunisticall
 5. Create idempotent sell-before-buy order intents.
 6. Execute through paper or explicitly enabled live Upbit adapters.
 7. Reconcile positions and publish fixed-point NAV snapshots with holdings hashes.
-8. Queue GIWA share mint/burn and NAV/rebalance evidence through an external relayer.
+8. Queue fund-share mint/burn and NAV/rebalance evidence on X Layer through an external relayer.
 9. Persist engine state and tamper-evident audit hashes.
 
 Monetary values and shares are stored as integer strings. No floating-point arithmetic is used for fund accounting or settlement.
 
 ## Data model
 
-The migration in `drizzle/0000_giant_speedball.sql` creates 20 D1 tables covering products, assets, strategy configuration and signals, target allocations, prices, positions, NAVs, rebalances, orders, fills, investors, subscriptions, redemptions, investor positions, GIWA settlements, audit events, engine state and distributed leases.
+The migration in `drizzle/0000_giant_speedball.sql` creates 20 D1 tables covering products, assets, strategy configuration and signals, target allocations, prices, positions, NAVs, rebalances, orders, fills, investors, subscriptions, redemptions, investor positions, on-chain settlements (table `giwa_settlements`, named for the original rail), audit events, engine state and distributed leases.
 
 Generate a new migration after schema changes:
 
@@ -44,19 +44,26 @@ npm run db:generate
 ## API surface
 
 - `GET /api/market` — product NAV, target weights and latest engine cycle
-- `GET /api/health` — D1, Upbit and GIWA readiness
+- `GET /api/health` — D1, Upbit and settlement-chain readiness
 - `GET|POST|DELETE /api/portfolio` — investor ledger, subscriptions and redemptions
 - `GET /api/operations/status` — orders, rebalances, settlements and cycle counters
 - `POST /api/operations/run` — authorized controlled cycle
 - `POST /api/operations/actions` — KYC, funding, redemption and product pause/resume controls
 
-Investor writes use the private Sites identity header or a GIWA wallet in paper mode. Live mode requires authenticated investor identity. Operator writes require an allowlisted identity or bearer token.
+Investor writes use the private Sites identity header or a browser wallet (OKX Wallet or any EIP-1193 wallet) in paper mode. Live mode requires authenticated investor identity. Operator writes require an allowlisted identity or bearer token.
 
-## GIWA contracts
+## Settlement contracts on X Layer
 
 `contracts/GanymedeFundShare.sol` implements a permissioned, pausable, six-decimal fund-share registry with idempotent subscription/redemption settlement. `contracts/GanymedeNavRegistry.sol` stores monotonic NAV and rebalance evidence hashes. Private keys are never accepted by the application; contract writes go through the configured external relayer and should be controlled by a multisig.
 
-GIWA Sepolia is a settlement test rail, not proof of custody, licensing or an Upbit mainnet relationship.
+Settlement runs on **X Layer testnet** (chain ID 1952, gas in OKB) by default. `SETTLEMENT_CHAIN` selects the rail in both the app and the relayer:
+
+| `SETTLEMENT_CHAIN` | Network | Chain ID | Explorer |
+| --- | --- | --- | --- |
+| `xlayer-testnet` (default) | X Layer Testnet | 1952 | https://www.okx.com/web3/explorer/xlayer-test |
+| `giwa-sepolia` | GIWA Sepolia | 91342 | https://sepolia-explorer.giwa.io |
+
+The chain registry lives in `lib/chains.ts` (app and wallet UI) and `relayer/src/chain.ts` (signer); keep them in step. Either rail is a settlement test rail, not proof of custody, licensing or a venue relationship.
 
 ## Local development
 
@@ -80,7 +87,7 @@ Live Upbit execution is enabled only when all three conditions are true:
 2. Valid `UPBIT_ACCESS_KEY` and `UPBIT_SECRET_KEY`
 3. `LIVE_TRADING_CONFIRMATION=ENABLE_GANYMEDE_LIVE_UPBIT_ORDERS`
 
-GIWA writes additionally require a relayer URL/token and deployed share/NAV registry addresses. The application accepts no signing key.
+On-chain writes additionally require `SETTLEMENT_RELAYER_URL`/`SETTLEMENT_RELAYER_TOKEN` and deployed `FUND_SHARE_ADDRESS`/`NAV_REGISTRY_ADDRESS`. The application accepts no signing key.
 
 Before live activation, complete legal classification, approved offering documents, fund administrator NAV sign-off, custody reconciliation, cash banking, venue whitelisting, transfer-agent controls, sanctions/KYC/AML workflows, disaster recovery, monitoring, key rotation, smart-contract audit and staged low-limit production testing.
 

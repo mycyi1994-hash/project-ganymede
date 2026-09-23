@@ -654,15 +654,15 @@ body:has(.ganymede-v4.etf-platform-launch) {
 .ganymede-v4 .detail-brand small { font-size: 9px; }
 .ganymede-v4 .product-detail-topbar > p { color: var(--obs-text-3); font-size: 10px; }
 
-.ganymede-v4 .giwa-testnet-notice {
+.ganymede-v4 .chain-testnet-notice {
   min-height: 40px;
   color: var(--obs-text-3);
   border-color: var(--obs-line-soft);
   background: rgba(11, 12, 16, .96);
   font-size: 10px;
 }
-.ganymede-v4 .giwa-testnet-notice span { color: var(--obs-warning); }
-.ganymede-v4 .giwa-testnet-notice a { color: var(--obs-text-2); }
+.ganymede-v4 .chain-testnet-notice span { color: var(--obs-warning); }
+.ganymede-v4 .chain-testnet-notice a { color: var(--obs-text-2); }
 
 .ganymede-v4 .product-detail-hero {
   min-height: 540px;
@@ -962,8 +962,8 @@ body:has(.ganymede-v4.etf-platform-launch) {
   .ganymede-v4 .product-detail-topbar .wallet-connect.is-compact { display: flex; padding-right: 12px; }
   .ganymede-v4 .product-detail-topbar .wallet-connect.is-compact > button { min-width: 44px; width: 44px; padding: 0; overflow: hidden; font-size: 0; }
   .ganymede-v4 .product-detail-topbar .wallet-connect.is-compact > button::after { content: "◎"; font-size: 18px; }
-  .ganymede-v4 .giwa-testnet-notice { min-height: 48px; padding: 8px 16px; grid-template-columns: 1fr auto; gap: 10px; font-size: 9px; line-height: 1.35; }
-  .ganymede-v4 .giwa-testnet-notice p { display: none; }
+  .ganymede-v4 .chain-testnet-notice { min-height: 48px; padding: 8px 16px; grid-template-columns: 1fr auto; gap: 10px; font-size: 9px; line-height: 1.35; }
+  .ganymede-v4 .chain-testnet-notice p { display: none; }
   .ganymede-v4 .product-detail-hero { min-height: auto; padding: 34px 16px; grid-template-columns: 1fr; }
   .ganymede-v4 .product-detail-copy .detail-back { margin-bottom: 24px; }
   .ganymede-v4 .product-detail-copy h1 { font-size: 48px; }

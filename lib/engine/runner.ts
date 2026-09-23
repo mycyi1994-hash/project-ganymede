@@ -1,6 +1,6 @@
 import { ASSET_UNIVERSE, PRODUCT_DEFINITIONS } from "./seed";
 import { asBigInt, newId, notionalToUnitsAtomic, unitsToMarketValueKrw } from "./fixed";
-import { GiwaSettlementClient, type GiwaSettlementRequest } from "./giwa";
+import { SettlementClient, type SettlementRequest } from "./settlement";
 import { EngineRepository } from "./repository";
 import { calculateStrategy, shouldRebalance } from "./strategy";
 import { fetchDailyCandles, fetchMarketSnapshot, UpbitExecutionClient } from "./upbit";
@@ -52,13 +52,13 @@ function marketDataQuality(ticks: MarketTick[]): "live" | "reference" | "mixed" 
 
 async function processFundFlows(
   repo: EngineRepository,
-  giwa: GiwaSettlementClient,
+  settlementClient: SettlementClient,
   paperMode: boolean,
 ): Promise<number> {
   let settlements = 0;
   const subscriptions = await repo.listSubscriptionsForProcessing(paperMode);
   for (const subscription of subscriptions) {
-    const request: GiwaSettlementRequest = {
+    const request: SettlementRequest = {
       entityType: "subscription",
       entityId: subscription.id,
       action: "mint_subscription",
@@ -68,15 +68,15 @@ async function processFundFlows(
       sharesMicros: subscription.expected_shares_micros,
       effectiveAt: new Date().toISOString(),
     };
-    const settlement = await giwa.settle(request);
-    await repo.saveGiwaSettlement(request, settlement);
+    const settlement = await settlementClient.settle(request);
+    await repo.saveSettlement(request, settlement);
     await repo.settleSubscription(subscription, settlement, paperMode);
     settlements += 1;
   }
 
   const redemptions = await repo.listRedemptionsForProcessing(paperMode);
   for (const redemption of redemptions) {
-    const request: GiwaSettlementRequest = {
+    const request: SettlementRequest = {
       entityType: "redemption",
       entityId: redemption.id,
       action: "burn_redemption",
@@ -85,8 +85,8 @@ async function processFundFlows(
       sharesMicros: redemption.requested_shares_micros,
       effectiveAt: new Date().toISOString(),
     };
-    const settlement = await giwa.settle(request);
-    await repo.saveGiwaSettlement(request, settlement);
+    const settlement = await settlementClient.settle(request);
+    await repo.saveSettlement(request, settlement);
     await repo.settleRedemption(redemption, settlement, paperMode);
     settlements += 1;
   }
@@ -163,7 +163,7 @@ async function buildOrders(
 async function evaluateAndRebalance(
   repo: EngineRepository,
   execution: UpbitExecutionClient,
-  giwa: GiwaSettlementClient,
+  settlementClient: SettlementClient,
   product: ProductDefinition,
   ticks: Map<string, MarketTick>,
   candles: Map<string, DailyCandle[]>,
@@ -202,7 +202,7 @@ async function evaluateAndRebalance(
     if (result.error) warnings.push(`${product.ticker} ${intent.symbol} ${intent.side}: ${result.error}`);
   }
   await repo.markRebalance(rebalanceId, allCompleted ? "completed" : "executing");
-  const request: GiwaSettlementRequest = {
+  const request: SettlementRequest = {
     entityType: "rebalance",
     entityId: rebalanceId,
     action: "publish_rebalance",
@@ -213,8 +213,8 @@ async function evaluateAndRebalance(
     })(),
     effectiveAt: new Date().toISOString(),
   };
-  const settlement = await giwa.settle(request);
-  await repo.saveGiwaSettlement(request, settlement);
+  const settlement = await settlementClient.settle(request);
+  await repo.saveSettlement(request, settlement);
   return { rebalances: 1, orders: orders.length, settlements: 1, warnings };
 }
 
@@ -247,7 +247,7 @@ export async function runEngineCycle(
 
   try {
     const execution = new UpbitExecutionClient(env);
-    const giwa = new GiwaSettlementClient(env);
+    const settlementClient = new SettlementClient(env);
     const market = await loadMarketData();
     await repo.saveMarketSnapshot(market.ticks);
     await repo.saveCandles(market.candles);
@@ -257,11 +257,11 @@ export async function runEngineCycle(
     const executionHealth = await execution.health();
     if (mode === "live" && !executionHealth.configured) warnings.push("Live Upbit execution is disabled because credentials or the explicit live-trading confirmation are missing");
 
-    let settlementsQueued = await processFundFlows(repo, giwa, mode === "paper");
+    let settlementsQueued = await processFundFlows(repo, settlementClient, mode === "paper");
     let rebalancesCreated = 0;
     let ordersCreated = 0;
     for (const product of PRODUCT_DEFINITIONS) {
-      const outcome = await evaluateAndRebalance(repo, execution, giwa, product, ticks, market.candles, trigger, options.force === true, quality === "live" && executionHealth.configured);
+      const outcome = await evaluateAndRebalance(repo, execution, settlementClient, product, ticks, market.candles, trigger, options.force === true, quality === "live" && executionHealth.configured);
       rebalancesCreated += outcome.rebalances;
       ordersCreated += outcome.orders;
       settlementsQueued += outcome.settlements;
@@ -271,13 +271,13 @@ export async function runEngineCycle(
     let navsPublished = 0;
     for (const product of PRODUCT_DEFINITIONS) {
       const nav = await repo.calculateAndSaveNav(product.id, ticks, quality === "live" ? "indicative" : "stale");
-      const request: GiwaSettlementRequest = {
+      const request: SettlementRequest = {
         entityType: "nav", entityId: `${product.id}:${nav.asOf}`, action: "publish_nav", productId: product.id,
         navPerShareMicros: nav.navPerShareMicros.toString(), sharesOutstandingMicros: nav.sharesOutstandingMicros.toString(),
         holdingsHash: nav.holdingsHash, effectiveAt: nav.asOf,
       };
-      const settlement = await giwa.settle(request);
-      await repo.saveGiwaSettlement(request, settlement);
+      const settlement = await settlementClient.settle(request);
+      await repo.saveSettlement(request, settlement);
       navsPublished += 1;
       settlementsQueued += 1;
     }

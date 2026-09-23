@@ -1,8 +1,8 @@
 {
-  "name": "ganymede-giwa-relayer",
+  "name": "ganymede-settlement-relayer",
   "version": "0.1.0",
   "private": true,
-  "description": "Signs and submits Ganymede settlement transactions to GIWA. The only component in the system that holds an EVM private key.",
+  "description": "Signs and submits Ganymede settlement transactions to X Layer (or GIWA). The only component in the system that holds an EVM private key.",
   "type": "module",
   "scripts": {
     "typecheck": "tsc --noEmit",

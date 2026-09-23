@@ -23,7 +23,7 @@ test("server-renders the Ganymede landing page", async () => {
   assert.match(html, /ONE CLEAR ORBIT/);
   assert.match(html, /COMPARE STRATEGIES/);
   assert.match(html, /PRE-LAUNCH/);
-  assert.match(html, /GIWA SEPOLIA/);
+  assert.match(html, /X LAYER TESTNET/);
 });
 
 test("direct ETF detail URLs render product and basket data", async () => {
@@ -39,7 +39,7 @@ test("direct ETF detail URLs render product and basket data", async () => {
   assert.match(html, /INVESTMENT OBJECTIVE/);
   assert.match(html, /REVIEW SIMULATION/);
   assert.match(html, /THE FOUNDATION/);
-  assert.match(html, /GIWA Sepolia/);
+  assert.match(html, /X Layer Testnet/);
 });
 
 test("unknown ETF slugs return not found", async () => {

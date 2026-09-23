@@ -2,15 +2,17 @@
  * Allowlists investor wallets on the fund share ledger.
  *
  * This runs under the ADMIN key on purpose. Allowlisting is a compliance
- * decision (in production: Upbit Korea Dojang Verified Address + KYC/AML), so
- * the relayer deliberately has no permission to do it. If a mint fails with
+ * decision (in production: KYC/AML, plus Upbit Korea Dojang Verified Address
+ * on GIWA), so the relayer deliberately has no permission to do it. On X Layer
+ * this allowlist is also what the relayer's /v1/eligibility check reads. If a mint fails with
  * `investor_not_allowlisted`, this script is the intended remedy.
  *
- * Run: WALLETS=0xabc...,0xdef... npm run allowlist
+ * Run: WALLETS=0xabc...,0xdef... npm run allowlist         (X Layer testnet)
+ *      WALLETS=0xabc...,0xdef... npm run allowlist:giwa    (GIWA Sepolia)
  */
 import hre from "hardhat";
 import { getAddress, type Address } from "viem";
-import { loadDeployment } from "./_deployment";
+import { loadDeployment, railFor } from "./_deployment";
 
 async function main() {
   const wallets = (process.env.WALLETS ?? "")
@@ -27,7 +29,7 @@ async function main() {
     return getAddress(wallet);
   });
 
-  const deployment = loadDeployment();
+  const deployment = loadDeployment(railFor(hre.network.name));
   const [admin] = await hre.viem.getWalletClients();
   const publicClient = await hre.viem.getPublicClient();
 

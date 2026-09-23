@@ -1,18 +1,20 @@
 /**
- * Reads live contract state back off GIWA Sepolia.
+ * Reads live contract state back off the settlement rail.
  *
  * Use this to confirm the deployment is wired correctly and to collect the
  * explorer links for a grant or diligence submission.
  *
- * Run: npm run status
+ * Run: npm run status          (X Layer testnet)
+ *      npm run status:giwa     (GIWA Sepolia)
  */
 import hre from "hardhat";
 import type { Address } from "viem";
-import { loadDeployment } from "./_deployment";
+import { loadDeployment, railFor } from "./_deployment";
 import { productKey } from "../../relayer/src/ids";
 
 async function main() {
-  const deployment = loadDeployment();
+  const rail = railFor(hre.network.name);
+  const deployment = loadDeployment(rail);
   const publicClient = await hre.viem.getPublicClient();
 
   const share = await hre.viem.getContractAt(
@@ -71,8 +73,8 @@ async function main() {
   }
 
   const balance = await publicClient.getBalance({ address: deployment.relayer as Address });
-  console.log(`\nrelayer ${deployment.relayer} balance ${balance} wei`);
-  if (balance === 0n) console.log("  WARNING: relayer cannot pay gas — top it up from the faucet.");
+  console.log(`\nrelayer ${deployment.relayer} balance ${balance} wei (${rail.gasToken})`);
+  if (balance === 0n) console.log(`  WARNING: relayer cannot pay gas — top it up with ${rail.gasToken} from the faucet.`);
 }
 
 main().catch((error) => {

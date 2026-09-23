@@ -23,7 +23,7 @@ import { classifyRevert, planCall, RequestError, type SettlementRequest } from "
 import { idempotencyKey } from "./ids";
 import { readSettlement, writeSettlement, type StoredSettlement } from "./store";
 import type { Env } from "./env";
-import { giwaSepolia } from "./chain";
+import { settlementChain } from "./chain";
 
 const RECEIPT_TIMEOUT_MS = 20_000;
 
@@ -52,16 +52,17 @@ export class Submitter implements DurableObject {
       throw new RequestError("RELAYER_PRIVATE_KEY secret is missing or malformed", 500, "relayer_unconfigured");
     }
     const account = privateKeyToAccount(key as Hex);
-    const transport = http(this.env.GIWA_RPC_URL || giwaSepolia.rpcUrls.default.http[0]);
+    const { chain } = settlementChain(this.env.SETTLEMENT_CHAIN);
+    const transport = http(this.env.SETTLEMENT_RPC_URL || chain.rpcUrls.default.http[0]);
     return {
       account,
-      publicClient: createPublicClient({ chain: giwaSepolia, transport }),
-      walletClient: createWalletClient({ account, chain: giwaSepolia, transport }),
+      publicClient: createPublicClient({ chain, transport }),
+      walletClient: createWalletClient({ account, chain, transport }),
     };
   }
 
   private contractAddress(target: "fundShare" | "navRegistry"): Address {
-    const raw = target === "fundShare" ? this.env.GIWA_FUND_SHARE_ADDRESS : this.env.GIWA_NAV_REGISTRY_ADDRESS;
+    const raw = target === "fundShare" ? this.env.FUND_SHARE_ADDRESS : this.env.NAV_REGISTRY_ADDRESS;
     if (!/^0x[a-fA-F0-9]{40}$/.test(raw ?? "")) {
       throw new RequestError(`${target} address is not configured on the relayer`, 500, "contract_unconfigured");
     }

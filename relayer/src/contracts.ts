@@ -124,7 +124,7 @@ export const NAV_REGISTRY_ABI = [
   { type: "error", name: "ContractPaused", inputs: [] },
 ] as const;
 
-/** The settlement request the engine POSTs (lib/engine/giwa.ts). */
+/** The settlement request the engine POSTs (lib/engine/settlement.ts). */
 export interface SettlementRequest {
   entityType: "nav" | "subscription" | "redemption" | "rebalance";
   entityId: string;
