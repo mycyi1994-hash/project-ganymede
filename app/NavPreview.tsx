@@ -33,7 +33,9 @@ export default function NavPreview() {
   const status = unavailable || snapshot?.onchainError
     ? "Record unavailable"
     : record ? "Published on chain" : snapshot ? "Awaiting publication" : "Loading on-chain record";
-  const nav = record ? new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 4, maximumFractionDigits: 4 }).format(Number(record.navPerShareMicros) / 1_000_000) : "—";
+  // Truncate like the proof page, so both show the same NAV rather than a rounded one.
+  const micros = record ? BigInt(record.navPerShareMicros) : null;
+  const nav = micros !== null ? `$${(micros / 1_000_000n).toLocaleString("en-US")}.${(micros % 1_000_000n).toString().padStart(6, "0").slice(0, 4)}` : "—";
 
   return (
     <section className="launch-proof-panel" aria-labelledby="preview-title">

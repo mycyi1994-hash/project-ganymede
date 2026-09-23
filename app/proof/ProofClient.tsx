@@ -147,9 +147,11 @@ export default function ProofClient() {
     return () => { cancelled = true; };
   }, [data]);
 
-  const composition = data?.latest?.composition ?? null;
   const verifiedCanonical = data?.onchain ? [data.latest?.publication, ...(data.history ?? [])].find((entry) => entry?.holdingsHash === data.onchain?.holdingsHash)?.canonical ?? null : null;
   const canonical = verifiedCanonical ?? data?.latest?.canonical ?? null;
+  // A pricing pass that did not publish keeps showing the composition the chain anchors, not a blank NAV.
+  const composition = data?.latest?.composition ?? (verifiedCanonical ? JSON.parse(verifiedCanonical) as Composition : null);
+  const showingPublished = Boolean(composition && !data?.latest?.composition);
   const status = data ? data.latest?.status ?? "awaiting_configuration" : error ? "unavailable" : "loading";
   const registryUrl = data?.registry.address ? `${data.registry.explorerUrl}/address/${data.registry.address}` : null;
 
@@ -181,7 +183,7 @@ export default function ProofClient() {
         <dl className="proof-nav">
           <div><dt>NAV PER SHARE</dt><dd>{composition ? usd(composition.navPerShareMicros, 4) : "—"}</dd></div>
           <div><dt>STATUS</dt><dd className={`proof-status proof-status-${status}`}>{status === "loading" ? "LOADING DATA" : status === "unavailable" ? "DATA UNAVAILABLE" : STATUS_LABEL[status]}</dd></div>
-          <div><dt>LAST PRICED</dt><dd>{time(data?.latest?.evaluatedAt)}</dd></div>
+          <div><dt>{showingPublished ? "LAST PUBLISHED" : "LAST PRICED"}</dt><dd>{time(showingPublished ? composition?.asOf : data?.latest?.evaluatedAt)}</dd></div>
           <div><dt>INCEPTION NAV</dt><dd>{data ? usd(data.product.inceptionNavMicros) : "—"}</dd></div>
         </dl>
       </section>
@@ -212,7 +214,7 @@ export default function ProofClient() {
         <header><h2 id="proof-holdings">Composition</h2><p>{composition ? `Units fixed ${time(composition.basketFixedAt)} · re-fixed quarterly at the prevailing NAV` : data?.product.methodology}</p></header>
         <div className="proof-table-wrap">
           <table className="proof-table">
-            <thead><tr><th scope="col">Token</th><th scope="col">Weight at fixing</th><th scope="col">Units / share</th><th scope="col">Live price</th><th scope="col">Value / share</th><th scope="col">Priced at</th></tr></thead>
+            <thead><tr><th scope="col">Token</th><th scope="col">Weight at fixing</th><th scope="col">Units / share</th><th scope="col">{showingPublished ? "Price at publication" : "Live price"}</th><th scope="col">Value / share</th><th scope="col">Priced at</th></tr></thead>
             <tbody>
               {(composition?.holdings ?? data?.pricing.constituents.map((constituent) => ({ symbol: constituent.symbol, address: constituent.address ?? "", weightBps: 0, unitsWad: "0", priceMicros: "0", valueMicros: "0", priceTime: "", priceSource: "" })) ?? []).map((holding) => {
                 const constituent = data?.pricing.constituents.find((candidate) => candidate.symbol === holding.symbol);
@@ -233,6 +235,7 @@ export default function ProofClient() {
             </tbody>
           </table>
         </div>
+        {showingPublished && <p className="proof-footnote">Showing the composition behind the NAV on chain, published {time(composition?.asOf)}. The latest pricing pass at {time(data?.latest?.evaluatedAt)} did not publish.</p>}
         {data?.latest?.blockers && data.latest.blockers.length > 0 && (
           <ul className="proof-blockers" aria-label="Why the latest NAV was not published">
             {data.latest.blockers.map((blocker) => <li key={blocker}>Not published: {blocker}</li>)}
