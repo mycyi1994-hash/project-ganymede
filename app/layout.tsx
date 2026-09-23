@@ -1,18 +1,14 @@
 import type { Metadata } from "next";
 import { headers } from "next/headers";
-import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-
-const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
-const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
 
 export async function generateMetadata(): Promise<Metadata> {
   const requestHeaders = await headers();
   const host = requestHeaders.get("x-forwarded-host") ?? requestHeaders.get("host") ?? "neptune-onboarding-seoul.duddlfqotl.chatgpt.site";
   const protocol = requestHeaders.get("x-forwarded-proto") ?? "https";
   const imageUrl = `${protocol}://${host}/og-v4.png`;
-  const title = "Ganymede Index — Four Strategies. One Clear Orbit.";
-  const description = "Compare Foundation, Builder, Stabilizer and Explorer—four private pre-launch digital-asset strategies with transparent mandates and X Layer testnet settlement.";
+  const title = "Ganymede Index — Know the strategy. See the evidence.";
+  const description = "Explore four digital-asset strategies and a tokenized US tech basket. Compare the rules and inspect on-chain NAV evidence in a private pre-launch test environment.";
 
   return {
     title,
@@ -29,7 +25,7 @@ export async function generateMetadata(): Promise<Metadata> {
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en">
-      <body className={`${geistSans.variable} ${geistMono.variable}`}>{children}</body>
+      <body>{children}</body>
     </html>
   );
 }

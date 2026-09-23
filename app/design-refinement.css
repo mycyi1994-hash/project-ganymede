@@ -1,0 +1,297 @@
+/* Readable observatory: content leads, celestial artwork gives context. */
+@font-face {
+  font-family: "Geist";
+  src: url("/fonts/geist-latin.woff2") format("woff2");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Geist Mono";
+  src: url("/fonts/geist-mono-latin.woff2") format("woff2");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+:root {
+  --font-geist-sans: "Geist", Arial, sans-serif;
+  --font-geist-mono: "Geist Mono", monospace;
+  --obs-text-2: #c8c6ce;
+  --obs-text-3: #aaa6b2;
+  --obs-line: rgba(229, 226, 236, .22);
+  --obs-core: #b6d5e8;
+  --obs-tech: #cab4ec;
+  --obs-yield: #b0d8be;
+  --obs-alpha: #e0baa6;
+}
+
+.ganymede-v4::after { opacity: .035; }
+.ganymede-v4 .section-kicker { display: block; font-size: 11px; line-height: 1.5; letter-spacing: .09em; }
+.ganymede-v4 .platform-launch-nav,
+.ganymede-v4 .platform-topbar { display: grid; grid-template-columns: 1fr auto 1fr; }
+.ganymede-v4 .app-menu button,
+.ganymede-v4 .app-menu a,
+.ganymede-v4 .launch-nav button,
+.ganymede-v4 .launch-nav a {
+  min-width: 0;
+  padding: 0 17px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: var(--obs-text-2);
+  font: 600 11px/1.3 var(--font-geist-mono), monospace;
+  letter-spacing: .05em;
+  text-decoration: none;
+}
+.ganymede-v4 .app-menu a:hover { color: var(--obs-text); background: #ffffff08; }
+.ganymede-v4 .app-identity { padding-inline: 24px; }
+.ganymede-v4 .app-disclaimer { height: auto; min-height: 52px; padding-block: 12px; font-size: 11px; line-height: 1.5; }
+.ganymede-v4 .app-disclaimer > span { font-size: 10px; }
+
+/* A flowing page keeps both the evidence and the navigation reachable. */
+body:has(.ganymede-v4.etf-platform-launch) { height: auto; overflow: auto; }
+.ganymede-v4.etf-platform-launch {
+  width: 100%;
+  height: auto;
+  min-height: 100svh;
+  padding-bottom: 0;
+  background: radial-gradient(ellipse at 78% 28%, #302d422b, transparent 45%), var(--obs-bg);
+}
+.ganymede-v4 .platform-launch-nav { position: relative; height: 80px; }
+.ganymede-v4 .launch-nav { display: flex; }
+.launch-layout {
+  width: min(1440px, 100%);
+  margin: auto;
+  padding: 36px clamp(24px, 5vw, 80px) 44px;
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+  align-items: center;
+  gap: clamp(32px, 5vw, 88px);
+}
+.ganymede-v4 .etf-launch-copy {
+  width: auto;
+  position: relative;
+  inset: auto;
+  transform: none;
+  pointer-events: auto;
+  animation: none;
+}
+.ganymede-v4 .launch-status-line { margin: 0 0 36px; flex-wrap: wrap; justify-content: flex-start; gap: 12px 22px; line-height: 1.5; font-size: 10px; }
+.ganymede-v4 .etf-launch-copy > p:first-of-type { font-size: 11px; line-height: 1.6; letter-spacing: .08em; }
+.ganymede-v4 .etf-launch-copy h1 {
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  gap: 0;
+  font-size: clamp(42px, 4.8vw, 74px);
+  font-weight: 470;
+  line-height: 1.04;
+  letter-spacing: -.06em;
+  text-wrap: wrap;
+}
+.ganymede-v4 .etf-launch-copy h1 span { white-space: normal; }
+.ganymede-v4 .etf-launch-copy h1 span:last-child { color: #c6bdce; text-shadow: none; }
+.ganymede-v4 .etf-launch-copy .launch-description { margin-top: 26px; max-width: 540px; font-size: 17px; line-height: 1.7; }
+.ganymede-v4 .etf-launch-copy .launch-actions { display: flex; flex-wrap: wrap; gap: 12px; animation: none; }
+.ganymede-v4 .launch-actions .launch-portfolio { display: inline-flex; align-items: center; justify-content: space-between; gap: 24px; padding: 0 20px; font: 600 12px/1.4 var(--font-geist-mono), monospace; text-decoration: none; }
+.ganymede-v4 .launch-assurance { gap: 12px 18px; font: 400 12px/1.5 var(--font-geist-sans), sans-serif; letter-spacing: 0; }
+.launch-observatory { min-width: 0; }
+.launch-orbit { height: 250px; position: relative; overflow: hidden; }
+.ganymede-v4.etf-platform-launch .launch-orbit .scene { transform: translateY(24px) scale(1.8); opacity: .76; pointer-events: none; mask-image: none; }
+.launch-orbit > span { position: absolute; bottom: 12px; left: 0; right: 0; color: var(--obs-text-3); text-align: center; font: 500 10px/1.5 var(--font-geist-mono), monospace; letter-spacing: .14em; }
+.launch-proof-panel { position: relative; padding: 25px 28px 0; border: 1px solid #d7cfdf38; background: linear-gradient(135deg, #171820, #0c0d12); }
+.preview-heading { display: flex; justify-content: space-between; gap: 10px; align-items: center; }
+.preview-eyebrow { color: #c6bdce; font: 600 10px/1.5 var(--font-geist-mono), monospace; letter-spacing: .05em; }
+.preview-network { color: var(--obs-warning); padding: 4px 6px; border: 1px solid #c8b48c44; font: 600 9px/1.3 var(--font-geist-mono), monospace; }
+.launch-proof-panel h2 { margin: 18px 0 10px; font-size: 24px; font-weight: 500; line-height: 1.2; letter-spacing: -.03em; }
+.launch-proof-panel > p { margin: 0; max-width: 360px; color: var(--obs-text-2); font-size: 14px; line-height: 1.6; }
+.preview-reading { min-height: 100px; padding-block: 22px; display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 14px; }
+.preview-reading > div > span { display: block; margin-bottom: 8px; color: var(--obs-text-3); font: 500 10px/1.4 var(--font-geist-mono), monospace; }
+.preview-reading strong { display: block; color: var(--obs-ivory); font: 500 36px/1 var(--font-geist-mono), monospace; letter-spacing: -.055em; }
+.preview-state { display: flex; gap: 6px; align-items: center; color: var(--obs-text-3); font-size: 11px; }
+.preview-state i, .catalog-environment i { width: 5px; height: 5px; background: currentColor; border-radius: 50%; }
+.preview-state.is-published { color: var(--obs-positive); }
+.preview-footer { border-top: 1px solid var(--obs-line); padding: 16px 0; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px; align-items: center; }
+.preview-footer > span { color: var(--obs-text-3); font-size: 11px; }
+.preview-footer a { display: inline-flex; gap: 14px; align-items: center; min-height: 28px; font-size: 13px; color: var(--obs-text); text-decoration: none; }
+.preview-footer a:hover { text-decoration: underline; text-underline-offset: 4px; }
+.ganymede-v4 .launch-fund-index {
+  position: relative;
+  inset: auto;
+  width: auto;
+  margin: 0 clamp(24px, 5vw, 80px);
+  display: grid;
+  grid-template-columns: 1.1fr repeat(4, 1fr);
+  border-bottom: 1px solid var(--obs-line);
+  background: transparent;
+  backdrop-filter: none;
+  animation: none;
+}
+.ganymede-v4 .launch-fund-index-label { display: flex; min-height: 90px; padding: 16px 0; font-size: 10px; line-height: 1.8; letter-spacing: .07em; }
+.ganymede-v4 .launch-fund-index button { display: grid; min-height: 90px; padding: 18px; border-top: 0; border-left: 1px solid var(--obs-line-soft); grid-template-columns: 20px 1fr auto; gap: 10px; }
+.ganymede-v4 .launch-fund-index button b { color: var(--product-accent); font-size: 14px; }
+.ganymede-v4 .launch-fund-index button small { display: block; font: 400 12px/1.4 var(--font-geist-sans), sans-serif; text-transform: capitalize; }
+.ganymede-v4 .launch-fund-index button em { display: block; font-size: 18px; }
+.ganymede-v4 .launch-fund-index button > i { display: block; }
+.ganymede-v4 .launch-disclosure { position: relative; inset: auto; max-width: none; margin: 0; padding: 22px clamp(24px, 5vw, 80px); font: 400 11px/1.6 var(--font-geist-sans), sans-serif; white-space: normal; }
+
+/* Compact, comparable cards with three clearly separated metrics. */
+.ganymede-v4.etf-platform-shell { width: 100%; min-width: 0; height: auto; min-height: 100svh; grid-template-rows: 76px auto auto; }
+.ganymede-v4 .product-market-page { display: grid; gap: 24px; padding-block: 38px; overflow: visible; grid-template-rows: auto auto auto; }
+.ganymede-v4 .product-market-intro { gap: 24px; align-items: end; }
+.ganymede-v4 .product-market-intro h1 { margin-top: 12px; font-size: clamp(32px, 3.4vw, 48px); line-height: 1.1; }
+.ganymede-v4 .product-market-intro > div > p { max-width: 640px; font-size: 15px; line-height: 1.6; }
+.catalog-environment { display: flex; flex: 0 0 auto; align-items: center; gap: 9px; color: var(--obs-warning); font: 500 10px/1.5 var(--font-geist-mono), monospace; padding-bottom: 10px; }
+.ganymede-v4 .product-market-toolbar { min-height: 44px; height: auto; gap: 16px; }
+.ganymede-v4 .market-toolbar-status { gap: 20px; }
+.ganymede-v4 .market-toolbar-status > p { display: block; font-size: 11px; line-height: 1.5; letter-spacing: 0; }
+.ganymede-v4 .choice-guide-trigger { width: auto; font-size: 11px; }
+.ganymede-v4 .etf-card-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: none; grid-auto-rows: auto; gap: 22px; }
+.ganymede-v4 .etf-product-card { height: auto; min-height: 0; grid-template-rows: auto auto auto; border-top: 2px solid var(--product-accent); }
+.ganymede-v4 .etf-product-card .etf-card-hero { min-height: 220px; padding: 26px; align-items: start; }
+.ganymede-v4 .etf-card-copy { max-width: 75%; }
+.ganymede-v4 .product-role-name { position: static; display: block; margin-bottom: 16px; color: var(--product-accent); font-size: 11px; letter-spacing: .08em; }
+.ganymede-v4 .product-card-labels { gap: 6px; }
+.ganymede-v4 .etf-ticker,
+.ganymede-v4 .strategy-style-badge,
+.ganymede-v4 .risk-badge { font-size: 10px; letter-spacing: .025em; min-height: 25px; }
+.ganymede-v4 .etf-product-card .etf-card-copy h2 { margin-top: 18px; font-size: clamp(24px, 2vw, 30px); line-height: 1.1; }
+.ganymede-v4 .etf-product-card .etf-card-copy p { max-width: 370px; font-size: 15px; line-height: 1.5; }
+.ganymede-v4 .etf-product-card .etf-card-copy > small { display: block; margin-top: 14px; font-size: 10px; line-height: 1.5; letter-spacing: .04em; }
+.ganymede-v4 .etf-product-card .ascii-planet { width: 30%; height: 160px; top: 50%; right: -2%; left: auto; bottom: auto; transform: translateY(-40%); opacity: .48; filter: none; pointer-events: none; }
+.ganymede-v4 .etf-product-card:hover .ascii-planet { transform: translateY(-40%); opacity: .7; }
+.ganymede-v4 .etf-product-card .celestial-id { display: none; }
+.ganymede-v4 .product-card-index { top: 26px; right: 26px; font-size: 11px; }
+.ganymede-v4 .product-card-index i { display: none; }
+.ganymede-v4 .product-card-metrics { grid-template-columns: 1.3fr .8fr 1fr; }
+.ganymede-v4 .etf-metrics > div { padding: 18px 20px; }
+.ganymede-v4 .etf-metrics dt { font-size: 10px; line-height: 1.4; letter-spacing: .035em; }
+.ganymede-v4 .etf-metrics dd { display: flex; flex-wrap: wrap; margin-top: 10px; gap: 5px; font-size: 22px; line-height: 1.25; }
+.ganymede-v4 .product-card-metrics dd small { display: block; width: 100%; color: var(--obs-text-3); font-size: 9px; font-weight: 400; }
+.ganymede-v4 .etf-card-actions { flex-wrap: wrap; gap: 12px; padding: 14px 20px; }
+.ganymede-v4 .holding-chips { flex-wrap: wrap; gap: 8px; }
+.ganymede-v4 .holding-chips span { min-height: 0; padding: 0; gap: 4px; border: 0; font-size: 11px; line-height: 1.5; }
+.ganymede-v4 .holding-chips .holding-more { padding-left: 2px; }
+.ganymede-v4 .etf-product-card .select-etf-button { width: auto; min-width: 144px; min-height: 42px; font-size: 11px; }
+
+/* Detail and proof share a small, visible route back to the product. */
+.detail-route-nav { display: flex; height: 100%; align-items: center; gap: 24px; }
+.detail-route-nav a { display: inline-flex; align-items: center; min-height: 44px; color: var(--obs-text-2); text-decoration: none; font: 600 11px/1.4 var(--font-geist-mono), monospace; }
+.detail-route-nav a[aria-current="page"] { color: var(--obs-ivory); text-decoration: underline; text-underline-offset: 8px; }
+.ganymede-v4 .product-detail-hero { min-height: 0; padding-block: 30px 36px; grid-template-columns: minmax(0, 1.3fr) minmax(140px, .5fr) minmax(270px, .8fr); gap: 26px; }
+.ganymede-v4 .product-detail-copy .detail-back { margin-bottom: 16px; font-size: 11px; }
+.ganymede-v4 .product-signature { font-size: 10px; margin-bottom: 12px; }
+.ganymede-v4 .product-detail-copy h1 { margin-top: 16px; font-size: clamp(36px, 3.7vw, 56px); line-height: 1; }
+.ganymede-v4 .product-detail-copy h2 { font-size: 19px; margin-top: 16px; line-height: 1.4; }
+.ganymede-v4 .product-detail-copy > p { font-size: 15px; line-height: 1.65; }
+.ganymede-v4 .product-fit-strip { margin-top: 18px; }
+.ganymede-v4 .product-fit-strip p { font-size: 12px; line-height: 1.5; }
+.ganymede-v4 .product-fit-strip span { font-size: 10px; letter-spacing: .04em; }
+.ganymede-v4 .product-hero-visual { height: 240px; opacity: .6; filter: none; }
+.ganymede-v4 .product-hero-facts { margin-top: 18px; }
+.ganymede-v4 .product-hero-facts dt { font-size: 10px; }
+.ganymede-v4 .product-hero-facts dd { font-size: 13px; }
+.ganymede-v4 .product-market-data { padding: 22px; }
+.ganymede-v4 .product-market-data dd { font-size: 13px; }
+.ganymede-v4 .product-nav b { font-size: 34px; }
+.ganymede-v4 .product-nav-time { line-height: 1.6; letter-spacing: .025em; }
+.ganymede-v4 .product-tabs button { font-size: 11px; min-width: 148px; }
+.ganymede-v4 .product-information-card > p,
+.ganymede-v4 .objective-points p,
+.ganymede-v4 .product-order-card > p { font-size: 14px; line-height: 1.65; }
+.ganymede-v4 .product-facts-card dt,
+.ganymede-v4 .product-facts-card dd,
+.ganymede-v4 .product-order-card dd { font-size: 12px; line-height: 1.6; }
+.ganymede-v4 .proof-nav dt, .ganymede-v4 .proof-table thead th { font-size: 11px; letter-spacing: .03em; }
+.ganymede-v4 .proof-nav dd { font-size: 14px; line-height: 1.5; }
+.ganymede-v4 .proof-check p { font-size: 13px; }
+.ganymede-v4 .proof-table { font-size: 13px; }
+.ganymede-v4 .proof-section > header p { font-size: 11px; }
+
+@media (max-width: 1100px) {
+  .ganymede-v4 .platform-launch-nav, .ganymede-v4 .platform-topbar { grid-template-columns: 1fr auto; height: auto; min-height: 76px; }
+  .ganymede-v4 .launch-nav, .ganymede-v4 .app-menu { grid-row: 2; grid-column: 1 / -1; min-height: 48px; justify-content: center; border-top: 1px solid var(--obs-line-soft); }
+  .ganymede-v4 .platform-launch-nav > .wallet-connect, .ganymede-v4 .app-utility-zone { grid-column: 2; grid-row: 1; }
+  .ganymede-v4 .platform-launch-nav .launch-wordmark, .ganymede-v4 .app-identity { min-height: 68px; }
+  .ganymede-v4.etf-platform-shell { grid-template-rows: auto auto auto; }
+  .ganymede-v4 .product-market-intro { align-items: start; flex-direction: column; gap: 8px; }
+  .ganymede-v4 .catalog-environment { padding: 0; }
+  .ganymede-v4 .market-toolbar-status > p { display: none; }
+  .ganymede-v4 .etf-card-copy { max-width: 86%; }
+  .ganymede-v4 .etf-product-card .ascii-planet { opacity: .24; }
+  .ganymede-v4 .product-detail-hero { grid-template-columns: minmax(0, 1.3fr) minmax(250px, .8fr); }
+  .ganymede-v4 .product-hero-visual { display: none; }
+  .ganymede-v4 .launch-fund-index { grid-template-columns: repeat(4, 1fr); }
+  .ganymede-v4 .launch-fund-index-label { grid-column: 1 / -1; min-height: 0; padding: 12px 0; }
+  .ganymede-v4 .launch-fund-index-label br { display: none; }
+  .ganymede-v4 .launch-fund-index button { border-top: 1px solid var(--obs-line-soft); }
+}
+
+@media (max-width: 760px) {
+  .ganymede-v4 .platform-launch-nav { padding: 0 20px; }
+  .ganymede-v4 .launch-nav button, .ganymede-v4 .launch-nav a { min-height: 48px; flex: 1; padding: 0 10px; font-size: 10px; }
+  .launch-layout { padding: 30px 20px; grid-template-columns: 1fr; gap: 16px; }
+  .ganymede-v4 .launch-status-line { margin-bottom: 26px; gap: 8px; font-size: 9px; }
+  .ganymede-v4 .etf-launch-copy h1 { font-size: clamp(37px, 9.8vw, 64px); line-height: 1.08; }
+  .ganymede-v4 .etf-launch-copy > p:first-of-type { font-size: 10px; }
+  .ganymede-v4 .etf-launch-copy .launch-description { margin-top: 20px; font-size: 16px; }
+  .ganymede-v4 .etf-launch-copy .launch-actions { margin-top: 24px; display: grid; grid-template-columns: 1fr; }
+  .ganymede-v4 .launch-actions > * { width: 100%; min-height: 50px; }
+  .ganymede-v4 .launch-assurance { margin-top: 18px; font-size: 11px; }
+  .launch-orbit { height: 190px; }
+  .ganymede-v4.etf-platform-launch .launch-orbit .scene { transform: translateY(12px) scale(2); }
+  .launch-proof-panel { padding: 22px 20px 0; }
+  .launch-proof-panel h2 { font-size: 23px; }
+  .preview-reading strong { font-size: 34px; }
+  .ganymede-v4 .launch-fund-index { margin: 0 20px; grid-template-columns: repeat(2, 1fr); }
+  .ganymede-v4 .launch-fund-index button { min-height: 80px; padding: 14px 10px; }
+  .ganymede-v4 .launch-fund-index button small { font-size: 11px; }
+  .ganymede-v4 .launch-disclosure { padding: 20px; }
+  .ganymede-v4 .app-identity { padding-inline: 16px; }
+  .ganymede-v4.etf-platform-shell .platform-topbar .app-menu button, .ganymede-v4 .app-menu a { flex: 1; min-width: 0; padding-inline: 6px; font-size: 9px; letter-spacing: 0; white-space: nowrap; }
+  .ganymede-v4 .app-menu a span { display: none; }
+  .ganymede-v4 .app-disclaimer { position: relative; display: flex; flex-wrap: wrap; gap: 6px; padding: 16px; }
+  .ganymede-v4 .app-disclaimer p { font-size: 11px; }
+  .ganymede-v4 .product-market-page { padding: 24px 16px; gap: 20px; }
+  .ganymede-v4 .product-market-intro h1 { font-size: 34px; margin-top: 8px; }
+  .ganymede-v4 .product-market-intro > div > p { font-size: 14px; }
+  .ganymede-v4 .section-kicker { font-size: 10px; }
+  .ganymede-v4 .catalog-environment { font-size: 9px; }
+  .ganymede-v4 .product-market-toolbar { flex-direction: row; flex-wrap: wrap; gap: 10px; }
+  .ganymede-v4 .strategy-filters { flex: 1; width: auto; grid-template-columns: repeat(3, minmax(0, 1fr)) !important; }
+  .ganymede-v4 .etf-filters button { min-width: 0; padding-inline: 5px; font-size: 9px; white-space: nowrap; }
+  .ganymede-v4 .market-toolbar-status { width: auto; }
+  .ganymede-v4 .choice-guide-trigger { min-height: 44px; width: auto; padding: 0 10px; font-size: 9px; gap: 8px; }
+  .ganymede-v4 .choice-guide-trigger span { display: none; }
+  .ganymede-v4 .etf-card-grid { grid-template-columns: 1fr; grid-auto-rows: auto; gap: 18px; }
+  .ganymede-v4 .etf-product-card .etf-card-hero { min-height: 0; padding: 22px 20px; }
+  .ganymede-v4 .etf-card-copy { max-width: 94%; }
+  .ganymede-v4 .etf-product-card .etf-card-copy h2 { font-size: 25px; }
+  .ganymede-v4 .etf-product-card .etf-card-copy p { font-size: 14px; }
+  .ganymede-v4 .etf-product-card .ascii-planet { width: 35%; height: 130px; right: -5%; opacity: .15; }
+  .ganymede-v4 .etf-product-card:hover .ascii-planet { opacity: .15; }
+  .ganymede-v4 .product-card-index { top: 22px; right: 20px; }
+  .ganymede-v4 .product-card-metrics { grid-template-columns: 1.2fr .8fr 1fr; }
+  .ganymede-v4 .etf-metrics > div { padding: 16px 12px; }
+  .ganymede-v4 .etf-metrics dt { font-size: 9px; letter-spacing: 0; min-height: 26px; }
+  .ganymede-v4 .etf-metrics dd { font-size: 18px; }
+  .ganymede-v4 .etf-card-actions { padding: 14px 16px; }
+  .ganymede-v4 .etf-product-card .select-etf-button { min-width: 132px; font-size: 10px; }
+  .ganymede-v4 .product-detail-topbar { height: auto; min-height: 112px; grid-template-columns: 1fr auto; }
+  .ganymede-v4 .product-detail-topbar .detail-brand { min-height: 64px; }
+  .ganymede-v4 .product-detail-topbar > .wallet-connect { grid-row: 1; grid-column: 2; }
+  .detail-route-nav { grid-row: 2; grid-column: 1 / -1; height: 48px; justify-content: center; border-top: 1px solid var(--obs-line-soft); }
+  .ganymede-v4 .product-detail-hero { padding: 24px 20px; grid-template-columns: 1fr; gap: 24px; }
+  .ganymede-v4 .product-detail-copy h1 { font-size: 42px; }
+  .ganymede-v4 .product-detail-copy h2 { font-size: 18px; }
+  .ganymede-v4 .product-fit-strip { grid-template-columns: 1fr; }
+  .ganymede-v4 .product-fit-strip > div { padding: 12px 0; border-right: 0; border-bottom: 1px solid var(--obs-line-soft); }
+  .ganymede-v4 .product-fit-strip p { margin-top: 6px; font-size: 13px; }
+  .ganymede-v4 .product-tabs { top: 112px; }
+  .ganymede-v4 .product-tabs button { min-width: 130px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ganymede-v4 .etf-card-grid, .ganymede-v4 .etf-product-card { animation: none !important; transition: none !important; }
+}

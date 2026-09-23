@@ -1,6 +1,7 @@
 "use client";
 
 import { KeyboardEvent as ReactKeyboardEvent, useEffect, useId, useMemo, useRef, useState } from "react";
+import Link from "next/link";
 import MiniAsciiCelestial from "../../MiniAsciiCelestial";
 import WalletConnect from "../../WalletConnect";
 import { DEFAULT_SETTLEMENT_CHAIN } from "@/lib/chains";
@@ -188,7 +189,7 @@ function OverviewPanel({ etf, liveProduct, engineMode, amountKrw, subscriptionSt
   onAmountChange: (value: string) => void;
   onSubscribe: () => void;
 }) {
-  const navPerShare = liveProduct?.nav ? asNumber(liveProduct.nav.navPerShareMicros) / 1_000_000 : asNumber(etf.nav.replace("$", ""));
+  const navPerShare = liveProduct?.nav ? asNumber(liveProduct.nav.navPerShareMicros) / 1_000_000 : 0;
   const estimatedShares = navPerShare > 0 ? asNumber(amountKrw) / navPerShare : 0;
   const hasRequest = Boolean(subscriptionStatus);
   const amountHelpId = useId();
@@ -245,12 +246,13 @@ function OverviewPanel({ etf, liveProduct, engineMode, amountKrw, subscriptionSt
         <div className="amount-presets" aria-label="Quick amount selection"><button type="button" aria-pressed={amountKrw === "500000"} onClick={() => onAmountChange("500000")}>₩500,000</button><button type="button" aria-pressed={amountKrw === "1000000"} onClick={() => onAmountChange("1000000")}>₩1,000,000</button><button type="button" aria-pressed={amountKrw === "5000000"} onClick={() => onAmountChange("5000000")}>₩5,000,000</button></div>
         <dl>
           <div><dt>SAMPLE AMOUNT</dt><dd>{formatKrw(amountKrw)}</dd></div>
-          <div><dt>{liveProduct?.nav ? "INDICATIVE VALUE / SHARE" : "REFERENCE VALUE / SHARE"}</dt><dd>{formatNav(liveProduct?.nav?.navPerShareMicros, etf.nav)}</dd></div>
-          <div><dt>ESTIMATED PAPER SHARES</dt><dd>{estimatedShares.toLocaleString("en-US", { minimumFractionDigits: 3, maximumFractionDigits: 3 })}</dd></div>
+          <div><dt>INDICATIVE VALUE / SHARE</dt><dd>{formatNav(liveProduct?.nav?.navPerShareMicros, "—")}</dd></div>
+          <div><dt>ESTIMATED PAPER SHARES</dt><dd>{liveProduct?.nav ? estimatedShares.toLocaleString("en-US", { minimumFractionDigits: 3, maximumFractionDigits: 3 }) : "—"}</dd></div>
           <div><dt>ANNUAL MANAGEMENT FEE</dt><dd>{etf.fee}</dd></div>
         </dl>
         <div className="order-environment"><span><i /> SIMULATION ONLY</span><p>No economic asset is issued on {DEFAULT_SETTLEMENT_CHAIN.name}.</p></div>
-        <button type="button" disabled={submitting || Boolean(amountError)} aria-busy={submitting} className={`product-add-button${hasRequest ? " is-added" : ""}`} onClick={onSubscribe}>{submitting ? "SAVING SIMULATION…" : hasRequest ? "VIEW PAPER PORTFOLIO" : "REVIEW SIMULATION"}</button>
+        <button type="button" disabled={submitting || Boolean(amountError) || (!hasRequest && !liveProduct?.nav)} aria-busy={submitting} className={`product-add-button${hasRequest ? " is-added" : ""}`} onClick={onSubscribe}>{submitting ? "SAVING SIMULATION…" : hasRequest ? "VIEW PAPER PORTFOLIO" : "REVIEW SIMULATION"}</button>
+        {!liveProduct?.nav && <p className="amount-help">An indicative NAV is needed before you can review an estimate.</p>}
         {subscriptionStatus && <div className="subscription-success" role="status"><b>SIMULATION SAVED.</b><p>No real order was placed. Review the allocation in your paper portfolio.</p></div>}
         {orderError && <p className="subscription-error" role="alert">{orderError}</p>}
         <WalletConnect />
@@ -378,6 +380,7 @@ function DocumentsPanel({ etf }: { etf: Etf }) {
 export default function EtfDetailClient({ etf }: { etf: Etf }) {
   const [activeTab, setActiveTab] = useState<ProductTab>("overview");
   const [liveProduct, setLiveProduct] = useState<LiveProduct | null>(null);
+  const [marketLoading, setMarketLoading] = useState(true);
   const [engineMode, setEngineMode] = useState<"paper" | "live">("paper");
   const [amountKrw, setAmountKrw] = useState("1000000");
   const [subscriptionStatus, setSubscriptionStatus] = useState("");
@@ -422,7 +425,9 @@ export default function EtfDetailClient({ etf }: { etf: Etf }) {
         const latest = portfolio.subscriptions?.find((subscription) => (subscription.product_id ?? subscription.productId) === etf.id);
         if (!cancelled && latest?.status) setSubscriptionStatus(latest.status);
       } catch {
-        if (!cancelled) setOrderError("We couldn’t refresh the latest indicative data. Reference values are shown; no action is required.");
+        if (!cancelled) setOrderError("We couldn’t refresh the latest data. Reload this page to try again.");
+      } finally {
+        if (!cancelled) setMarketLoading(false);
       }
     };
     void load();
@@ -470,7 +475,7 @@ export default function EtfDetailClient({ etf }: { etf: Etf }) {
     <main className={`product-detail-page ganymede-v4 product-${etf.id}`}>
       <header className="detail-topbar product-detail-topbar">
         <button type="button" className="detail-brand" onClick={() => window.location.assign("/")} aria-label="Ganymede Index overview"><span>G</span><strong>GANYMEDE INDEX<small>DIGITAL-ASSET STRATEGIES</small></strong></button>
-        <p>ETF PRODUCTS <i>/</i> {etf.ticker}</p>
+        <nav className="detail-route-nav" aria-label="Product navigation"><Link href="/?app=select">ALL STRATEGIES</Link><a href="/proof">PROOF OF NAV ↗</a></nav>
         <WalletConnect compact />
       </header>
 
@@ -492,10 +497,10 @@ export default function EtfDetailClient({ etf }: { etf: Etf }) {
         <div className="product-hero-visual" aria-label={`${etf.name} animated ASCII product planet`}><MiniAsciiCelestial variant={etf.visual} /></div>
 
         <aside className="product-market-data">
-          <span>INDICATIVE FUND DATA / {liveProduct?.nav?.quality?.toUpperCase() ?? "INITIALIZING"}</span>
-          <div className="product-nav"><small>INDICATIVE NAV</small><b>{formatNav(liveProduct?.nav?.navPerShareMicros, etf.nav)}</b><em>{liveProduct?.status?.toUpperCase() ?? "BOOTSTRAPPING"}</em></div>
+          <span>INDICATIVE FUND DATA / {liveProduct?.nav?.quality?.toUpperCase() ?? (marketLoading ? "LOADING" : "UNAVAILABLE")}</span>
+          <div className="product-nav"><small>INDICATIVE NAV / KRW</small><b>{formatNav(liveProduct?.nav?.navPerShareMicros, "—")}</b><em>{liveProduct?.status?.toUpperCase() ?? (marketLoading ? "LOADING DATA" : "DATA UNAVAILABLE")}</em></div>
           <p className="product-nav-time">AS OF {liveProduct?.nav?.asOf ? new Date(liveProduct.nav.asOf).toLocaleString("ko-KR", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }) : "AWAITING DATA"}</p>
-          <dl><div><dt>FUND AUM</dt><dd>{liveProduct?.nav ? formatKrw(liveProduct.nav.netAssetValueKrw) : etf.aum}</dd></div><div><dt>MODEL 1Y</dt><dd>+{etf.oneYearReturn}</dd></div><div><dt>EXPENSE RATIO</dt><dd>{etf.fee}</dd></div><div><dt>BASKET</dt><dd>{liveProduct?.targets?.length ? `100% / ${livePositionCount}` : `${totalWeight}% / ${etf.assetCount}`}</dd></div></dl>
+          <dl><div><dt>MODEL AUM</dt><dd>{liveProduct?.nav ? formatKrw(liveProduct.nav.netAssetValueKrw) : "—"}</dd></div><div><dt>MODEL 1Y</dt><dd>+{etf.oneYearReturn}</dd></div><div><dt>EXPENSE RATIO</dt><dd>{etf.fee}</dd></div><div><dt>BASKET</dt><dd>{liveProduct?.targets?.length ? `100% / ${livePositionCount}` : `${totalWeight}% / ${etf.assetCount}`}</dd></div></dl>
         </aside>
       </section>
 

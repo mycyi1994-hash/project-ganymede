@@ -22,6 +22,10 @@ test("server-renders the Ganymede landing page", async () => {
   assert.match(html, /FOUR STRATEGIES/);
   assert.match(html, /ONE CLEAR ORBIT/);
   assert.match(html, /COMPARE STRATEGIES/);
+  assert.match(html, /Know the strategy/);
+  assert.match(html, /See the evidence/);
+  assert.match(html, /href="\/proof"/);
+  assert.match(html, /LAST ON-CHAIN NAV/);
   assert.match(html, /PRE-LAUNCH/);
   assert.match(html, /X LAYER TESTNET/);
 });
@@ -40,6 +44,18 @@ test("direct ETF detail URLs render product and basket data", async () => {
   assert.match(html, /REVIEW SIMULATION/);
   assert.match(html, /THE FOUNDATION/);
   assert.match(html, /X Layer Testnet/);
+  const visibleHtml = html.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, "");
+  assert.doesNotMatch(visibleHtml, /\$23\.84/);
+  assert.match(html, /LOADING DATA/);
+});
+
+test("proof page distinguishes loading from missing configuration", async () => {
+  const response = await render("/proof");
+  assert.equal(response.status, 200);
+  const html = await response.text();
+  assert.match(html, /LOADING DATA/);
+  assert.match(html, /Loading publications/);
+  assert.doesNotMatch(html, /AWAITING CONFIGURATION/);
 });
 
 test("unknown ETF slugs return not found", async () => {

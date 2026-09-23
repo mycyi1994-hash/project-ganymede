@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
 import WalletConnect from "../WalletConnect";
 
 type Holding = {
@@ -149,7 +150,7 @@ export default function ProofClient() {
   const composition = data?.latest?.composition ?? null;
   const verifiedCanonical = data?.onchain ? [data.latest?.publication, ...(data.history ?? [])].find((entry) => entry?.holdingsHash === data.onchain?.holdingsHash)?.canonical ?? null : null;
   const canonical = verifiedCanonical ?? data?.latest?.canonical ?? null;
-  const status = data?.latest?.status ?? "awaiting_configuration";
+  const status = data ? data.latest?.status ?? "awaiting_configuration" : error ? "unavailable" : "loading";
   const registryUrl = data?.registry.address ? `${data.registry.explorerUrl}/address/${data.registry.address}` : null;
 
   const copy = async () => {
@@ -167,7 +168,7 @@ export default function ProofClient() {
     <main className="product-detail-page ganymede-v4 proof-page">
       <header className="detail-topbar product-detail-topbar">
         <button type="button" className="detail-brand" onClick={() => window.location.assign("/")} aria-label="Ganymede Index overview"><span>G</span><strong>GANYMEDE INDEX<small>TOKENIZED-STOCK ETF OPERATIONS</small></strong></button>
-        <p>PROOF OF NAV <i>/</i> {data?.product.ticker ?? "GMD USTX"}</p>
+        <nav className="detail-route-nav" aria-label="Product navigation"><Link href="/?app=select">ALL STRATEGIES</Link><a href="/proof" aria-current="page">PROOF OF NAV</a></nav>
         <WalletConnect compact />
       </header>
 
@@ -179,7 +180,7 @@ export default function ProofClient() {
         </div>
         <dl className="proof-nav">
           <div><dt>NAV PER SHARE</dt><dd>{composition ? usd(composition.navPerShareMicros, 4) : "—"}</dd></div>
-          <div><dt>STATUS</dt><dd className={`proof-status proof-status-${status}`}>{STATUS_LABEL[status]}</dd></div>
+          <div><dt>STATUS</dt><dd className={`proof-status proof-status-${status}`}>{status === "loading" ? "LOADING DATA" : status === "unavailable" ? "DATA UNAVAILABLE" : STATUS_LABEL[status]}</dd></div>
           <div><dt>LAST PRICED</dt><dd>{time(data?.latest?.evaluatedAt)}</dd></div>
           <div><dt>INCEPTION NAV</dt><dd>{data ? usd(data.product.inceptionNavMicros) : "—"}</dd></div>
         </dl>
@@ -202,7 +203,7 @@ export default function ProofClient() {
           ))}
         </ol>
         <p className="proof-footnote">
-          Registry {registryUrl ? <a href={registryUrl} target="_blank" rel="noreferrer">{shortHash(data?.registry.address)} ↗</a> : "not configured"}
+          Registry {registryUrl ? <a href={registryUrl} target="_blank" rel="noreferrer">{shortHash(data?.registry.address)} ↗</a> : data ? "not configured" : error ? "unavailable" : "loading…"}
           {data?.onchain?.effectiveAt && <> · latestNav effective {time(data.onchain.effectiveAt)} · published {time(data.onchain.publishedAt)}</>}
         </p>
       </section>
@@ -259,7 +260,7 @@ export default function ProofClient() {
               </tbody>
             </table>
           </div>
-        ) : <p className="proof-empty">No publications yet.</p>}
+        ) : <p className="proof-empty">{data ? "No publications yet." : error ? "Publications unavailable." : "Loading publications…"}</p>}
       </section>
 
       <section className="proof-section" aria-labelledby="proof-document">
