@@ -97,6 +97,10 @@ npx wrangler d1 execute ganymede-xlayer --remote --file=drizzle/0000_giant_speed
 npx wrangler deploy   # set the environment below with `npx wrangler secret put` or `--secrets-file`
 ```
 
+D1's free tier allows 100,000 row writes a day across the whole account. The
+five-minute engine, together with any other Workers on the account, can exhaust
+that (it did on 2026-09-23); the Workers Paid plan raises it to 50 million.
+
 ## Environment and live activation
 
 Copy `.env.example` into the appropriate secret store. Never commit credentials.
