@@ -1,5 +1,5 @@
 import DataNotice from "./DataNotice";
-import MiniAsciiCelestial from "./MiniAsciiCelestial";
+import { StrategyGlyph } from "./DesignElements";
 import { etfs } from "./data/etfs";
 import { hasValuation, isPendingRequest, portfolioSummary, type PortfolioData, type PortfolioPosition } from "@/lib/portfolio-display";
 
@@ -9,7 +9,7 @@ const percent = (value: number) => `${value > 0 ? "+" : value < 0 ? "−" : ""}$
 const time = (value: unknown) => {
   if (typeof value !== "string" || !value) return "Time unavailable";
   const parsed = new Date(value.endsWith("Z") || /[+-]\d\d:\d\d$/.test(value) ? value : value.replace(" ", "T") + "Z");
-  return Number.isNaN(parsed.getTime()) ? "Time unavailable" : parsed.toLocaleString("en-GB", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+  return Number.isNaN(parsed.getTime()) ? "Time unavailable" : parsed.toLocaleString("en-GB", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit", timeZone: "UTC", timeZoneName: "short" });
 };
 
 export default function PortfolioView({ data, loading, error, actionError, removing, onBrowse, onRetry, onRedeem, onOpen }: {
@@ -34,18 +34,18 @@ export default function PortfolioView({ data, loading, error, actionError, remov
   return <main className="portfolio-workspace">
     <header className="portfolio-heading">
       <div><p className="section-kicker">MY PORTFOLIO / PAPER MODE</p><h1>Your strategies, together.</h1><p>Explore a portfolio with sample allocations. No real money moves.</p></div>
-      <div className="portfolio-heading-actions"><button type="button" className="portfolio-refresh" disabled={loading || removing} onClick={onRetry}>{loading ? "REFRESHING…" : "REFRESH"} <span aria-hidden="true">↻</span></button><button type="button" className="portfolio-primary" onClick={onBrowse}>EXPLORE STRATEGIES <span aria-hidden="true">↗</span></button></div>
+      <div className="portfolio-heading-actions"><button type="button" className="portfolio-refresh" disabled={loading || removing} onClick={onRetry}>{loading ? "Refreshing…" : "Refresh"} <span aria-hidden="true">↻</span></button><button type="button" className="portfolio-primary" onClick={onBrowse}>Explore strategies <span aria-hidden="true">↗</span></button></div>
     </header>
 
     {error && data && <DataNotice title="Portfolio refresh is unavailable." onRetry={onRetry} loading={loading}>Showing your last loaded snapshot. Values and request statuses may have changed.</DataNotice>}
     {actionError && !error && <DataNotice title="We couldn’t confirm the removal." onRetry={onRetry} loading={loading}>Refresh your portfolio to check the request before trying again. No real funds move in this simulation.</DataNotice>}
 
     {!data ? <section className="portfolio-state" aria-busy={loading}>
-      <div className="portfolio-state-art" aria-hidden="true"><MiniAsciiCelestial variant="core" /></div>
-      <div><p className="section-kicker">{error ? "TEMPORARILY UNAVAILABLE" : "LOADING YOUR ALLOCATIONS"}</p><h2>{error ? "Your portfolio couldn’t be loaded." : "Bringing your strategies together."}</h2><p>{error ? "We can’t confirm your saved allocations right now. Try again in a moment; you can still explore the strategies." : "Checking saved allocations and their latest available valuations."}</p>{error && <button type="button" className="portfolio-primary" onClick={onRetry} disabled={loading}>{loading ? "CHECKING…" : "TRY AGAIN ↻"}</button>}</div>
+      <div className="portfolio-state-art" aria-hidden="true"><StrategyGlyph /></div>
+      <div><p className="section-kicker">{error ? "TEMPORARILY UNAVAILABLE" : "LOADING YOUR ALLOCATIONS"}</p><h2>{error ? "Your portfolio couldn’t be loaded." : "Bringing your strategies together."}</h2><p>{error ? "We can’t confirm your saved allocations right now. Try again in a moment; you can still explore the strategies." : "Checking saved allocations and their latest available valuations."}</p>{error && <button type="button" className="portfolio-primary" onClick={onRetry} disabled={loading}>{loading ? "Checking…" : "Try again ↻"}</button>}</div>
     </section> : !positions.length ? <section className="portfolio-state">
-      <div className="portfolio-state-art" aria-hidden="true"><MiniAsciiCelestial variant="core" /></div>
-      <div><p className="section-kicker">{pending.length ? "ALLOCATION IN PROGRESS" : "ROOM FOR YOUR FIRST STRATEGY"}</p><h2>{pending.length ? "Saved. Waiting to take shape." : "Start with one strategy."}</h2><p>{pending.length ? "Your allocation request is saved. Shares and a valuation will appear once it has been processed. Check its status below." : "Compare a strategy’s role, risk and fee, then save a sample amount to see it here."}</p><button type="button" className="portfolio-primary" onClick={pending.length ? onRetry : onBrowse} disabled={pending.length > 0 && loading}>{pending.length ? loading ? "CHECKING…" : "CHECK STATUS ↻" : "CHOOSE A STRATEGY ↗"}</button><p className="portfolio-state-note">01 CHOOSE <span>→</span> 02 TRY AN AMOUNT <span>→</span> 03 SAVE</p></div>
+      <div className="portfolio-state-art" aria-hidden="true"><StrategyGlyph /></div>
+      <div><p className="section-kicker">{pending.length ? "ALLOCATION IN PROGRESS" : "ROOM FOR YOUR FIRST STRATEGY"}</p><h2>{pending.length ? "Saved. Waiting to take shape." : "Start with one strategy."}</h2><p>{pending.length ? "Your allocation request is saved. Shares and a valuation will appear once it has been processed. Check its status below." : "Compare a strategy’s role, risk and fee, then save a sample amount to see it here."}</p><button type="button" className="portfolio-primary" onClick={pending.length ? onRetry : onBrowse} disabled={pending.length > 0 && loading}>{pending.length ? loading ? "Checking…" : "Check status ↻" : "Choose a strategy ↗"}</button><p className="portfolio-state-note">01 CHOOSE <span>→</span> 02 TRY AN AMOUNT <span>→</span> 03 SAVE</p></div>
     </section> : <>
       <section className="portfolio-overview" aria-label="Portfolio summary">
         <div className="portfolio-value-card"><span className="portfolio-label">TOTAL SIMULATED VALUE / KRW</span><strong>{value === null ? "—" : money(value)}</strong><p>{value === null ? "A valuation is not yet available for every strategy." : error ? "Last loaded values · refresh unavailable" : "Based on each strategy’s latest recorded NAV"}</p><dl><div><dt>SAMPLE AMOUNT</dt><dd>{money(invested)}</dd></div><div><dt>SIMULATED CHANGE</dt><dd className={gain === null || gain === 0 ? "" : gain > 0 ? "portfolio-gain" : "portfolio-loss"}>{gain === null ? "—" : signedMoney(gain)}{returnPct !== null && <small>{percent(returnPct)}</small>}</dd></div></dl></div>
@@ -63,7 +63,7 @@ export default function PortfolioView({ data, loading, error, actionError, remov
             <div className="portfolio-position-value"><span className="portfolio-label">SIMULATED VALUE</span><strong>{priced ? money(position.currentValueKrw) : "—"}</strong><span className={!priced || change === 0 ? "" : change > 0 ? "portfolio-gain" : "portfolio-loss"}>{priced ? `${signedMoney(change)} (${percent(position.returnBps / 100)})` : "Awaiting a recorded NAV"}</span></div>
             <dl><div><dt>SAMPLE AMOUNT</dt><dd>{money(position.costBasisKrw)}</dd></div><div><dt>PAPER SHARES</dt><dd>{(Number(position.sharesMicros) / 1_000_000).toLocaleString("en-US", { maximumFractionDigits: 3 })}</dd></div></dl>
             <p className="portfolio-valuation-time">NAV AS OF {priced ? time(position.navAsOf) : "UNAVAILABLE"}</p>
-            <footer><button type="button" onClick={() => onOpen(position)}>VIEW STRATEGY ↗</button><button type="button" className="portfolio-remove" disabled={removing || loading || Boolean(error) || pendingRemoval} onClick={() => onRedeem(position)} aria-label={`${pendingRemoval ? "Removal pending for" : "Remove"} ${position.name}`}>{pendingRemoval ? "REMOVAL PENDING" : removing ? "PROCESSING…" : "REMOVE"}</button></footer>
+            <footer><button type="button" onClick={() => onOpen(position)}>View strategy ↗</button><button type="button" className="portfolio-remove" disabled={removing || loading || Boolean(error) || pendingRemoval} onClick={() => onRedeem(position)} aria-label={`${pendingRemoval ? "Removal pending for" : "Remove"} ${position.name}`}>{pendingRemoval ? "Removal pending" : removing ? "Processing…" : "Remove"}</button></footer>
           </article>;
         })}</div>
       </section>

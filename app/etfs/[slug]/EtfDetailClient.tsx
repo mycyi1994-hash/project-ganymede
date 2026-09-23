@@ -2,7 +2,7 @@
 
 import { KeyboardEvent as ReactKeyboardEvent, useEffect, useId, useRef, useState } from "react";
 import Link from "next/link";
-import MiniAsciiCelestial from "../../MiniAsciiCelestial";
+import { SiteFooter, StrategyGlyph } from "../../DesignElements";
 import SiteHeader from "../../SiteHeader";
 import DataNotice from "../../DataNotice";
 import { DEFAULT_SETTLEMENT_CHAIN } from "@/lib/chains";
@@ -59,14 +59,14 @@ async function currentWalletAddress() {
 }
 
 const tabs: Array<{ id: ProductTab; label: string }> = [
-  { id: "overview", label: "OVERVIEW" },
-  { id: "performance", label: "MODEL RESULTS" },
-  { id: "holdings", label: "HOLDINGS" },
-  { id: "methodology", label: "HOW IT WORKS" },
-  { id: "documents", label: "RISKS & DOCUMENTS" },
+  { id: "overview", label: "Overview" },
+  { id: "performance", label: "Model results" },
+  { id: "holdings", label: "Holdings" },
+  { id: "methodology", label: "How it works" },
+  { id: "documents", label: "Risks & documents" },
 ];
 
-const shades = ["#eeede8", "#aaa9a4", "#85847f", "#64635f", "#4d4c49", "#393936"];
+const shades = ["#283e52", "#55738b", "#7e99ad", "#a3bbc8", "#657e72", "#c2d3d8"];
 
 const assetMetadata: Record<string, { name: string; assetClass: string }> = {
   BTC: { name: "Bitcoin", assetClass: "Store of Value" },
@@ -130,7 +130,8 @@ function useLocalDialogFocus(onClose: () => void) {
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     const getFocusable = () => Array.from(dialog.querySelectorAll<HTMLElement>('button:not([disabled]), a[href], input:not([disabled]), [tabindex]:not([tabindex="-1"])'));
-    getFocusable()[0]?.focus();
+    dialog.tabIndex = -1;
+    dialog.focus({ preventScroll: true });
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") { event.preventDefault(); onClose(); return; }
       if (event.key !== "Tab") return;
@@ -175,7 +176,7 @@ function SimulationReviewDialog({ etf, amountKrw, nav, submitting, error, onCanc
         <p className="fee-assumption">Fee illustration assumes the sample value stays unchanged for one year. It is not deducted upfront; taxes, spreads and other costs are excluded.</p>
         <div className="simulation-review-warning"><i /> TEST ENVIRONMENT · NO ECONOMIC ASSET IS ISSUED ON {DEFAULT_SETTLEMENT_CHAIN.label}</div>
         {error && <div className="simulation-review-error" role="alert"><p>{error}</p><Link href="/?app=portfolio">CHECK PAPER PORTFOLIO ↗</Link></div>}
-        <footer><button type="button" disabled={submitting} onClick={onCancel}>EDIT AMOUNT</button><button type="button" className="is-primary" disabled={submitting || estimate.shares === null} aria-busy={submitting} onClick={onConfirm}>{submitting ? "SAVING SIMULATION…" : "SAVE TO PAPER PORTFOLIO"}</button></footer>
+        <footer><button type="button" disabled={submitting} onClick={onCancel}>Edit amount</button><button type="button" className="is-primary" disabled={submitting || estimate.shares === null} aria-busy={submitting} onClick={onConfirm}>{submitting ? "Saving simulation…" : "Save to paper portfolio"}</button></footer>
       </section>
     </div>
   );
@@ -209,7 +210,7 @@ function OverviewPanel({ etf, liveProduct, engineMode, amountKrw, subscriptionSt
           <h3>A closer look at the strategy.</h3>
           <p>{etf.description}</p>
           <div className="strategy-fit"><div><span>PORTFOLIO ROLE</span><p>{etf.bestFor}</p></div><div><span>MAY NOT SUIT</span><p>{etf.notFor}</p></div></div>
-          <div className="holdings-preview-heading"><span>{liveProduct?.targets.length ? "LEADING TARGET HOLDINGS" : "MODEL HOLDINGS"}</span><button type="button" onClick={onHoldings}>VIEW ALL ↗</button></div>
+          <div className="holdings-preview-heading"><span>{liveProduct?.targets.length ? "LEADING TARGET HOLDINGS" : "MODEL HOLDINGS"}</span><button type="button" onClick={onHoldings}>View all ↗</button></div>
           <ul className="holdings-preview">{leadingHoldings.map((asset) => <li key={asset.ticker}><span>{asset.ticker}</span><div><i style={{ width: `${asset.weight}%` }} /></div><b>{formatWeight(asset.weight)}%</b></li>)}</ul>
         </article>
 
@@ -231,7 +232,7 @@ function OverviewPanel({ etf, liveProduct, engineMode, amountKrw, subscriptionSt
         <h3>Try the numbers.</h3>
         <p>See what a sample allocation could look like. No real order is placed and no money moves.</p>
         <ol className="subscription-steps" aria-label="Simulation steps"><li className={!hasRequest ? "is-active" : ""} aria-current={!hasRequest ? "step" : undefined}><b>01</b><span>AMOUNT</span></li><li><b>02</b><span>REVIEW</span></li><li className={hasRequest ? "is-active" : ""} aria-current={hasRequest ? "step" : undefined}><b>03</b><span>SAVE</span></li></ol>
-        {hasRequest ? <div className="subscription-success" role="status"><b>SIMULATION SAVED.</b><p>{subscriptionStatus === "settled" ? "Your paper allocation is ready in your portfolio." : "Your request is saved. Follow its progress in your portfolio."}</p></div> : <>
+        {hasRequest ? <div className="subscription-success" role="status"><b>Simulation saved.</b><p>{subscriptionStatus === "settled" ? "Your paper allocation is ready in your portfolio." : "Your request is saved. Follow its progress in your portfolio."}</p></div> : <>
           <label className="subscription-amount"><span>SAMPLE AMOUNT / KRW</span><input type="number" min="100000" step="1" inputMode="numeric" value={amountKrw} onChange={(event) => onAmountChange(event.target.value)} aria-invalid={Boolean(estimate.amountError)} aria-describedby={`${amountHelpId}${estimate.amountError ? ` ${amountErrorId}` : ""}`} /></label>
           <p className="amount-help" id={amountHelpId}>Minimum ₩100,000 · whole KRW amounts.</p>
           {estimate.amountError && <p className="amount-error" id={amountErrorId}>{estimate.amountError}</p>}
@@ -240,7 +241,7 @@ function OverviewPanel({ etf, liveProduct, engineMode, amountKrw, subscriptionSt
           <dl><div><dt>ANNUAL FEE RATE</dt><dd>{etf.fee}</dd></div><div><dt>ILLUSTRATIVE YEARLY FEE</dt><dd>{estimate.annualFeeKrw === null ? "—" : formatKrw(estimate.annualFeeKrw)}</dd></div></dl>
           <p className="fee-assumption">Assumes an unchanged sample value for one year. Not an upfront charge. Excludes taxes, spreads and other costs.</p>
         </>}
-        <button type="button" disabled={submitting || (!hasRequest && estimate.shares === null)} aria-busy={submitting} className={`product-add-button${hasRequest ? " is-added" : ""}`} onClick={onSubscribe}>{submitting ? "SAVING SIMULATION…" : hasRequest ? "VIEW PAPER PORTFOLIO" : "REVIEW SIMULATION →"}</button>
+        <button type="button" disabled={submitting || (!hasRequest && estimate.shares === null)} aria-busy={submitting} className={`product-add-button${hasRequest ? " is-added" : ""}`} onClick={onSubscribe}>{submitting ? "Saving simulation…" : hasRequest ? "View paper portfolio" : "Review simulation →"}</button>
         {!hasRequest && !liveProduct?.nav && <p className="amount-help">Waiting for an indicative NAV before an estimate is available.</p>}
         {orderError && <p className="subscription-error" role="alert">{orderError}</p>}
         <small className="simulation-note">Simulation only · no economic asset is issued. Estimates may change at the next valuation. A test wallet is optional.</small>
@@ -266,7 +267,7 @@ function PerformancePanel({ etf }: { etf: Etf }) {
         <div className="return-chart" role="img" aria-label={`Monthly returns for ${etf.name}: ${etf.monthlyReturns.join(", ")} percent`}>
           {etf.monthlyReturns.map((value, index) => (
             <div className="return-column" key={months[index]}>
-              <div className="return-bar-space"><i className={value >= 0 ? "is-positive" : "is-negative"} style={{ height: `${Math.abs(value) * 6 + 5}px` }} /></div>
+              <div className="return-bar-space"><i className={value >= 0 ? "is-positive" : "is-negative"} style={{ height: `${Math.abs(value) / Math.max(1, ...etf.monthlyReturns.map(Math.abs)) * 92}px` }} /></div>
               <b>{value > 0 ? "+" : ""}{value.toFixed(1)}</b>
               <span>{months[index]}</span>
             </div>
@@ -300,7 +301,6 @@ function HoldingsPanel({ etf, liveProduct }: { etf: Etf; liveProduct: LiveProduc
     const start = basket.slice(0, index).reduce((sum, preceding) => sum + preceding.weight, 0);
     return `${shades[index % shades.length]} ${start}% ${start + asset.weight}%`;
   }).join(",");
-  const maximum = Math.max(...basket.map((asset) => asset.weight));
 
   return (
     <div className="holdings-panel-v2">
@@ -316,7 +316,7 @@ function HoldingsPanel({ etf, liveProduct }: { etf: Etf; liveProduct: LiveProduc
             <span className="holding-asset-v2"><AssetMark asset={asset} /><b>{asset.ticker}</b><small>{asset.name}</small></span>
             <span>{asset.assetClass}</span>
             <span>{asset.description}</span>
-            <span className="holding-progress"><i><b style={{ width: `${asset.weight / maximum * 100}%` }} /></i></span>
+            <span className="holding-progress"><i><b style={{ width: `${asset.weight}%` }} /></i></span>
             <span><b>{formatWeight(asset.weight)}%</b></span>
           </div>
         ))}
@@ -350,13 +350,13 @@ function DocumentsPanel({ etf }: { etf: Etf }) {
         <span>PRODUCT DOCUMENTS</span>
         <h3>Review before adding a strategy</h3>
         {documents.map(([name, description, version], index) => (
-          <article key={name}><span>{String(index + 1).padStart(2, "0")}</span><div><b>{name}</b><p>{description}</p></div><small>{version}</small><button type="button" disabled title="Approved downloadable document not yet available">COMING SOON</button></article>
+          <article key={name}><span>{String(index + 1).padStart(2, "0")}</span><div><b>{name}</b><p>{description}</p></div><small>{version}</small><span className="document-status">Not yet available</span></article>
         ))}
       </section>
       <aside id="risk-disclosure">
         <span>IMPORTANT INFORMATION</span>
         <h3>Controlled product launch</h3>
-        <p>The strategy, NAV, order, rebalance, investor and audit services are implemented as an operating system. Public offering remains disabled until the fund, custody, transfer-agent, venue and distribution approvals are configured.</p>
+        <p>This is a model strategy in a test environment. Allocations are simulations and no fund shares are offered to the public.</p>
         <p>{DEFAULT_SETTLEMENT_CHAIN.name} is the current share-settlement rail. Testnet assets have no economic value and the relayer remains isolated from fund custody.</p>
         <p>Performance history shown in this interface is illustrative until an administrator-verified live track record is available. Review the approved prospectus before investing.</p>
       </aside>
@@ -470,19 +470,20 @@ export default function EtfDetailClient({ etf }: { etf: Etf }) {
 
       <section className="product-detail-hero" aria-labelledby="detail-product-name">
         <div className="product-detail-copy">
+          <Link href="/?app=select" className="detail-back">← All strategies</Link>
           <div className="product-detail-labels"><span>{etf.roleName} / {etf.ticker}</span><b className={`strategy-style-badge strategy-${etf.strategyStyle}`}>{etf.strategyStyle.toUpperCase()}</b></div>
           <h1 id="detail-product-name">{etf.name}</h1>
           <h2>{etf.tagline}</h2>
           <p>{etf.whyChoose}</p>
-          <div className="product-hero-actions"><button type="button" onClick={subscriptionStatus ? () => window.location.assign("/?app=portfolio") : openSubscription}>{subscriptionStatus ? "VIEW PAPER PORTFOLIO" : "TRY A SAMPLE AMOUNT"}</button><button type="button" onClick={() => openInformation("methodology")}>SEE HOW IT WORKS</button></div>
+          <div className="product-hero-actions"><button type="button" onClick={subscriptionStatus ? () => window.location.assign("/?app=portfolio") : openSubscription}>{subscriptionStatus ? "View paper portfolio" : "Try a sample amount"}</button><button type="button" onClick={() => openInformation("methodology")}>See how it works</button></div>
           <dl className="product-hero-facts"><div><dt>ANNUAL FEE</dt><dd>{etf.fee}</dd></div><div><dt>RISK</dt><dd>{etf.risk}</dd></div><div><dt>REBALANCE</dt><dd>{etf.rebalanceFrequency}</dd></div></dl>
         </div>
 
         <aside className="product-market-data">
-          <div className="detail-nav-planet" aria-hidden="true"><MiniAsciiCelestial variant={etf.visual} /></div>
+          <div className="detail-nav-planet" aria-hidden="true"><StrategyGlyph variant={etf.visual} compact /></div>
           <span>INDICATIVE FUND DATA / {marketError && liveProduct?.nav ? "LAST LOADED" : liveProduct?.nav?.quality?.toUpperCase() ?? (marketLoading ? "LOADING" : "UNAVAILABLE")}</span>
           <div className="product-nav"><small>INDICATIVE NAV / KRW</small><b>{formatNav(liveProduct?.nav?.navPerShareMicros, "—")}</b><em>{liveProduct?.status?.toUpperCase() ?? (marketLoading ? "LOADING DATA" : "DATA UNAVAILABLE")}</em></div>
-          <p className="product-nav-time">AS OF {liveProduct?.nav?.asOf ? new Date(liveProduct.nav.asOf).toLocaleString("ko-KR", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }) : "AWAITING DATA"}</p>
+          <p className="product-nav-time">AS OF {liveProduct?.nav?.asOf ? new Date(liveProduct.nav.asOf).toLocaleString("en-GB", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit", timeZone: "UTC", timeZoneName: "short" }) : "AWAITING DATA"}</p>
           <dl><div><dt>MODEL AUM</dt><dd>{liveProduct?.nav ? formatKrw(liveProduct.nav.netAssetValueKrw) : "—"}</dd></div><div><dt>TARGET POSITIONS</dt><dd>{liveProduct?.targets?.length ? livePositionCount : etf.assetCount}</dd></div></dl>
         </aside>
       </section>
@@ -503,7 +504,7 @@ export default function EtfDetailClient({ etf }: { etf: Etf }) {
 
       {reviewOpen && <SimulationReviewDialog etf={etf} amountKrw={amountKrw} nav={liveProduct?.nav?.navPerShareMicros ?? ""} submitting={submitting} error={orderError} onCancel={() => { if (!submitting) setReviewOpen(false); }} onConfirm={() => { void subscribe().then((saved) => { if (saved) setReviewOpen(false); }); }} />}
 
-      <footer className="product-detail-footer"><span>GANYMEDE INDEX / {etf.ticker}</span><p>Private pre-launch environment. Allocations are simulations; no fund shares are offered.</p><span>{DEFAULT_SETTLEMENT_CHAIN.label} / {DEFAULT_SETTLEMENT_CHAIN.chainId}</span></footer>
+      <SiteFooter />
     </main>
   );
 }

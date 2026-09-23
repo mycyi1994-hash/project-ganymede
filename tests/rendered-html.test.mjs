@@ -18,15 +18,15 @@ test("server-renders the Ganymede landing page", async () => {
   assert.equal(response.status, 200);
   assert.match(response.headers.get("content-type") ?? "", /^text\/html\b/i);
   const html = await response.text();
-  assert.match(html, /GANYMEDE INDEX/);
+  assert.match(html, /Ganymede/);
   assert.match(html, /Digital-asset strategies/);
-  assert.match(html, /INSPECT NAV EVIDENCE/);
-  assert.match(html, /Tokenized stocks/);
-  assert.match(html, /Traceable NAV/);
+  assert.match(html, /Inspect NAV/);
+  assert.match(html, /An index you/);
+  assert.match(html, /can inspect/);
   assert.match(html, /href="\/proof"/);
-  assert.match(html, /LAST ON-CHAIN NAV/);
-  assert.match(html, /PRE-LAUNCH/);
-  assert.match(html, /X LAYER TESTNET/);
+  assert.match(html, /Last published NAV/);
+  assert.match(html, /Model basket/);
+  assert.match(html, /X Layer Testnet/);
 });
 
 test("direct ETF detail URLs render product and basket data", async () => {
@@ -37,10 +37,10 @@ test("direct ETF detail URLs render product and basket data", async () => {
   assert.match(html, /PRE-LAUNCH TEST ENVIRONMENT/);
   assert.match(html, /INDICATIVE FUND DATA/);
   assert.match(html, /INDICATIVE NAV/);
-  assert.match(html, /MODEL RESULTS/);
+  assert.match(html, /Model results/);
   assert.match(html, /HOLDINGS/);
   assert.match(html, /INVESTMENT OBJECTIVE/);
-  assert.match(html, /REVIEW SIMULATION/);
+  assert.match(html, /Review simulation/);
   assert.match(html, /THE FOUNDATION/);
   assert.match(html, /X Layer Testnet/);
   const visibleHtml = html.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, "");
@@ -58,7 +58,7 @@ test("proof page distinguishes loading from missing configuration", async () => 
   assert.match(html, /LOADING DATA/);
   assert.match(html, /Loading publications/);
   assert.doesNotMatch(html, /AWAITING CONFIGURATION/);
-  assert.match(html, /LAST ON-CHAIN NAV/);
+  assert.match(html, /Last published NAV/);
   assert.match(html, /The original document/);
   assert.match(html, /Recalculated NAV/);
   assert.doesNotMatch(html, /<details[^>]*\bopen(?:[=>\s])/);
@@ -71,15 +71,15 @@ test("unknown ETF slugs return not found", async () => {
 
 test("all public screens keep the same primary links and select the requested section before hydration", async () => {
   const links = [
-    ["/", "OVERVIEW"], ["/?app=select", "FUNDS"],
-    ["/?app=portfolio", "MY PORTFOLIO"], ["/proof", "PROOF OF NAV"],
+    ["/", "Overview"], ["/?app=select", "Funds"],
+    ["/?app=portfolio", "My portfolio"], ["/proof", "Proof of NAV"],
   ];
   for (const [path, active, heading] of [
-    ["/", "/", "Tokenized stocks"],
-    ["/?app=select", "/?app=select", "Find your place in the market"],
+    ["/", "/", "An index you"],
+    ["/?app=select", "/?app=select", "A clearer way to explore"],
     ["/?app=portfolio", "/?app=portfolio", "Your strategies, together"],
     ["/etfs/gmd-core", "/?app=select", "GANYMEDE CORE 20"],
-    ["/proof", "/proof", "LAST ON-CHAIN NAV"],
+    ["/proof", "/proof", "Last published NAV"],
   ]) {
     const response = await render(path);
     assert.equal(response.status, 200);

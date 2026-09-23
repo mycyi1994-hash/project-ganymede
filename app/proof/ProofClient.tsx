@@ -7,6 +7,7 @@ import { PROOF_DEPLOYMENT, parseComposition, verifyComposition, type Check } fro
 import { readLatestNav, type OnchainNav } from "@/lib/xstocks/onchain";
 import { formatRecordTime as time, pricingStatus } from "@/lib/nav-status";
 import RecordTime from "../RecordTime";
+import { SiteFooter, StockMark } from "../DesignElements";
 
 type Holding = {
   symbol: string;
@@ -186,16 +187,16 @@ export default function ProofClient() {
 
       <section className="proof-hero" aria-labelledby="proof-title">
         <div>
-          <p className="proof-kicker">GMD USTX / THE NAV OBSERVATORY / TESTNET</p>
-          <h1 id="proof-title">Proof of NAV</h1>
+          <p className="proof-kicker">GMD USTX · NAV evidence</p>
+          <h1 id="proof-title">The value.<br />And the evidence.</h1>
           <p className="proof-lede">Read the record from X Layer. Check the original document. Recalculate the value of all six holdings, right here in your browser.</p>
           <div className="proof-jump-links"><a href="#proof-holdings">Explore the basket <span aria-hidden="true">↓</span></a><a href="#proof-source">Inspect source records <span aria-hidden="true">↓</span></a></div>
         </div>
         <aside className="proof-record" aria-label="Last on-chain NAV">
-          <span>LAST ON-CHAIN NAV / USD</span>
+          <span>Last published NAV / USD</span>
           <strong>{record ? usd(record.navPerShareMicros, 4) : "—"}</strong>
           <dl><div><dt>RECORD EFFECTIVE</dt><dd><RecordTime value={record?.effectiveAt} /></dd></div><div><dt>NETWORK</dt><dd>{data?.registry.chainName ?? "X Layer Testnet"}</dd></div></dl>
-          <p>{checks?.record ? "Read directly from X Layer · one model share" : "Server snapshot · direct verification pending"}</p>
+          <p>{checks?.record ? "Read directly from X Layer · one model share" : record ? "Server snapshot · direct verification pending" : error ? "Record unavailable · retry below" : "Waiting for an on-chain record"}</p>
         </aside>
       </section>
 
@@ -223,7 +224,7 @@ export default function ProofClient() {
         {composition && !publishedComposition && <p className="proof-footnote">This composition has not been matched to the on-chain record shown above.</p>}
         <div className="proof-basket-layout"><aside className="proof-basket-method"><span>THE BASKET AT A GLANCE</span><strong>{composition ? String(composition.holdings.length).padStart(2, "0") : "—"}</strong><p>US tech xStocks</p><dl><div><dt>Allocation</dt><dd>Equal weight at fixing</dd></div><div><dt>Review</dt><dd>Quarterly</dd></div><div><dt>Pricing source</dt><dd>OKX OnchainOS · X Layer</dd></div></dl><p className="basket-method-note">Fixed token units per model share. Their value changes with market prices.</p></aside>
         <div className="proof-table-wrap proof-simple-wrap"><table className="proof-table proof-simple-table"><thead><tr><th scope="col">Token</th><th scope="col">Weight at fixing</th><th scope="col">Value / share</th></tr></thead><tbody>
-          {(composition?.holdings ?? []).map((holding) => <tr key={holding.symbol}><th scope="row"><span>{holding.symbol}</span><small>{data?.pricing.constituents.find((item) => item.symbol === holding.symbol)?.name}</small></th><td><span>{(holding.weightBps / 100).toFixed(2)}%</span><span className="proof-weight-track" aria-hidden="true"><i style={{ width: `${Math.max(0, Math.min(100, holding.weightBps / 100))}%` }} /></span></td><td>{usd(holding.valueMicros, 4)}</td></tr>)}
+          {(composition?.holdings ?? []).map((holding) => <tr key={holding.symbol}><th scope="row"><div className="proof-stock"><StockMark symbol={holding.symbol} /><span><b>{holding.symbol}</b><small>{data?.pricing.constituents.find((item) => item.symbol === holding.symbol)?.name}</small></span></div></th><td><span>{(holding.weightBps / 100).toFixed(2)}%</span><span className="proof-weight-track" aria-hidden="true"><i style={{ width: `${Math.max(0, Math.min(100, holding.weightBps / 100))}%` }} /></span></td><td>{usd(holding.valueMicros, 4)}</td></tr>)}
         </tbody></table>{!composition && <p className="proof-empty">{data ? "No priced composition is available yet." : error ? "Composition unavailable." : "Loading composition…"}</p>}</div>
         </div>
         <p className="proof-footnote">Weights are set at fixing and can drift with prices. {composition ? `Basket fixed ${time(composition.basketFixedAt)}.` : ""}</p>
@@ -242,7 +243,7 @@ export default function ProofClient() {
         </div></details>
       </section>
 
-      <footer className="product-detail-footer"><span>GANYMEDE INDEX / {data?.product.ticker ?? "GMD USTX"}</span><p>Test environment. NAV evidence only; no fund shares are offered. xStocks are issued by Backed; Ganymede does not custody them.</p><span>{data ? `${data.registry.chainName.toUpperCase()} / ${data.registry.chainId}` : ""}</span></footer>
+      <p className="proof-custody-note">Test environment. NAV evidence only. xStocks are issued by Backed; Ganymede does not custody them.</p><SiteFooter />
     </main>
   );
 }

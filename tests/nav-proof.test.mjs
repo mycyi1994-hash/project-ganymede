@@ -89,6 +89,9 @@ test("historical record age and current pricing are independent", () => {
   assert.equal(pricingStatus({ status: "priced", evaluatedAt: "2026-09-23T11:00:00Z" }, clock).label, "Pricing update delayed");
   assert.equal(pricingStatus({ status: "awaiting_prices", evaluatedAt: now }, clock).label, "Awaiting fresh prices");
   assert.equal(pricingStatus({ status: "priced", evaluatedAt: now }, clock, true).label, "Refresh unavailable");
+  const firstLoadFailure = pricingStatus(null, clock, true);
+  assert.equal(firstLoadFailure.label, "Pricing unavailable");
+  assert.doesNotMatch(firstLoadFailure.detail, /last loaded record/i);
   assert.equal(elapsedTime("2026-09-23T10:26:11Z", clock), "2 hr 0 min ago");
   assert.equal(formatRecordTime(now), "2026-09-23 12:26:11 UTC");
 });
