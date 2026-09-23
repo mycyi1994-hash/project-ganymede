@@ -62,8 +62,9 @@ cd relayer
 npm install
 npm run typecheck
 
+# wrangler.jsonc already names the deployed `ganymede-settlement-relayer`
+# database. On a fresh Cloudflare account, create one and put its id there:
 npm run db:create          # note the returned database_id
-# put it in wrangler.jsonc, replacing PLACEHOLDER_RUN_WRANGLER_D1_CREATE
 npm run db:migrate
 
 npx wrangler secret put RELAYER_API_TOKEN         # shared with the app

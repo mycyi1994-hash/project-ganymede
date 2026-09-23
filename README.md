@@ -87,6 +87,16 @@ npm test
 
 The Sites configuration provisions the `DB` D1 binding and the build registers the five-minute cron. Apply the bundled migration to a local or hosted database before exercising APIs.
 
+To deploy straight to Cloudflare Workers instead of Sites, name the Worker and its D1 database at build time, then deploy the build output:
+
+```bash
+npx wrangler d1 create ganymede-xlayer   # once; note the database_id
+export CLOUDFLARE_WORKER_NAME=ganymede-xlayer CLOUDFLARE_D1_DATABASE_NAME=ganymede-xlayer CLOUDFLARE_D1_DATABASE_ID=<database_id>
+npm run build
+npx wrangler d1 execute ganymede-xlayer --remote --file=drizzle/0000_giant_speedball.sql   # once
+npx wrangler deploy   # set the environment below with `npx wrangler secret put` or `--secrets-file`
+```
+
 ## Environment and live activation
 
 Copy `.env.example` into the appropriate secret store. Never commit credentials.

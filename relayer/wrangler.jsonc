@@ -19,8 +19,9 @@
   "d1_databases": [
     {
       "binding": "DB",
-      "database_name": "ganymede-relayer",
-      "database_id": "PLACEHOLDER_RUN_WRANGLER_D1_CREATE"
+      // Its own ledger: the GIWA relayer keeps the older `ganymede-relayer` database.
+      "database_name": "ganymede-settlement-relayer",
+      "database_id": "e90fecd3-0e90-4a03-b52f-d9c05cc16ab5"
     }
   ],
 

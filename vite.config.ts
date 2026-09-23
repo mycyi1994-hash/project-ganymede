@@ -11,15 +11,25 @@ const { d1, r2 } = hostingConfig;
 // macOS Seatbelt blocks FSEvents, so Codex previews need polling for HMR.
 const isCodexSeatbeltSandbox = process.env.CODEX_SANDBOX === "seatbelt";
 
+// Sites fills in the worker and database at deploy time. A direct
+// `wrangler deploy` to Cloudflare Workers names them here instead.
+const workerName = process.env.CLOUDFLARE_WORKER_NAME;
+const d1DatabaseName = process.env.CLOUDFLARE_D1_DATABASE_NAME;
+const d1DatabaseId = process.env.CLOUDFLARE_D1_DATABASE_ID;
+
 const localBindingConfig = {
+  ...(workerName ? { name: workerName } : {}),
   main: "./worker/index.ts",
-  compatibility_flags: ["nodejs_compat"],
+  // global_fetch_strictly_public lets the engine reach a settlement relayer
+  // Worker on the same Cloudflare account through its workers.dev URL, which
+  // otherwise fails with Cloudflare error 1042.
+  compatibility_flags: ["nodejs_compat", "global_fetch_strictly_public"],
   d1_databases: d1
     ? [
         {
           binding: d1,
-          database_name: "site-creator-d1",
-          database_id: SITE_CREATOR_PLACEHOLDER_DATABASE_ID,
+          database_name: d1DatabaseName || "site-creator-d1",
+          database_id: d1DatabaseId || SITE_CREATOR_PLACEHOLDER_DATABASE_ID,
         },
       ]
     : [],
