@@ -9,7 +9,6 @@ export async function GET() {
   const currentEnv = engineEnv();
   try {
     const repo = new EngineRepository(currentEnv.DB);
-    await repo.seed();
     const [upbit, settlement, database] = await Promise.all([
       new UpbitExecutionClient(currentEnv).health(),
       new SettlementClient(currentEnv).health(),

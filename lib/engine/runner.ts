@@ -175,10 +175,10 @@ async function evaluateAndRebalance(
   const warnings: string[] = [];
   const currentWeights = await repo.currentWeights(product.id, ticks);
   const strategy = calculateStrategy(product, buildStrategyInputs(ticks, candles, currentWeights));
-  await repo.saveStrategy(strategy);
   const lastCompleted = await repo.latestCompletedRebalance(product.id);
   const due = force || shouldRebalance(product, lastCompleted);
   if (!due) return { rebalances: 0, orders: 0, settlements: 0, warnings };
+  await repo.saveStrategy(strategy);
   if (strategy.blocked) {
     await repo.createRebalance(product, strategy, trigger);
     warnings.push(`${product.ticker} rebalance blocked: ${strategy.blockReason}`);
@@ -229,7 +229,6 @@ export async function runEngineCycle(
   const owner = `${cycleId}:${trigger}`;
   const startedAt = new Date().toISOString();
   const mode = env.TRADING_MODE === "live" ? "live" : "paper";
-  await repo.seed();
   const due = options.force || await repo.cycleIsDue(options.minimumIntervalSeconds ?? DEFAULT_CYCLE_INTERVAL_SECONDS);
   if (!due) {
     return {
@@ -247,29 +246,40 @@ export async function runEngineCycle(
   }
 
   try {
+    // Re-check after taking the lease: a previous worker may have just finished.
+    if (!options.force && !(await repo.cycleIsDue(options.minimumIntervalSeconds ?? DEFAULT_CYCLE_INTERVAL_SECONDS))) {
+      return { cycleId, trigger, mode, startedAt, completedAt: new Date().toISOString(), marketDataQuality: "reference", navsPublished: 0, strategiesEvaluated: 0, rebalancesCreated: 0, ordersCreated: 0, settlementsQueued: 0, warnings: ["Cycle skipped after lease acquisition"], skipped: true };
+    }
+    await repo.seed();
     const execution = new UpbitExecutionClient(env);
     const settlementClient = new SettlementClient(env);
+    // Run the X Layer basket before the independent legacy venue feed. A venue
+    // failure must not prevent a tokenized-stock pricing attempt.
+    const xstocks = await runXStocksCycle(env, repo, settlementClient).catch((error) => ({
+      navsPublished: 0, settlementsQueued: 0,
+      warnings: [`xStocks cycle failed: ${error instanceof Error ? error.message : "unknown error"}`],
+    }));
     const market = await loadMarketData();
     await repo.saveMarketSnapshot(market.ticks);
     await repo.saveCandles(market.candles);
     const ticks = new Map(market.ticks.map((tick) => [tick.symbol, tick]));
     const quality = marketDataQuality(market.ticks);
-    const warnings = [...market.warnings];
+    const warnings = [...xstocks.warnings, ...market.warnings];
     const executionHealth = await execution.health();
     if (mode === "live" && !executionHealth.configured) warnings.push("Live Upbit execution is disabled because credentials or the explicit live-trading confirmation are missing");
 
-    let settlementsQueued = await processFundFlows(repo, settlementClient, mode === "paper");
+    let settlementsQueued = xstocks.settlementsQueued + await processFundFlows(repo, settlementClient, mode === "paper");
     let rebalancesCreated = 0;
     let ordersCreated = 0;
     for (const product of PRODUCT_DEFINITIONS) {
-      const outcome = await evaluateAndRebalance(repo, execution, settlementClient, product, ticks, market.candles, trigger, options.force === true, quality === "live" && executionHealth.configured);
+      const outcome = await evaluateAndRebalance(repo, execution, settlementClient, product, ticks, market.candles, trigger, trigger === "operator" && options.force === true, quality === "live" && executionHealth.configured);
       rebalancesCreated += outcome.rebalances;
       ordersCreated += outcome.orders;
       settlementsQueued += outcome.settlements;
       warnings.push(...outcome.warnings);
     }
 
-    let navsPublished = 0;
+    let navsPublished = xstocks.navsPublished;
     for (const product of PRODUCT_DEFINITIONS) {
       const nav = await repo.calculateAndSaveNav(product.id, ticks, quality === "live" ? "indicative" : "stale");
       const request: SettlementRequest = {
@@ -279,19 +289,8 @@ export async function runEngineCycle(
       };
       const settlement = await settlementClient.settle(request);
       await repo.saveSettlement(request, settlement);
-      navsPublished += 1;
+      if (settlement.status === "confirmed") navsPublished += 1;
       settlementsQueued += 1;
-    }
-
-    // The tokenized-stock basket prices from X Layer, independently of the KRW
-    // venue feed above. Its failures must never abort the main cycle.
-    try {
-      const xstocks = await runXStocksCycle(env, repo, settlementClient);
-      navsPublished += xstocks.navsPublished;
-      settlementsQueued += xstocks.settlementsQueued;
-      warnings.push(...xstocks.warnings);
-    } catch (error) {
-      warnings.push(`xStocks cycle failed: ${error instanceof Error ? error.message : "unknown error"}`);
     }
 
     const result: EngineCycleResult = {

@@ -48,8 +48,15 @@ export async function operatorIdentity(request: Request): Promise<string | null>
 
 export function jsonError(error: unknown, status = 500): Response {
   const message = error instanceof Error ? error.message : "Unexpected server error";
-  const missingTable = /no such table|has no column|D1_ERROR/i.test(message);
-  return Response.json({ error: missingTable ? "The ETF database is not initialized yet. Apply the bundled D1 migration and retry." : message }, { status });
+  const missingTable = /no such table|has no column|no such column/i.test(message);
+  const quota = /D1.*(?:limit|quota)|(?:limit|quota).*D1|too many (?:reads|writes)|daily.*(?:read|write)/i.test(message);
+  const database = /D1_ERROR/i.test(message);
+  const code = missingTable ? "DATABASE_SCHEMA_MISSING" : quota ? "DATABASE_CAPACITY" : database ? "DATABASE_UNAVAILABLE" : "REQUEST_FAILED";
+  const detail = missingTable ? "The database schema is unavailable. Please contact the operator."
+    : quota ? "Database capacity has been reached. Please try again later."
+    : database ? "The database is temporarily unavailable. Please try again."
+    : message;
+  return noStoreJson({ error: detail, code }, { status: quota || database ? 503 : status });
 }
 
 export async function readJson<T>(request: Request): Promise<T> {

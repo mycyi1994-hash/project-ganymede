@@ -1,6 +1,7 @@
 const cloudflareWorkersUrl = `data:text/javascript,${encodeURIComponent("export const env = Object.create(null);")}`;
 
 export async function resolve(specifier, context, nextResolve) {
+  if (specifier.startsWith("@/")) return { url: new URL(`../${specifier.slice(2)}.ts`, import.meta.url).href, shortCircuit: true };
   if (specifier === "cloudflare:workers") {
     return { url: cloudflareWorkersUrl, shortCircuit: true };
   }

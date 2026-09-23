@@ -22,6 +22,8 @@ import { fetchXStockQuotes, onchainOsCredentials } from "./prices";
 export const STATE_BASKET = "xstocks:basket";
 export const STATE_LATEST = "xstocks:latest";
 export const STATE_HISTORY = "xstocks:history";
+export const STATE_CONFIRMED = "xstocks:confirmed";
+export const STATE_DOCUMENT_PREFIX = "xstocks:document:";
 const HISTORY_LIMIT = 12;
 const DEFAULT_MAX_QUOTE_AGE_MINUTES = 360;
 
@@ -37,6 +39,7 @@ export type Publication = {
 
 export type LatestState = {
   evaluatedAt: string;
+  retryAt?: string | null;
   status: Evaluation["status"];
   blockers: string[];
   warnings: string[];
@@ -54,8 +57,12 @@ function maxQuoteAgeMinutes(env: EngineEnv): number {
 }
 
 export async function runXStocksCycle(env: EngineEnv, repo: EngineRepository, settlementClient: SettlementClient, now = new Date().toISOString()): Promise<XStocksCycleResult> {
+  const previousLatest = JSON.parse((await repo.getState(STATE_LATEST))?.value ?? "null") as LatestState | null;
+  if (previousLatest?.retryAt && Date.parse(previousLatest.retryAt) > Date.parse(now)) {
+    return { navsPublished: 0, settlementsQueued: 0, warnings: [`GMD USTX price provider cooldown until ${previousLatest.retryAt}`] };
+  }
   const constituents = constituentsWithAddresses(env.XSTOCKS_ADDRESSES);
-  const { quotes, warnings } = await fetchXStockQuotes(onchainOsCredentials(env), constituents);
+  const { quotes, warnings, retryAt } = await fetchXStockQuotes(onchainOsCredentials(env), constituents);
   const previous = deserializeBasket((await repo.getState(STATE_BASKET))?.value);
   const evaluation = await evaluateBasket({ constituents, quotes, previous, now, maxQuoteAgeMinutes: maxQuoteAgeMinutes(env) });
 
@@ -88,10 +95,20 @@ export async function runXStocksCycle(env: EngineEnv, repo: EngineRepository, se
       holdingsHash: evaluation.holdingsHash,
       effectiveAt: now,
     };
+    // Save the exact document before sending the transaction. Even if storage
+    // fails after broadcast, the on-chain hash still has a recoverable document.
+    const history = JSON.parse((await repo.getState(STATE_HISTORY))?.value ?? "[]") as Publication[];
+    const confirmed = history.find((entry) => entry.status === "confirmed");
+    if (confirmed && !(await repo.getState(STATE_CONFIRMED))) await repo.setState(STATE_CONFIRMED, JSON.stringify(confirmed));
+    const pending: Publication = { asOf: now, navPerShareMicros: evaluation.composition.navPerShareMicros, holdingsHash: evaluation.holdingsHash, canonical: evaluation.canonical, status: "queued", txHash: null, error: null };
+    // Content-addressed evidence survives a lost receipt or history rotation.
+    await repo.setState(`${STATE_DOCUMENT_PREFIX}${pending.holdingsHash}`, JSON.stringify(pending));
+    const previousHistory = history.filter((entry) => entry.holdingsHash !== pending.holdingsHash);
+    await repo.setState(STATE_HISTORY, JSON.stringify([pending, ...previousHistory].slice(0, HISTORY_LIMIT)));
     const settlement = await settlementClient.settle(request);
     await repo.saveSettlement(request, settlement);
     settlementsQueued += 1;
-    navsPublished += 1;
+    if (settlement.status === "confirmed") navsPublished += 1;
     publication = {
       asOf: now,
       navPerShareMicros: evaluation.composition.navPerShareMicros,
@@ -103,14 +120,15 @@ export async function runXStocksCycle(env: EngineEnv, repo: EngineRepository, se
     };
     if (settlement.error) warnings.push(`${XSTOCKS_PRODUCT.ticker} NAV publication: ${settlement.error}`);
 
-    const history = JSON.parse((await repo.getState(STATE_HISTORY))?.value ?? "[]") as Publication[];
-    await repo.setState(STATE_HISTORY, JSON.stringify([publication, ...history].slice(0, HISTORY_LIMIT)));
+    if (settlement.status === "confirmed") await repo.setState(STATE_CONFIRMED, JSON.stringify(publication));
+    await repo.setState(STATE_HISTORY, JSON.stringify([publication, ...previousHistory].slice(0, HISTORY_LIMIT)));
   } else {
     warnings.push(...evaluation.blockers.map((blocker) => `${XSTOCKS_PRODUCT.ticker} not published: ${blocker}`));
   }
 
   const latest: LatestState = {
     evaluatedAt: now,
+    retryAt: retryAt ?? null,
     status: evaluation.status,
     blockers: evaluation.blockers,
     warnings,

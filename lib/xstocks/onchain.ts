@@ -22,7 +22,7 @@ export type OnchainNav = {
 
 export function decodeLatestNav(result: string): OnchainNav {
   const hex = result.startsWith("0x") ? result.slice(2) : result;
-  if (hex.length < 64 * 5) throw new Error("latestNav returned a short payload");
+  if (hex.length !== 64 * 5 || !/^[0-9a-f]+$/i.test(hex)) throw new Error("latestNav returned an invalid payload");
   const word = (index: number) => hex.slice(index * 64, (index + 1) * 64);
   const seconds = (index: number) => {
     const value = BigInt(`0x${word(index)}`);
@@ -37,11 +37,23 @@ export function decodeLatestNav(result: string): OnchainNav {
   };
 }
 
-export async function readLatestNav(rpcUrl: string, registry: string): Promise<OnchainNav> {
+export async function readLatestNav(rpcUrl: string, registry: string, options: { fetcher?: typeof fetch; chainId?: number } = {}): Promise<OnchainNav> {
   if (XSTOCKS_PRODUCT.id !== "us-tech-x") throw new Error("XSTOCKS_PRODUCT_KEY is stale — recompute it for the new product id");
-  const response = await fetch(rpcUrl, {
+  if (!/^0x[0-9a-f]{40}$/i.test(registry)) throw new Error("Invalid NAV registry address");
+  const fetcher = options.fetcher ?? fetch;
+  if (options.chainId !== undefined) {
+    const chainResponse = await fetcher(rpcUrl, {
+      method: "POST", headers: { "Content-Type": "application/json" }, signal: AbortSignal.timeout(10_000),
+      body: JSON.stringify({ jsonrpc: "2.0", id: 2, method: "eth_chainId", params: [] }),
+    });
+    if (!chainResponse.ok) throw new Error(`Settlement RPC ${chainResponse.status}`);
+    const chain = await chainResponse.json() as { result?: string };
+    if (!chain.result || !/^0x[0-9a-f]+$/i.test(chain.result) || BigInt(chain.result) !== BigInt(options.chainId)) throw new Error("The RPC returned a different network");
+  }
+  const response = await fetcher(rpcUrl, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
+    signal: AbortSignal.timeout(10_000),
     body: JSON.stringify({
       jsonrpc: "2.0",
       id: 1,

@@ -8,7 +8,6 @@ export async function GET(request: Request) {
   if (!actor) return noStoreJson({ error: "Operator authorization required" }, { status: 401 });
   try {
     const repo = new EngineRepository(engineEnv().DB);
-    await repo.seed();
     return noStoreJson({ actor, ...(await repo.operationsStatus()) });
   } catch (error) {
     return jsonError(error);
