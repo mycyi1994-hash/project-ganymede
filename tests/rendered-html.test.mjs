@@ -60,7 +60,7 @@ test("proof page distinguishes loading from missing configuration", async () => 
   assert.doesNotMatch(html, /AWAITING CONFIGURATION/);
   assert.match(html, /LAST ON-CHAIN NAV/);
   assert.match(html, /The original document/);
-  assert.match(html, /NAV value/);
+  assert.match(html, /Recalculated NAV/);
   assert.doesNotMatch(html, /<details[^>]*\bopen(?:[=>\s])/);
 });
 

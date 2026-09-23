@@ -3,6 +3,10 @@
 import { useCallback, useEffect, useState } from "react";
 import SiteHeader from "../SiteHeader";
 import { formatUsdMicros as usd } from "@/lib/nav-display";
+import { PROOF_DEPLOYMENT, parseComposition, verifyComposition, type Check } from "@/lib/xstocks/proof";
+import { readLatestNav, type OnchainNav } from "@/lib/xstocks/onchain";
+import { formatRecordTime as time, pricingStatus } from "@/lib/nav-status";
+import RecordTime from "../RecordTime";
 
 type Holding = {
   symbol: string;
@@ -53,8 +57,6 @@ type ProofResponse = {
   onchainError: string | null;
 };
 
-type Check = { state: "pass" | "fail" | "pending"; detail: string };
-
 const WAD = 10n ** 18n;
 
 function units(wad: string): string {
@@ -66,16 +68,6 @@ function shortHash(hash: string | null | undefined): string {
   return hash ? `${hash.slice(0, 10)}…${hash.slice(-8)}` : "—";
 }
 
-function time(iso: string | null | undefined): string {
-  if (!iso) return "—";
-  return new Date(iso).toISOString().replace("T", " ").slice(0, 19) + " UTC";
-}
-
-async function sha256Hex(text: string): Promise<string> {
-  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
-  return `0x${Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("")}`;
-}
-
 const STATUS_LABEL: Record<string, string> = {
   priced: "LIVE PRICED",
   awaiting_prices: "AWAITING LIVE PRICES",
@@ -85,19 +77,25 @@ const STATUS_LABEL: Record<string, string> = {
 export default function ProofClient() {
   const [data, setData] = useState<ProofResponse | null>(null);
   const [error, setError] = useState("");
-  const [verification, setVerification] = useState<{ source: ProofResponse; hash: Check; chain: Check; nav: Check } | null>(null);
+  const [verification, setVerification] = useState<{ source: ProofResponse; hash: Check; chain: Check; nav: Check; record: OnchainNav | null; rpcError: string | null } | null>(null);
   const checks = verification?.source === data ? verification : null;
   const [copied, setCopied] = useState(false);
   const [copyError, setCopyError] = useState("");
+  const [now, setNow] = useState(0);
+  const [refreshing, setRefreshing] = useState(false);
 
   const load = useCallback(async () => {
+    setRefreshing(true);
+    setNow(Date.now());
     try {
-      const response = await fetch("/api/xstocks", { cache: "no-store" });
+      const response = await fetch("/api/xstocks", { cache: "no-store", signal: AbortSignal.timeout(15_000) });
       if (!response.ok) throw new Error(`API ${response.status}`);
       setData(await response.json() as ProofResponse);
       setError("");
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : "Could not load proof data");
+    } finally {
+      setRefreshing(false);
     }
   }, []);
 
@@ -110,58 +108,60 @@ export default function ProofClient() {
     };
   }, [load]);
 
-  // Verification runs in the browser: the server supplies documents, never verdicts.
+  // No server-RPC fallback: a blocked direct RPC stays unavailable.
   useEffect(() => {
     if (!data) return;
     let cancelled = false;
     (async () => {
-      const onchain = data.onchain;
-      const published = onchain ? [data.latest?.publication, ...data.history].find((entry) => entry?.holdingsHash === onchain.holdingsHash) ?? null : null;
-      let hash: Check = { state: "pending", detail: "No on-chain publication to verify yet." };
-      let chain: Check = { state: "pending", detail: data.onchainError ?? "Registry has no NAV for this product yet." };
-      let nav: Check = { state: "pending", detail: "Waiting for an on-chain NAV." };
-
-      if (onchain && onchain.effectiveAt) {
-        chain = published
-          ? { state: "pass", detail: `latestNav on ${data.registry.chainName} carries a holdings hash this page holds the document for.` }
-          : { state: "fail", detail: "The registry's holdings hash matches none of the compositions this page holds." };
-        if (published) {
-          try {
-            const computed = await sha256Hex(published.canonical);
-            hash = computed === onchain.holdingsHash
-              ? { state: "pass", detail: `sha256(composition) computed in your browser = ${shortHash(computed)}` }
-              : { state: "fail", detail: `Browser computed ${shortHash(computed)}, chain holds ${shortHash(onchain.holdingsHash)}` };
-            const documentNav = (JSON.parse(published.canonical) as Composition).navPerShareMicros;
-            nav = documentNav === onchain.navPerShareMicros
-              ? { state: "pass", detail: `On-chain NAV ${usd(onchain.navPerShareMicros, 6)} matches the NAV stated in the published document.` }
-              : { state: "fail", detail: `On-chain NAV ${usd(onchain.navPerShareMicros, 6)} ≠ composition ${usd(documentNav, 6)}` };
-          } catch {
-            hash = { state: "fail", detail: "The published document could not be checked in this browser." };
-            nav = { state: "fail", detail: "The document's NAV could not be read." };
+      let record: OnchainNav | null = null;
+      let rpcError: string | null = null;
+      let hash: Check = { state: "pending", detail: "Waiting for a directly read on-chain record." };
+      let nav: Check = { state: "pending", detail: "Waiting for the published composition." };
+      let chain: Check = { state: "pending", detail: "Reading the public X Layer RPC from this browser." };
+      try {
+        if (data.registry.chainId !== PROOF_DEPLOYMENT.chainId || data.registry.address?.toLowerCase() !== PROOF_DEPLOYMENT.registry) throw new Error("The API registry differs from the deployment pinned in this browser.");
+        record = await readLatestNav(PROOF_DEPLOYMENT.rpcUrl, PROOF_DEPLOYMENT.registry, { chainId: PROOF_DEPLOYMENT.chainId });
+        chain = record.effectiveAt
+          ? { state: "pass", detail: "This browser read latestNav directly from the pinned registry and confirmed X Layer Testnet (1952)." }
+          : { state: "pending", detail: "The registry has no published NAV for this basket yet." };
+        if (record.effectiveAt) {
+          const published = [data.latest?.publication, ...data.history].find((entry) => entry?.holdingsHash.toLowerCase() === record!.holdingsHash.toLowerCase());
+          if (published) {
+            const result = await verifyComposition(published.canonical, record);
+            hash = result.hash;
+            nav = result.nav;
+          } else {
+            hash = { state: "fail", detail: "The directly read hash has no matching document in this response. A publication may have occurred during loading; retry to fetch its composition." };
+            nav = { state: "pending", detail: "A matching document is required to recalculate NAV." };
           }
         }
+      } catch (reason) {
+        rpcError = reason instanceof Error ? reason.message : "Direct RPC read failed.";
+        chain = { state: "pending", detail: "Direct verification unavailable: " + rpcError };
       }
-      if (!cancelled) setVerification({ source: data, hash, chain, nav });
+      if (!cancelled) setVerification({ source: data, hash, chain, nav, record, rpcError });
     })();
     return () => { cancelled = true; };
   }, [data]);
 
-  const verifiedCanonical = data?.onchain ? [data.latest?.publication, ...(data.history ?? [])].find((entry) => entry?.holdingsHash === data.onchain?.holdingsHash)?.canonical ?? null : null;
+  const displayedRecord = checks?.record ?? data?.onchain;
+  const verifiedCanonical = displayedRecord ? [data?.latest?.publication, ...(data?.history ?? [])].find((entry) => entry?.holdingsHash === displayedRecord.holdingsHash)?.canonical ?? null : null;
   const canonical = verifiedCanonical ?? data?.latest?.canonical ?? null;
   let publishedComposition: Composition | null = null;
   if (verifiedCanonical) {
-    try { publishedComposition = JSON.parse(verifiedCanonical) as Composition; } catch { /* The failed check is shown above the document. */ }
+    try { publishedComposition = parseComposition(verifiedCanonical); } catch { /* The failed check is shown above the document. */ }
   }
-  const composition = publishedComposition ?? data?.latest?.composition ?? null;
-  const record = data?.onchain?.effectiveAt ? data.onchain : null;
+  const composition = publishedComposition;
+  const record = displayedRecord?.effectiveAt ? displayedRecord : null;
+  const pricing = pricingStatus(data?.latest ?? null, now, Boolean(error));
   const checkList = [
-    { label: "On-chain record", check: checks?.chain, description: "A composition is available for this record." },
+    { label: "Direct chain read", check: checks?.chain, description: "Read from X Layer in your browser." },
     { label: "Composition hash", check: checks?.hash, description: "The document matches the hash on chain." },
-    { label: "NAV value", check: checks?.nav, description: "The recorded and documented NAV agree." },
+    { label: "Recalculated NAV", check: checks?.nav, description: "Six holding values sum to the recorded NAV." },
   ];
   const passed = checkList.filter(({ check }) => check?.state === "pass").length;
-  const summaryState = error || data?.onchainError ? "unavailable" : !data ? "loading" : !record ? "waiting" : !checks ? "checking" : checkList.some(({ check }) => check?.state === "fail") ? "fail" : passed === 3 ? "pass" : "waiting";
-  const summaryText = { unavailable: "Data could not be refreshed.", loading: "Loading NAV evidence.", waiting: "Awaiting a published record.", checking: "Checking the published record.", fail: "The checks need attention.", pass: "NAV evidence matches." }[summaryState];
+  const summaryState = error || checks?.rpcError ? "unavailable" : !data ? "loading" : !record ? "waiting" : !checks ? "checking" : checkList.some(({ check }) => check?.state === "fail") ? "fail" : passed === 3 ? "pass" : "waiting";
+  const summaryText = { unavailable: "Verification is unavailable.", loading: "Loading NAV evidence.", waiting: "Awaiting a published record.", checking: "Checking the published record.", fail: "The checks need attention.", pass: "This NAV record checks out." }[summaryState];
   let prettyDocument = canonical ?? "No composition yet.";
   if (canonical) { try { prettyDocument = JSON.stringify(JSON.parse(canonical), null, 2); } catch { /* Keep the original bytes inspectable. */ } }
   const status = data ? data.latest?.status ?? "awaiting_configuration" : error ? "unavailable" : "loading";
@@ -188,26 +188,29 @@ export default function ProofClient() {
         <div>
           <p className="proof-kicker">GMD USTX / THE NAV OBSERVATORY / TESTNET</p>
           <h1 id="proof-title">Proof of NAV</h1>
-          <p className="proof-lede">A published value. A visible composition. An on-chain record to compare them against. Inspect the evidence behind the US tech basket.</p>
+          <p className="proof-lede">Read the record from X Layer. Check the original document. Recalculate the value of all six holdings, right here in your browser.</p>
           <div className="proof-jump-links"><a href="#proof-holdings">Explore the basket <span aria-hidden="true">↓</span></a><a href="#proof-source">Inspect source records <span aria-hidden="true">↓</span></a></div>
         </div>
         <aside className="proof-record" aria-label="Last on-chain NAV">
           <span>LAST ON-CHAIN NAV / USD</span>
           <strong>{record ? usd(record.navPerShareMicros, 4) : "—"}</strong>
-          <dl><div><dt>RECORD EFFECTIVE</dt><dd>{time(record?.effectiveAt)}</dd></div><div><dt>NETWORK</dt><dd>{data?.registry.chainName ?? "X Layer Testnet"}</dd></div></dl>
-          <p>{data?.latest?.status === "awaiting_prices" ? "Latest prices are unavailable. Showing the last recorded NAV." : "One share in the model basket · evidence only"}</p>
+          <dl><div><dt>RECORD EFFECTIVE</dt><dd><RecordTime value={record?.effectiveAt} /></dd></div><div><dt>NETWORK</dt><dd>{data?.registry.chainName ?? "X Layer Testnet"}</dd></div></dl>
+          <p>{checks?.record ? "Read directly from X Layer · one model share" : "Server snapshot · direct verification pending"}</p>
         </aside>
       </section>
 
+      <section className="proof-pricing-status" aria-label="Latest pricing status"><div><span>LATEST PRICING</span><strong className={"pricing-label pricing-" + pricing.tone}>{data || error ? pricing.label : "Loading pricing status…"}</strong><p>{data || error ? pricing.detail : "Retrieving the latest pricing attempt."}</p></div><div className="pricing-last-attempt"><span>LAST PRICING ATTEMPT</span><RecordTime value={data?.latest?.evaluatedAt} /></div></section>
+
       <section className="proof-section proof-result" aria-label="Evidence checks">
         <div className={`proof-result-heading proof-result-${summaryState}`} aria-live="polite" aria-atomic="true">
-          <div><span className="proof-result-eyebrow">CHECKED IN YOUR BROWSER</span><h2 id="proof-verify">{summaryText}</h2></div>
+          <div><span className="proof-result-eyebrow">HISTORICAL RECORD / CHECKED IN YOUR BROWSER</span><h2 id="proof-verify">{summaryText}</h2></div>
           <span className="proof-count">{summaryState === "pass" || summaryState === "fail" ? `${passed} / 3 CHECKS PASSED` : summaryState === "unavailable" ? "DATA UNAVAILABLE" : summaryState === "loading" ? "LOADING DATA" : summaryState === "waiting" ? "NOT YET VERIFIED" : "CHECKING…"}</span>
         </div>
         {error && <p className="proof-refresh-error" role="alert">{data ? "The latest refresh failed. The record shown is from the last successful load." : "NAV evidence could not be loaded."} <button type="button" onClick={() => void load()}>TRY AGAIN</button></p>}
-        {data?.onchainError && <p className="proof-refresh-error">The on-chain record is currently unavailable.</p>}
-        <ol className="proof-checks">{checkList.map(({ label, check, description }, index) => <li key={label} className={`proof-check proof-check-${check?.state ?? "pending"}`}><div className="proof-check-top"><span>0{index + 1} / {index === 0 ? "RECORD" : index === 1 ? "DOCUMENT" : "VALUE"}</span><b aria-hidden="true">{check?.state === "pass" ? "✓" : check?.state === "fail" ? "!" : "…"}</b></div><div><strong>{label}</strong><p>{check?.state === "pass" ? description : check?.state === "fail" ? "Could not confirm a match. Open the details below." : "Waiting for evidence."}</p><span className="check-state-label">{check?.state === "pass" ? "MATCHED" : check?.state === "fail" ? "NEEDS ATTENTION" : "PENDING"}</span></div></li>)}</ol>
-        <p className="proof-footnote">These checks establish document consistency. They do not verify custody, backing or investment safety.</p>
+        {checks?.rpcError && <p className="proof-refresh-error" role="alert">Your browser could not complete a direct chain read. The server snapshot is shown for reference; independent verification has not passed.</p>}
+        <div className="proof-recheck"><span>Checks apply to the record above, regardless of current price availability.</span><button type="button" onClick={() => void load()} disabled={refreshing || Boolean(data && !checks)}>{refreshing || Boolean(data && !checks) ? "CHECKING…" : "CHECK AGAIN"}</button></div>
+        <ol className="proof-checks">{checkList.map(({ label, check, description }, index) => <li key={label} className={`proof-check proof-check-${check?.state ?? "pending"}`}><div className="proof-check-top"><span>0{index + 1} / {index === 0 ? "RECORD" : index === 1 ? "DOCUMENT" : "VALUE"}</span><b aria-hidden="true">{check?.state === "pass" ? "✓" : check?.state === "fail" ? "!" : "…"}</b></div><div><strong>{label}</strong><p>{check?.state === "pass" ? description : check?.state === "fail" ? "Could not confirm a match. Open the details below." : checks?.rpcError ? "Direct verification unavailable." : "Waiting for evidence."}</p><span className="check-state-label">{check?.state === "pass" ? "MATCHED" : check?.state === "fail" ? "NEEDS ATTENTION" : checks?.rpcError ? "UNAVAILABLE" : "PENDING"}</span></div></li>)}</ol>
+        <p className="proof-footnote">These checks establish record and calculation consistency. They do not verify custody, backing or investment safety.</p>
         <details className="detail-disclosure proof-check-details"><summary>Inspect the checks & registry <span aria-hidden="true">+</span></summary><div className="disclosure-content">
           {checkList.map(({ label, check }) => <p key={label}><strong>{label}</strong> — {check?.detail ?? "Waiting for evidence."}</p>)}
           <p>Registry {registryUrl ? <a href={registryUrl} target="_blank" rel="noreferrer">{data?.registry.address} ↗</a> : data ? "not configured" : error ? "unavailable" : "loading…"}</p>
