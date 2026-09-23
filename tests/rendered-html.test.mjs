@@ -69,3 +69,30 @@ test("unknown ETF slugs return not found", async () => {
   const response = await render("/etfs/not-a-real-etf");
   assert.equal(response.status, 404);
 });
+
+test("all public screens keep the same primary links and select the requested section before hydration", async () => {
+  const links = [
+    ["/", "OVERVIEW"], ["/?app=select", "FUNDS"],
+    ["/?app=portfolio", "MY PORTFOLIO"], ["/proof", "PROOF OF NAV"],
+  ];
+  for (const [path, active, heading] of [
+    ["/", "/", "Know the strategy"],
+    ["/?app=select", "/?app=select", "Find your place in the market"],
+    ["/?app=portfolio", "/?app=portfolio", "Your strategies, together"],
+    ["/etfs/gmd-core", "/?app=select", "GANYMEDE CORE 20"],
+    ["/proof", "/proof", "LAST ON-CHAIN NAV"],
+  ]) {
+    const response = await render(path);
+    assert.equal(response.status, 200);
+    const html = (await response.text()).replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, "");
+    const nav = html.match(/<nav\b[^>]*aria-label="Primary navigation"[^>]*>([\s\S]*?)<\/nav>/)?.[1];
+    assert.ok(nav, `${path} must provide primary navigation`);
+    const anchors = [...nav.matchAll(/<a\b([^>]*)>(.*?)<\/a>/g)];
+    assert.deepEqual(anchors.map(([, attrs, label]) => [attrs.match(/href="([^"]*)"/)?.[1], label]), links);
+    const selected = anchors.filter(([, attrs]) => attrs.includes('aria-current="page"'));
+    assert.equal(selected.length, 1, `${path} must select exactly one section`);
+    assert.ok(selected[0][1].includes(`href="${active}"`));
+    assert.ok(html.includes(heading), `${path} must render its content directly`);
+    if (path.includes("?app=")) assert.ok(!html.includes('id="hero-title"'), "App screens must not first render the landing page");
+  }
+});

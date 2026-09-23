@@ -1,8 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import Link from "next/link";
-import WalletConnect from "../WalletConnect";
+import SiteHeader from "../SiteHeader";
 
 type Holding = {
   symbol: string;
@@ -190,11 +189,7 @@ export default function ProofClient() {
 
   return (
     <main className="product-detail-page ganymede-v4 proof-page">
-      <header className="detail-topbar product-detail-topbar">
-        <button type="button" className="detail-brand" onClick={() => window.location.assign("/")} aria-label="Ganymede Index overview"><span>G</span><strong>GANYMEDE INDEX<small>TOKENIZED-STOCK ETF OPERATIONS</small></strong></button>
-        <nav className="detail-route-nav" aria-label="Product navigation"><Link href="/?app=select">ALL STRATEGIES</Link><a href="/proof" aria-current="page">PROOF OF NAV</a></nav>
-        <WalletConnect compact />
-      </header>
+      <SiteHeader current="proof" />
 
       <section className="proof-hero" aria-labelledby="proof-title">
         <div>

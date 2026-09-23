@@ -3,7 +3,7 @@
 import { KeyboardEvent as ReactKeyboardEvent, useEffect, useId, useRef, useState } from "react";
 import Link from "next/link";
 import MiniAsciiCelestial from "../../MiniAsciiCelestial";
-import WalletConnect from "../../WalletConnect";
+import SiteHeader from "../../SiteHeader";
 import DataNotice from "../../DataNotice";
 import { DEFAULT_SETTLEMENT_CHAIN } from "@/lib/chains";
 import { estimatePaperAllocation } from "@/lib/simulation";
@@ -464,11 +464,7 @@ export default function EtfDetailClient({ etf }: { etf: Etf }) {
 
   return (
     <main className={`product-detail-page ganymede-v4 product-${etf.id}`}>
-      <header className="detail-topbar product-detail-topbar">
-        <button type="button" className="detail-brand" onClick={() => window.location.assign("/")} aria-label="Ganymede Index overview"><span>G</span><strong>GANYMEDE INDEX<small>DIGITAL-ASSET STRATEGIES</small></strong></button>
-        <nav className="detail-route-nav" aria-label="Product navigation"><Link href="/?app=select">ALL STRATEGIES</Link><a href="/proof">PROOF OF NAV ↗</a></nav>
-        <WalletConnect compact />
-      </header>
+      <SiteHeader current="select" />
 
       <div className="chain-testnet-notice"><span><i /> PRE-LAUNCH TEST ENVIRONMENT</span><p>{DEFAULT_SETTLEMENT_CHAIN.name} · Chain ID {DEFAULT_SETTLEMENT_CHAIN.chainId} · Simulated fund-share registry</p><a href={DEFAULT_SETTLEMENT_CHAIN.explorerUrl} target="_blank" rel="noreferrer">OPEN EXPLORER ↗</a></div>
 

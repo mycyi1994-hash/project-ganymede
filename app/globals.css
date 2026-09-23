@@ -3,6 +3,7 @@
 @import "./design-refinement.css";
 @import "./detail-refinement.css";
 @import "./portfolio-refinement.css";
+@import "./navigation.css";
 
 @layer legacy {
 
