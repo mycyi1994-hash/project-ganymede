@@ -1,6 +1,7 @@
 @import "tailwindcss";
 @import "./ganymede-v4.css";
 @import "./design-refinement.css";
+@import "./detail-refinement.css";
 
 @layer legacy {
 

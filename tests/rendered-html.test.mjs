@@ -47,6 +47,9 @@ test("direct ETF detail URLs render product and basket data", async () => {
   const visibleHtml = html.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, "");
   assert.doesNotMatch(visibleHtml, /\$23\.84/);
   assert.match(html, /LOADING DATA/);
+  assert.match(html, /MODEL HOLDINGS/);
+  assert.match(html, /ILLUSTRATIVE YEARLY FEE/);
+  assert.match(html, /Not an upfront charge/);
 });
 
 test("proof page distinguishes loading from missing configuration", async () => {
@@ -56,6 +59,10 @@ test("proof page distinguishes loading from missing configuration", async () => 
   assert.match(html, /LOADING DATA/);
   assert.match(html, /Loading publications/);
   assert.doesNotMatch(html, /AWAITING CONFIGURATION/);
+  assert.match(html, /LAST ON-CHAIN NAV/);
+  assert.match(html, /The original document/);
+  assert.match(html, /NAV value/);
+  assert.doesNotMatch(html, /<details[^>]*\bopen(?:[=>\s])/);
 });
 
 test("unknown ETF slugs return not found", async () => {
