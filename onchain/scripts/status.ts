@@ -58,7 +58,7 @@ async function main() {
   console.log(`  explorer       ${deployment.explorer}/address/${deployment.contracts.GanymedeNavRegistry.address}`);
 
   console.log("\nlatest NAV per product");
-  for (const productId of ["core-20", "digital-income", "tech-leaders", "next-frontier"]) {
+  for (const productId of ["us-tech-x", "core-20", "digital-income", "tech-leaders", "next-frontier"]) {
     const snapshot = await registry.read.latestNav([productKey(productId)]);
     const [navPerShareMicros, sharesOutstanding, holdingsHash, effectiveAt] = snapshot;
     if (effectiveAt === 0n) {

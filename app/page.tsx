@@ -589,7 +589,7 @@ export default function Home() {
   return (
     <main className="ganymede-launch etf-platform-launch ganymede-v4" aria-labelledby="hero-title">
       <GanymedeScene />
-      <header className="platform-launch-nav"><div className="launch-wordmark"><span>G</span><b>GANYMEDE INDEX<small>CELESTIAL ASSET OBSERVATORY</small></b></div><nav className="launch-nav" aria-label="Landing navigation"><button type="button" onClick={() => openView("select")}>STRATEGIES</button><button type="button" onClick={() => openView("portfolio")}>PORTFOLIO</button></nav><WalletConnect compact /></header>
+      <header className="platform-launch-nav"><div className="launch-wordmark"><span>G</span><b>GANYMEDE INDEX<small>CELESTIAL ASSET OBSERVATORY</small></b></div><nav className="launch-nav" aria-label="Landing navigation"><button type="button" onClick={() => openView("select")}>STRATEGIES</button><button type="button" onClick={() => openView("portfolio")}>PORTFOLIO</button><a href="/proof">PROOF OF NAV</a></nav><WalletConnect compact /></header>
       <section className="launch-copy etf-launch-copy">
         <div className="launch-status-line"><span><i /> PRIVATE PRE-LAUNCH</span><b>PAPER MODE · {DEFAULT_SETTLEMENT_CHAIN.label}</b></div>
         <p>PASSIVE + ACTIVE DIGITAL-ASSET STRATEGIES</p>

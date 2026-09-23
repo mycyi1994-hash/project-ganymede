@@ -643,6 +643,18 @@ export class EngineRepository {
     await this.audit("engine.cycle_completed", "engine", result.cycleId, "ENGINE", result);
   }
 
+  async getState(key: string): Promise<{ value: string; updatedAt: string } | null> {
+    const row = await this.db.prepare("SELECT value, updated_at FROM engine_state WHERE key = ?").bind(key).first<{ value: string; updated_at: string }>();
+    return row ? { value: row.value, updatedAt: row.updated_at } : null;
+  }
+
+  async setState(key: string, value: string): Promise<void> {
+    await this.db.prepare(`
+      INSERT INTO engine_state (key, value, updated_at) VALUES (?, ?, CURRENT_TIMESTAMP)
+      ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = CURRENT_TIMESTAMP
+    `).bind(key, value).run();
+  }
+
   async audit(eventType: string, entityType: string, entityId: string, actor: string, payload: unknown): Promise<void> {
     const payloadJson = stableJson(payload);
     const payloadHash = await sha256Hex(payloadJson);

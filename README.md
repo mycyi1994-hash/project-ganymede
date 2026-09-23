@@ -4,6 +4,14 @@ Ganymede is a full-stack operating system for passive and systematic-active digi
 
 The deployed system defaults to `paper` mode. Live public issuance is deliberately gated until licensed fund, custody, transfer-agent, venue, administrator, distribution and approved offering-document integrations are configured.
 
+## OKX Dev Day 2026: Proof of NAV for tokenized stocks
+
+**GMD US TECH x** is an equal-weight basket of xStocks (AAPLx, MSFTx, NVDAx, AMZNx, METAx, TSLAx) priced from live X Layer liquidity through OKX OnchainOS. Every NAV is published to `GanymedeNavRegistry` on X Layer with `holdingsHash = sha256(composition)`, and `/proof` verifies it in the browser against the chain. Submission notes, build-period changes and the demo script are in [`docs/OKX_DEV_DAY.md`](docs/OKX_DEV_DAY.md).
+
+```bash
+npm run xstocks:check    # discover, verify and price the constituents (needs OKX_API_* and XSTOCKS_ADDRESSES)
+```
+
 ## Product mandates
 
 | Product | Style | Method |
@@ -12,6 +20,7 @@ The deployed system defaults to `paper` mode. Live public issuance is deliberate
 | GMD YIELD | Passive | Liquidity-screened inverse-volatility index with cash buffer |
 | GMD TECH | Active | Momentum, liquidity and inverse-volatility composite |
 | GMD ALPHA | Active | Higher-frequency emerging-network composite with tighter caps |
+| GMD USTX | Passive | Equal-weight xStocks basket on X Layer, fixed units per share, re-fixed quarterly |
 
 Stablecoins are excluded from the eligible investment universe. Every mandate enforces minimum history and liquidity, custody eligibility, position floors/caps, cash buffers and turnover limits.
 
@@ -45,6 +54,7 @@ npm run db:generate
 
 - `GET /api/market` — product NAV, target weights and latest engine cycle
 - `GET /api/health` — D1, Upbit and settlement-chain readiness
+- `GET /api/xstocks` — xStocks basket composition, publication history and the registry's on-chain `latestNav`
 - `GET|POST|DELETE /api/portfolio` — investor ledger, subscriptions and redemptions
 - `GET /api/operations/status` — orders, rebalances, settlements and cycle counters
 - `POST /api/operations/run` — authorized controlled cycle

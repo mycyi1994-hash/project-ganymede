@@ -16,6 +16,15 @@ export type EngineEnv = {
   SETTLEMENT_RELAYER_TOKEN?: string;
   FUND_SHARE_ADDRESS?: string;
   NAV_REGISTRY_ADDRESS?: string;
+  /** "AAPLx=0x…,MSFTx=0x…" — xStocks contracts on X Layer mainnet. See lib/xstocks/basket.ts. */
+  XSTOCKS_ADDRESSES?: string;
+  XSTOCKS_MAX_QUOTE_AGE_MINUTES?: string;
+  /** OKX OnchainOS API credentials for live xStocks prices. */
+  OKX_API_KEY?: string;
+  OKX_API_SECRET?: string;
+  OKX_API_PASSPHRASE?: string;
+  OKX_PROJECT_ID?: string;
+  ONCHAINOS_BASE_URL?: string;
 };
 
 export type AssetDefinition = {

@@ -4,6 +4,7 @@ import { SettlementClient, type SettlementRequest } from "./settlement";
 import { EngineRepository } from "./repository";
 import { calculateStrategy, shouldRebalance } from "./strategy";
 import { fetchDailyCandles, fetchMarketSnapshot, UpbitExecutionClient } from "./upbit";
+import { runXStocksCycle } from "../xstocks/cycle";
 import type {
   DailyCandle,
   EngineCycleResult,
@@ -280,6 +281,17 @@ export async function runEngineCycle(
       await repo.saveSettlement(request, settlement);
       navsPublished += 1;
       settlementsQueued += 1;
+    }
+
+    // The tokenized-stock basket prices from X Layer, independently of the KRW
+    // venue feed above. Its failures must never abort the main cycle.
+    try {
+      const xstocks = await runXStocksCycle(env, repo, settlementClient);
+      navsPublished += xstocks.navsPublished;
+      settlementsQueued += xstocks.settlementsQueued;
+      warnings.push(...xstocks.warnings);
+    } catch (error) {
+      warnings.push(`xStocks cycle failed: ${error instanceof Error ? error.message : "unknown error"}`);
     }
 
     const result: EngineCycleResult = {
