@@ -70,7 +70,7 @@ See the commit history from `Move settlement rail to X Layer testnet` onward.
 | Demo URL | https://ganymede-xlayer.gana003.workers.dev/proof |
 | `GanymedeNavRegistry` (X Layer testnet) | [`0xf320d2a7f280b7ab61e24374986869d7be34289c`](https://web3.okx.com/explorer/x-layer-testnet/address/0xf320d2a7f280b7ab61e24374986869d7be34289c) |
 | `GanymedeFundShare` (X Layer testnet) | [`0x68c4e8c904b3eddb1146ef52a76a0a2755a55b59`](https://web3.okx.com/explorer/x-layer-testnet/address/0x68c4e8c904b3eddb1146ef52a76a0a2755a55b59) |
-| Example `publishNav` transaction | _fill in_ |
+| Example `publishNav` transaction | [`0xc3f3f6c4bd0f0c85c98ddfb8049a39560b11cb9dee59d58f21f095630c2a16ba`](https://web3.okx.com/explorer/x-layer-testnet/tx/0xc3f3f6c4bd0f0c85c98ddfb8049a39560b11cb9dee59d58f21f095630c2a16ba) (GMD US TECH x inception NAV, 2026-09-23 11:15:53 UTC) |
 | Settlement relayer | https://ganymede-settlement-relayer.gana003.workers.dev/v1/health |
 
 Constituents on X Layer mainnet (196), from the xStocks product list at
