@@ -79,24 +79,25 @@ async function main() {
 
   console.log("\nhanding issuance to the relayer key...");
   const setIssuerTx = await fundShare.write.setIssuer([relayerAddress], { account: admin.account });
-  await publicClient.waitForTransactionReceipt({ hash: setIssuerTx });
+  const setIssuerReceipt = await publicClient.waitForTransactionReceipt({ hash: setIssuerTx });
+  if (setIssuerReceipt.status !== "success") throw new Error(`setIssuer reverted: ${setIssuerTx}`);
   console.log(`  setIssuer  ${setIssuerTx}`);
 
-  // Verify the wiring landed rather than trusting the receipts.
-  const [onChainIssuer, onChainAdmin, onChainAgent, onChainPublisher] = await Promise.all([
-    fundShare.read.issuer(),
-    fundShare.read.administrator(),
-    fundShare.read.transferAgent(),
-    navRegistry.read.publisher(),
-  ]);
-
-  const checks: Array<[string, string, string]> = [
-    ["fundShare.issuer", onChainIssuer, relayerAddress],
-    ["fundShare.administrator", onChainAdmin, adminAddress],
-    ["fundShare.transferAgent", onChainAgent, adminAddress],
-    ["navRegistry.publisher", onChainPublisher, relayerAddress],
+  // Verify the wiring landed rather than trusting the receipts. The public RPC
+  // is load-balanced, so a read right after a receipt can land on a node that
+  // has not seen that block yet: retry for a few seconds before failing.
+  const checks: Array<[string, () => Promise<string>, string]> = [
+    ["fundShare.issuer", () => fundShare.read.issuer(), relayerAddress],
+    ["fundShare.administrator", () => fundShare.read.administrator(), adminAddress],
+    ["fundShare.transferAgent", () => fundShare.read.transferAgent(), adminAddress],
+    ["navRegistry.publisher", () => navRegistry.read.publisher(), relayerAddress],
   ];
-  for (const [label, actual, expected] of checks) {
+  for (const [label, read, expected] of checks) {
+    let actual = await read();
+    for (let attempt = 1; attempt < 10 && actual.toLowerCase() !== expected.toLowerCase(); attempt += 1) {
+      await new Promise((resolve) => setTimeout(resolve, 1_000));
+      actual = await read();
+    }
     if (actual.toLowerCase() !== expected.toLowerCase()) {
       throw new Error(`role wiring failed: ${label} is ${actual}, expected ${expected}`);
     }
