@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import GanymedeScene from "./GanymedeScene";
+import { formatUsdMicros } from "@/lib/nav-display";
 
 type Snapshot = {
   onchain: { navPerShareMicros: string; effectiveAt: string | null } | null;
@@ -31,20 +33,20 @@ export default function NavPreview() {
 
   const record = snapshot?.onchain?.effectiveAt ? snapshot.onchain : null;
   const status = unavailable || snapshot?.onchainError
-    ? "Record unavailable"
-    : record ? "Published on chain" : snapshot ? "Awaiting publication" : "Loading on-chain record";
-  const nav = record ? new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 4, maximumFractionDigits: 4 }).format(Number(record.navPerShareMicros) / 1_000_000) : "—";
+    ? record ? "Last loaded record · refresh unavailable" : "Record unavailable"
+    : record ? "Recorded on chain" : snapshot ? "Awaiting publication" : "Loading on-chain record";
+  const nav = record ? formatUsdMicros(record.navPerShareMicros, 4) : "—";
 
   return (
     <section className="launch-proof-panel" aria-labelledby="preview-title">
-      <div className="preview-heading"><span className="preview-eyebrow">TOKENIZED STOCKS / GMD USTX</span><span className="preview-network">TESTNET</span></div>
-      <h2 id="preview-title">One basket. Every number traceable.</h2>
-      <p>Six US tech xStocks. Inspect the composition behind the published NAV.</p>
+      <div className="preview-heading"><span className="preview-eyebrow">THE NAV OBSERVATORY</span><span className="preview-network">TESTNET</span></div>
+      <div className="preview-identity"><div><span>GMD USTX</span><h2 id="preview-title">US Tech<br />basket.</h2></div><div className="preview-orbit" aria-hidden="true"><GanymedeScene /></div></div>
       <div className="preview-reading" aria-live="polite" aria-atomic="true">
         <div><span>LAST ON-CHAIN NAV / USD</span><strong>{nav}</strong></div>
         <span className={`preview-state${record && !unavailable && !snapshot?.onchainError ? " is-published" : ""}`}><i />{status}</span>
       </div>
-      <div className="preview-footer"><span>{record?.effectiveAt ? `${new Date(record.effectiveAt).toISOString().slice(11, 16)} UTC · ${snapshot?.registry.chainName}` : "X Layer Testnet · model basket"}</span><a href="/proof">Inspect proof <span aria-hidden="true">↗</span></a></div>
+      <dl className="preview-facts"><div><dt>Record effective</dt><dd>{record?.effectiveAt ? new Date(record.effectiveAt).toISOString().replace("T", " ").slice(0, 16) + " UTC" : "—"}</dd></div><div><dt>Recorded on</dt><dd>{snapshot?.registry.chainName ?? "X Layer Testnet"}</dd></div></dl>
+      <div className="preview-footer"><span>One model share · Last published value</span><a href="/proof">Open evidence <span aria-hidden="true">↗</span></a></div>
     </section>
   );
 }

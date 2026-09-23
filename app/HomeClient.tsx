@@ -1,13 +1,12 @@
 "use client";
 
 import { KeyboardEvent as ReactKeyboardEvent, useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
-import GanymedeScene from "./GanymedeScene";
 import NavPreview from "./NavPreview";
 import PortfolioView from "./PortfolioView";
 import DataNotice from "./DataNotice";
 import type { PortfolioData, PortfolioPosition } from "@/lib/portfolio-display";
 import MiniAsciiCelestial from "./MiniAsciiCelestial";
-import { DEFAULT_SETTLEMENT_CHAIN } from "@/lib/chains";
+import { XSTOCKS_CONSTITUENTS } from "@/lib/xstocks/basket";
 import SiteHeader from "./SiteHeader";
 import { etfs, type Etf, type Filter } from "./data/etfs";
 
@@ -490,17 +489,23 @@ export default function HomeClient({ initialView }: { initialView: View | "overv
       <SiteHeader current="overview" onNavigate={(next) => next === "overview" ? openOverview() : openView(next)} />
       <div className="launch-layout">
       <section className="launch-copy etf-launch-copy">
-        <div className="launch-status-line"><span><i /> PRIVATE PRE-LAUNCH</span><b>PAPER MODE · {DEFAULT_SETTLEMENT_CHAIN.label}</b></div>
-        <p>DIGITAL-ASSET STRATEGIES, MADE TRANSPARENT</p>
-        <h1 id="hero-title"><span>Know the strategy.</span><span>See the evidence.</span></h1>
-        <p className="launch-description">Explore four digital-asset strategies and a tokenized US tech basket. Understand what’s inside, compare the rules, and inspect NAV evidence on chain.</p>
-        <div className="launch-actions"><button className="launch-app" type="button" onClick={() => openView("select")}>COMPARE STRATEGIES <span aria-hidden="true">↗</span></button><a className="launch-portfolio" href="/proof">VERIFY A NAV <span aria-hidden="true">↗</span></a></div>
-        <div className="launch-assurance"><span>Published methodology</span><span>Disclosed composition</span><span>On-chain NAV evidence</span></div>
+        <div className="launch-status-line"><span><i /> GMD USTX</span><b>X LAYER TESTNET · PRE-LAUNCH</b></div>
+        <p>THE US TECH BASKET, OPEN TO INSPECTION</p>
+        <h1 id="hero-title"><span>Tokenized stocks.</span><span>Traceable NAV.</span></h1>
+        <p className="launch-description">Six US tech xStocks in one model basket. See what’s inside and compare its published net asset value with the record on X Layer.</p>
+        <div className="launch-actions"><a className="launch-app" href="/proof">INSPECT NAV EVIDENCE <span aria-hidden="true">↗</span></a><a className="launch-basket-link" href="/proof#proof-holdings">Explore the basket <span aria-hidden="true">↓</span></a></div>
+        <ul className="launch-constituents" aria-label="Basket constituents">{XSTOCKS_CONSTITUENTS.map((item) => <li key={item.symbol}><b>{item.symbol}</b><span>{item.name === "Meta Platforms" ? "Meta" : item.name}</span></li>)}</ul>
+        <p className="launch-methodology">Equal weight at fixing · Quarterly review · Model basket</p>
       </section>
-      <div className="launch-observatory"><div className="launch-orbit" aria-hidden="true"><GanymedeScene /><span>GANYMEDE / THE OBSERVATORY</span></div><NavPreview /></div>
+      <div className="launch-observatory"><NavPreview /></div>
       </div>
+      <section className="launch-evidence-path" aria-label="How to inspect the evidence">
+        <div><span>01 / THE BASKET</span><h2>Know what’s inside.</h2><p>Six disclosed constituents, with units and prices in the composition.</p></div>
+        <div><span>02 / THE RECORD</span><h2>See what was published.</h2><p>A timestamped NAV and composition hash recorded on X Layer Testnet.</p></div>
+        <div><span>03 / THE EVIDENCE</span><h2>Compare them yourself.</h2><p>Your browser checks the document, its hash and the recorded NAV.</p></div>
+      </section>
       <aside className="launch-fund-index" aria-label="Fund universe">
-        <span className="launch-fund-index-label">FOUR STRATEGIES. <br />ONE CLEAR ORBIT.</span>
+        <span className="launch-fund-index-label">ALSO EXPLORE<span>Digital-asset strategies</span><small>Four approaches · Paper portfolios</small></span>
         {etfs.map((etf, index) => <button key={etf.id} type="button" className={`product-${etf.id}`} onClick={() => openEtfDetail(etf.id)}><i>{String(index + 1).padStart(2, "0")}</i><span><b>{etf.ticker.replace("GMD ", "")}</b><small>{etf.portfolioRole}</small></span><em aria-hidden="true">↗</em></button>)}
       </aside>
       <p className="launch-disclosure"><span>PRIVATE PRE-LAUNCH</span> No public offering is active. Model, reference and indicative figures are not administrator-verified.</p>

@@ -19,11 +19,10 @@ test("server-renders the Ganymede landing page", async () => {
   assert.match(response.headers.get("content-type") ?? "", /^text\/html\b/i);
   const html = await response.text();
   assert.match(html, /GANYMEDE INDEX/);
-  assert.match(html, /FOUR STRATEGIES/);
-  assert.match(html, /ONE CLEAR ORBIT/);
-  assert.match(html, /COMPARE STRATEGIES/);
-  assert.match(html, /Know the strategy/);
-  assert.match(html, /See the evidence/);
+  assert.match(html, /Digital-asset strategies/);
+  assert.match(html, /INSPECT NAV EVIDENCE/);
+  assert.match(html, /Tokenized stocks/);
+  assert.match(html, /Traceable NAV/);
   assert.match(html, /href="\/proof"/);
   assert.match(html, /LAST ON-CHAIN NAV/);
   assert.match(html, /PRE-LAUNCH/);
@@ -76,7 +75,7 @@ test("all public screens keep the same primary links and select the requested se
     ["/?app=portfolio", "MY PORTFOLIO"], ["/proof", "PROOF OF NAV"],
   ];
   for (const [path, active, heading] of [
-    ["/", "/", "Know the strategy"],
+    ["/", "/", "Tokenized stocks"],
     ["/?app=select", "/?app=select", "Find your place in the market"],
     ["/?app=portfolio", "/?app=portfolio", "Your strategies, together"],
     ["/etfs/gmd-core", "/?app=select", "GANYMEDE CORE 20"],

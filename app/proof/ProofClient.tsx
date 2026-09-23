@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import SiteHeader from "../SiteHeader";
+import { formatUsdMicros as usd } from "@/lib/nav-display";
 
 type Holding = {
   symbol: string;
@@ -54,15 +55,7 @@ type ProofResponse = {
 
 type Check = { state: "pass" | "fail" | "pending"; detail: string };
 
-const MICROS = 1_000_000n;
 const WAD = 10n ** 18n;
-
-function usd(micros: string | bigint, digits = 2): string {
-  const value = BigInt(micros);
-  const whole = value / MICROS;
-  const fraction = (value % MICROS).toString().padStart(6, "0").slice(0, digits);
-  return `$${whole.toLocaleString("en-US")}.${fraction}`;
-}
 
 function units(wad: string): string {
   const value = BigInt(wad);
@@ -193,13 +186,10 @@ export default function ProofClient() {
 
       <section className="proof-hero" aria-labelledby="proof-title">
         <div>
-          <p className="proof-kicker">GMD USTX / NAV EVIDENCE / TESTNET</p>
+          <p className="proof-kicker">GMD USTX / THE NAV OBSERVATORY / TESTNET</p>
           <h1 id="proof-title">Proof of NAV</h1>
-          <p className="proof-lede">See the recorded value of the US tech basket, then inspect the evidence behind it. Three checks compare the published document with the on-chain record.</p>
-        <div className={`proof-result-heading proof-result-${summaryState}`} aria-live="polite" aria-atomic="true">
-          <div><span className="proof-result-eyebrow">BROWSER VERIFICATION</span><h2 id="proof-verify">{summaryText}</h2></div>
-          <span className="proof-count">{summaryState === "pass" || summaryState === "fail" ? `${passed} / 3 CHECKS PASSED` : summaryState === "unavailable" ? "DATA UNAVAILABLE" : summaryState === "loading" ? "LOADING DATA" : summaryState === "waiting" ? "NOT YET VERIFIED" : "CHECKING…"}</span>
-        </div>
+          <p className="proof-lede">A published value. A visible composition. An on-chain record to compare them against. Inspect the evidence behind the US tech basket.</p>
+          <div className="proof-jump-links"><a href="#proof-holdings">Explore the basket <span aria-hidden="true">↓</span></a><a href="#proof-source">Inspect source records <span aria-hidden="true">↓</span></a></div>
         </div>
         <aside className="proof-record" aria-label="Last on-chain NAV">
           <span>LAST ON-CHAIN NAV / USD</span>
@@ -210,9 +200,13 @@ export default function ProofClient() {
       </section>
 
       <section className="proof-section proof-result" aria-label="Evidence checks">
+        <div className={`proof-result-heading proof-result-${summaryState}`} aria-live="polite" aria-atomic="true">
+          <div><span className="proof-result-eyebrow">CHECKED IN YOUR BROWSER</span><h2 id="proof-verify">{summaryText}</h2></div>
+          <span className="proof-count">{summaryState === "pass" || summaryState === "fail" ? `${passed} / 3 CHECKS PASSED` : summaryState === "unavailable" ? "DATA UNAVAILABLE" : summaryState === "loading" ? "LOADING DATA" : summaryState === "waiting" ? "NOT YET VERIFIED" : "CHECKING…"}</span>
+        </div>
         {error && <p className="proof-refresh-error" role="alert">{data ? "The latest refresh failed. The record shown is from the last successful load." : "NAV evidence could not be loaded."} <button type="button" onClick={() => void load()}>TRY AGAIN</button></p>}
         {data?.onchainError && <p className="proof-refresh-error">The on-chain record is currently unavailable.</p>}
-        <ol className="proof-checks">{checkList.map(({ label, check, description }) => <li key={label} className={`proof-check proof-check-${check?.state ?? "pending"}`}><b aria-hidden="true">{check?.state === "pass" ? "✓" : check?.state === "fail" ? "!" : "…"}</b><div><strong>{label}</strong><p>{check?.state === "pass" ? description : check?.state === "fail" ? "Could not confirm a match. Open the details below." : "Waiting for evidence."}</p><span className="check-state-label">{check?.state === "pass" ? "MATCHED" : check?.state === "fail" ? "NEEDS ATTENTION" : "PENDING"}</span></div></li>)}</ol>
+        <ol className="proof-checks">{checkList.map(({ label, check, description }, index) => <li key={label} className={`proof-check proof-check-${check?.state ?? "pending"}`}><div className="proof-check-top"><span>0{index + 1} / {index === 0 ? "RECORD" : index === 1 ? "DOCUMENT" : "VALUE"}</span><b aria-hidden="true">{check?.state === "pass" ? "✓" : check?.state === "fail" ? "!" : "…"}</b></div><div><strong>{label}</strong><p>{check?.state === "pass" ? description : check?.state === "fail" ? "Could not confirm a match. Open the details below." : "Waiting for evidence."}</p><span className="check-state-label">{check?.state === "pass" ? "MATCHED" : check?.state === "fail" ? "NEEDS ATTENTION" : "PENDING"}</span></div></li>)}</ol>
         <p className="proof-footnote">These checks establish document consistency. They do not verify custody, backing or investment safety.</p>
         <details className="detail-disclosure proof-check-details"><summary>Inspect the checks & registry <span aria-hidden="true">+</span></summary><div className="disclosure-content">
           {checkList.map(({ label, check }) => <p key={label}><strong>{label}</strong> — {check?.detail ?? "Waiting for evidence."}</p>)}
@@ -221,17 +215,19 @@ export default function ProofClient() {
         </div></details>
       </section>
 
-      <section className="proof-section" aria-labelledby="proof-holdings">
+      <section className="proof-section proof-basket-section" aria-labelledby="proof-holdings">
         <header><div><span className="proof-result-eyebrow">{publishedComposition ? "PUBLISHED COMPOSITION" : "LATEST PRICED COMPOSITION"}</span><h2 id="proof-holdings">Inside the US tech basket.</h2></div><p>{composition ? `Priced ${time(composition.asOf)}` : error ? "Composition unavailable" : "Waiting for composition data"}</p></header>
         {composition && !publishedComposition && <p className="proof-footnote">This composition has not been matched to the on-chain record shown above.</p>}
+        <div className="proof-basket-layout"><aside className="proof-basket-method"><span>THE BASKET AT A GLANCE</span><strong>{composition ? String(composition.holdings.length).padStart(2, "0") : "—"}</strong><p>US tech xStocks</p><dl><div><dt>Allocation</dt><dd>Equal weight at fixing</dd></div><div><dt>Review</dt><dd>Quarterly</dd></div><div><dt>Pricing source</dt><dd>OKX OnchainOS · X Layer</dd></div></dl><p className="basket-method-note">Fixed token units per model share. Their value changes with market prices.</p></aside>
         <div className="proof-table-wrap proof-simple-wrap"><table className="proof-table proof-simple-table"><thead><tr><th scope="col">Token</th><th scope="col">Weight at fixing</th><th scope="col">Value / share</th></tr></thead><tbody>
-          {(composition?.holdings ?? []).map((holding) => <tr key={holding.symbol}><th scope="row"><span>{holding.symbol}</span><small>{data?.pricing.constituents.find((item) => item.symbol === holding.symbol)?.name}</small></th><td>{(holding.weightBps / 100).toFixed(2)}%</td><td>{usd(holding.valueMicros, 4)}</td></tr>)}
+          {(composition?.holdings ?? []).map((holding) => <tr key={holding.symbol}><th scope="row"><span>{holding.symbol}</span><small>{data?.pricing.constituents.find((item) => item.symbol === holding.symbol)?.name}</small></th><td><span>{(holding.weightBps / 100).toFixed(2)}%</span><span className="proof-weight-track" aria-hidden="true"><i style={{ width: `${Math.max(0, Math.min(100, holding.weightBps / 100))}%` }} /></span></td><td>{usd(holding.valueMicros, 4)}</td></tr>)}
         </tbody></table>{!composition && <p className="proof-empty">{data ? "No priced composition is available yet." : error ? "Composition unavailable." : "Loading composition…"}</p>}</div>
+        </div>
         <p className="proof-footnote">Weights are set at fixing and can drift with prices. {composition ? `Basket fixed ${time(composition.basketFixedAt)}.` : ""}</p>
         <details className="detail-disclosure"><summary>Token addresses & pricing details <span aria-hidden="true">+</span></summary><div className="disclosure-content"><div className="proof-table-wrap"><table className="proof-table"><thead><tr><th scope="col">Token / address</th><th scope="col">Units / share</th><th scope="col">Price</th><th scope="col">Priced at</th></tr></thead><tbody>{(composition?.holdings ?? []).map((holding) => <tr key={holding.symbol}><th scope="row">{holding.symbol}<small><a href={`${data?.pricing.explorerUrl}/address/${holding.address}`} target="_blank" rel="noreferrer">{shortHash(holding.address)} ↗</a></small></th><td>{units(holding.unitsWad)}</td><td>{usd(holding.priceMicros, 4)}</td><td>{time(holding.priceTime)}</td></tr>)}</tbody></table></div>{data?.latest?.blockers && data.latest.blockers.length > 0 && <ul className="proof-blockers" aria-label="Why the latest NAV was not published">{data.latest.blockers.map((blocker) => <li key={blocker}>Not published: {blocker}</li>)}</ul>}<p className="proof-footnote">Latest pricing: {status === "loading" ? "LOADING DATA" : status === "unavailable" ? "DATA UNAVAILABLE" : STATUS_LABEL[status]} · {time(data?.latest?.evaluatedAt)}. Prices: OKX OnchainOS DEX, X Layer (chain {data?.pricing.chainIndex ?? "196"}).</p></div></details>
       </section>
 
-      <section className="proof-section proof-supporting" aria-label="Supporting evidence">
+      <section id="proof-source" className="proof-section proof-supporting" aria-label="Supporting evidence">
         <details className="detail-disclosure"><summary><span>On-chain publications<small>{data ? `${data.history.length} recent records` : error ? "Publications unavailable" : "Loading publications…"}</small></span><span aria-hidden="true">+</span></summary><div className="disclosure-content">
           {data && data.history.length > 0 ? <div className="proof-table-wrap"><table className="proof-table"><thead><tr><th scope="col">Effective</th><th scope="col">NAV / share</th><th scope="col">Holdings hash</th><th scope="col">Status</th><th scope="col">Transaction</th></tr></thead><tbody>{data.history.map((entry) => <tr key={entry.asOf}><th scope="row">{time(entry.asOf)}</th><td>{usd(entry.navPerShareMicros, 4)}</td><td><code>{shortHash(entry.holdingsHash)}</code></td><td>{entry.status.toUpperCase()}</td><td>{entry.txHash ? <a href={`${data.registry.explorerUrl}/tx/${entry.txHash}`} target="_blank" rel="noreferrer">{shortHash(entry.txHash)} ↗</a> : entry.error ?? "—"}</td></tr>)}</tbody></table></div> : <p className="proof-empty">{data ? "No publications yet." : error ? "Publications unavailable." : "Loading publications…"}</p>}
         </div></details>
