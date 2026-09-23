@@ -229,7 +229,6 @@ export async function runEngineCycle(
   const owner = `${cycleId}:${trigger}`;
   const startedAt = new Date().toISOString();
   const mode = env.TRADING_MODE === "live" ? "live" : "paper";
-  await repo.seed();
   const due = options.force || await repo.cycleIsDue(options.minimumIntervalSeconds ?? DEFAULT_CYCLE_INTERVAL_SECONDS);
   if (!due) {
     return {
@@ -247,6 +246,9 @@ export async function runEngineCycle(
   }
 
   try {
+    // Seeding rewrites the product and asset rows, so it runs once per cycle
+    // rather than on every request that wakes the engine.
+    await repo.seed();
     const execution = new UpbitExecutionClient(env);
     const settlementClient = new SettlementClient(env);
     const market = await loadMarketData();

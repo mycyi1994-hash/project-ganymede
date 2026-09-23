@@ -8,7 +8,6 @@ export async function GET() {
   const currentEnv = engineEnv();
   const repo = new EngineRepository(currentEnv.DB);
   try {
-    await repo.seed();
     let overview = await repo.marketOverview();
     if (!overview.lastCycle) {
       await runEngineCycle(currentEnv, "request", { force: true });
