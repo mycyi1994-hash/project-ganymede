@@ -67,10 +67,25 @@ See the commit history from `Move settlement rail to X Layer testnet` onward.
 
 | Item | Value |
 | --- | --- |
-| Demo URL | _fill in_ |
-| `GanymedeNavRegistry` (X Layer testnet) | _fill in_ |
-| `GanymedeFundShare` (X Layer testnet) | _fill in_ |
+| Demo URL | https://ganymede-xlayer.gana003.workers.dev/proof |
+| `GanymedeNavRegistry` (X Layer testnet) | [`0xf320d2a7f280b7ab61e24374986869d7be34289c`](https://web3.okx.com/explorer/x-layer-testnet/address/0xf320d2a7f280b7ab61e24374986869d7be34289c) |
+| `GanymedeFundShare` (X Layer testnet) | [`0x68c4e8c904b3eddb1146ef52a76a0a2755a55b59`](https://web3.okx.com/explorer/x-layer-testnet/address/0x68c4e8c904b3eddb1146ef52a76a0a2755a55b59) |
 | Example `publishNav` transaction | _fill in_ |
+| Settlement relayer | https://ganymede-settlement-relayer.gana003.workers.dev/v1/health |
+
+Constituents on X Layer mainnet (196), from the xStocks product list at
+[xstocks.fi](https://xstocks.fi/us/products) and confirmed on chain with
+`npm run xstocks:check -- verify` (symbol and 18 decimals). All six share one
+proxy implementation.
+
+| Token | Address |
+| --- | --- |
+| AAPLx | `0x9d275685dc284c8eb1c79f6aba7a63dc75ec890a` |
+| MSFTx | `0x5621737f42dae558b81269fcb9e9e70c19aa6b35` |
+| NVDAx | `0xc845b2894dbddd03858fd2d643b4ef725fe0849d` |
+| AMZNx | `0x3557ba345b01efa20a1bddc61f573bfd87195081` |
+| METAx | `0x96702be57cd9777f835117a809c7124fe4ec989a` |
+| TSLAx | `0x8ad3c73f833d3f9a523ab01476625f269aeb7cf0` |
 
 ## 90-second demo script
 
