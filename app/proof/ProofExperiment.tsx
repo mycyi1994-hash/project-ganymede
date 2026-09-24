@@ -4,6 +4,7 @@ import { useState } from "react";
 import { changedPriceCopy } from "@/lib/xstocks/proof-experiment";
 import { verifyComposition } from "@/lib/xstocks/proof";
 import type { OnchainNav } from "@/lib/xstocks/onchain";
+import { formatRecordTime } from "@/lib/nav-status";
 import { formatUsdMicros } from "@/lib/nav-display";
 
 type Result = Awaited<ReturnType<typeof verifyComposition>>;
@@ -24,6 +25,7 @@ export default function ProofExperiment({ canonical, record }: { canonical: stri
   };
   return <section className="proof-section proof-experiment" aria-labelledby="experiment-title">
     <header><p className="proof-kicker">Local verification experiment</p><h2 id="experiment-title">Change one price. Check the evidence.</h2><p>Try a $1 increase to {changed.symbol} in a copy of the published document. The holding values, NAV and chain record stay unchanged.</p></header>
+    <p className="proof-footnote">Verified snapshot effective {formatRecordTime(record.effectiveAt)}. This experiment stays on that snapshot while a refresh is in progress.</p>
     <div className="experiment-prices"><div><span>Published token price</span><strong>{formatUsdMicros(changed.originalPrice, 4)}</strong></div><span aria-hidden="true">→</span><div><span>Price in the edited copy</span><strong>{formatUsdMicros(changed.changedPrice, 4)}</strong></div></div>
     <div className="experiment-actions"><button type="button" className="button is-primary" onClick={() => void run("changed")} disabled={busy}>Change price by $1 & verify</button><button type="button" className="button" onClick={() => void run("original")} disabled={busy}>Restore original & verify</button></div>
     <div className="experiment-outcome" role="status" aria-live="polite" aria-atomic="true" aria-busy={busy}>

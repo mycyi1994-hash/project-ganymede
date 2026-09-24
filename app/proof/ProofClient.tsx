@@ -85,6 +85,7 @@ export default function ProofClient() {
   const [copyError, setCopyError] = useState("");
   const [now, setNow] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
+  const [experiment, setExperiment] = useState<{ canonical: string; record: OnchainNav } | null>(null);
 
   const load = useCallback(async () => {
     setRefreshing(true);
@@ -117,6 +118,7 @@ export default function ProofClient() {
     (async () => {
       let record: OnchainNav | null = null;
       let rpcError: string | null = null;
+      let experimentSource: string | null = null;
       let hash: Check = { state: "pending", detail: "Waiting for a directly read on-chain record." };
       let nav: Check = { state: "pending", detail: "Waiting for the published composition." };
       let chain: Check = { state: "pending", detail: "Reading the public X Layer RPC from this browser." };
@@ -132,6 +134,7 @@ export default function ProofClient() {
             const result = await verifyComposition(published.canonical, record);
             hash = result.hash;
             nav = result.nav;
+            if (hash.state === "pass" && nav.state === "pass") experimentSource = published.canonical;
           } else {
             hash = { state: "pending", detail: "The directly read hash has no matching document in this response. A publication may have occurred during loading; retry to fetch its composition." };
             nav = { state: "pending", detail: "A matching document is required to recalculate NAV." };
@@ -141,7 +144,10 @@ export default function ProofClient() {
         rpcError = reason instanceof Error ? reason.message : "Direct RPC read failed.";
         chain = { state: "pending", detail: "Direct verification unavailable: " + rpcError };
       }
-      if (!cancelled) setVerification({ source: data, hash, chain, nav, record, rpcError });
+      if (!cancelled) {
+        setVerification({ source: data, hash, chain, nav, record, rpcError });
+        setExperiment(experimentSource && record ? { canonical: experimentSource, record } : null);
+      }
     })();
     return () => { cancelled = true; };
   }, [data]);
@@ -237,7 +243,7 @@ export default function ProofClient() {
         </div></details>
       </section>
 
-      {summaryState === "pass" && verifiedCanonical && checks?.record ? <ProofExperiment key={`${checks.record.holdingsHash}:${checks.record.effectiveAt}`} canonical={verifiedCanonical} record={checks.record} /> : <section className="proof-section proof-experiment-unavailable"><h2>Try changing one price.</h2><p>The local experiment becomes available after the original document passes all three checks. Resolve any missing data or connection problem above first.</p></section>}
+      {!error && experiment ? <ProofExperiment key={`${experiment.record.holdingsHash}:${experiment.record.effectiveAt}`} canonical={experiment.canonical} record={experiment.record} /> : <section className="proof-section proof-experiment-unavailable"><h2>Try changing one price.</h2><p>The local experiment becomes available after the original document passes all three checks. Resolve any missing data or connection problem above first.</p></section>}
 
       <section id="proof-source" className="proof-section proof-supporting" aria-label="Supporting evidence">
         <details className="detail-disclosure"><summary><span>On-chain publications<small>{data ? `${data.history.length} recent records` : error ? "Publications unavailable" : "Loading publications…"}</small></span><span aria-hidden="true">+</span></summary><div className="disclosure-content">
