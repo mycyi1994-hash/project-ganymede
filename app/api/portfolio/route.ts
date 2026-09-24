@@ -9,7 +9,6 @@ export async function GET(request: Request) {
   if (!identity) return noStoreJson({ error: "Authenticated investor identity required" }, { status: 401 });
   try {
     const repo = new EngineRepository(engineEnv().DB);
-    await repo.seed();
     return noStoreJson(await repo.portfolio(identity.subject));
   } catch (error) {
     return jsonError(error);

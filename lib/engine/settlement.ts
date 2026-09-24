@@ -30,6 +30,7 @@ async function rpc<T>(rpcUrl: string, method: string, params: unknown[]): Promis
   const response = await fetch(rpcUrl, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
+    signal: AbortSignal.timeout(10_000),
     body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }),
   });
   if (!response.ok) throw new Error(`Settlement RPC ${response.status}`);
@@ -95,6 +96,7 @@ export class SettlementClient {
     }
     try {
       const response = await fetch(`${this.env.SETTLEMENT_RELAYER_URL.replace(/\/$/, "")}/v1/eligibility/${walletAddress}`, {
+        signal: AbortSignal.timeout(10_000),
         headers: { Authorization: `Bearer ${this.env.SETTLEMENT_RELAYER_TOKEN}`, Accept: "application/json" },
       });
       if (!response.ok) throw new Error(`Relayer ${response.status}`);
@@ -113,6 +115,7 @@ export class SettlementClient {
     }
     try {
       const response = await fetch(`${this.env.SETTLEMENT_RELAYER_URL.replace(/\/$/, "")}/v1/settlements`, {
+        signal: AbortSignal.timeout(20_000),
         method: "POST",
         headers: { Authorization: `Bearer ${this.env.SETTLEMENT_RELAYER_TOKEN}`, "Content-Type": "application/json", "Idempotency-Key": `${request.entityType}:${request.entityId}:${request.action}` },
         body: JSON.stringify({

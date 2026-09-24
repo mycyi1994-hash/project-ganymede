@@ -26,7 +26,7 @@ Stablecoins are excluded from the eligible investment universe. Every mandate en
 
 ## Operating loop
 
-The Cloudflare Worker runs every five minutes and may also wake opportunistically on requests. A D1 lease prevents overlapping cycles.
+The Cloudflare Worker runs every five minutes on its cron schedule or through the authenticated operator API; public requests never start a cycle or write to the database. A D1 lease prevents overlapping cycles.
 
 1. Refresh Upbit tickers, order books and daily candles; use clearly labelled deterministic reference data if the venue is unavailable.
 2. Process controlled subscription and redemption states.

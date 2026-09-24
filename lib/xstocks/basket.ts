@@ -207,6 +207,8 @@ export async function evaluateBasket(input: EvaluateInput): Promise<Evaluation> 
     const quote = input.quotes.get(constituent.symbol);
     if (!quote) blockers.push(`No live price for ${constituent.symbol}`);
     else if (quote.priceMicros <= 0n) blockers.push(`Non-positive price for ${constituent.symbol}`);
+    else if (quote.address.toLowerCase() !== constituent.address.toLowerCase()) blockers.push(`Price address mismatch for ${constituent.symbol}`);
+    else if (!Number.isFinite(Date.parse(quote.time)) || Date.parse(quote.time) > Date.parse(input.now) + 60_000) blockers.push(`Invalid price timestamp for ${constituent.symbol}`);
     else if (quoteAgeMinutes(quote, input.now) > input.maxQuoteAgeMinutes) {
       blockers.push(`${constituent.symbol} price is ${Math.round(quoteAgeMinutes(quote, input.now))} minutes old`);
     }

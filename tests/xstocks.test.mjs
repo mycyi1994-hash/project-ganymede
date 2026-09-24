@@ -134,23 +134,26 @@ function priceResponse() {
   return new Response(JSON.stringify({ code: "0", msg: "", data }), { status: 200, headers: { "Content-Type": "application/json" } });
 }
 
-test("retries once when the price API answers with a rate-limit page", async () => {
-  const responses = [new Response("error code: 1015", { status: 429 }), priceResponse()];
+test("retries once when the price API answers with a transient server error", async () => {
+  const responses = [new Response("upstream unavailable", { status: 503 }), priceResponse()];
   let calls = 0;
   const fetcher = async () => { calls += 1; return responses.shift(); };
-  const { quotes, warnings } = await fetchXStockQuotes(CREDENTIALS, CONSTITUENTS, fetcher, 10);
+  const { quotes, warnings, retryAt } = await fetchXStockQuotes(CREDENTIALS, CONSTITUENTS, fetcher);
   assert.equal(calls, 2);
   assert.deepEqual(warnings, []);
+  assert.equal(retryAt, undefined);
   assert.equal(quotes.size, XSTOCKS_CONSTITUENTS.length);
   assert.equal(quotes.get("AAPLx").priceMicros, parseDecimalMicros(PRICES.AAPLx));
 });
 
-test("reports a second failure instead of retrying again", async () => {
+test("a rate-limited price request sets a cooldown instead of retrying", async () => {
   let calls = 0;
   const fetcher = async () => { calls += 1; return new Response("error code: 1015", { status: 429 }); };
-  const { quotes, warnings } = await fetchXStockQuotes(CREDENTIALS, CONSTITUENTS, fetcher, 10);
-  assert.equal(calls, 2);
+  const before = Date.now();
+  const { quotes, warnings, retryAt } = await fetchXStockQuotes(CREDENTIALS, CONSTITUENTS, fetcher);
+  assert.equal(calls, 1);
   assert.equal(quotes.size, 0);
   assert.match(warnings[0], /429/);
-  assert.match(warnings[0], /1015/);
+  assert.match(warnings[0], /rate limit/);
+  assert.ok(Date.parse(retryAt) - before >= 10 * 60_000, `cooldown until ${retryAt} is shorter than ten minutes`);
 });

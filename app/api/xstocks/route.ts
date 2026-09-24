@@ -2,7 +2,7 @@ import { engineEnv, jsonError, noStoreJson } from "@/lib/engine/api-helpers";
 import { EngineRepository } from "@/lib/engine/repository";
 import { SettlementClient } from "@/lib/engine/settlement";
 import { constituentsWithAddresses, XSTOCKS_CHAIN, XSTOCKS_PRODUCT } from "@/lib/xstocks/basket";
-import { STATE_HISTORY, STATE_LATEST, type LatestState, type Publication } from "@/lib/xstocks/cycle";
+import { STATE_CONFIRMED, STATE_DOCUMENT_PREFIX, STATE_HISTORY, STATE_LATEST, type LatestState, type Publication } from "@/lib/xstocks/cycle";
 import { readLatestNav, type OnchainNav } from "@/lib/xstocks/onchain";
 
 export const dynamic = "force-dynamic";
@@ -12,9 +12,11 @@ export async function GET() {
   try {
     const repo = new EngineRepository(env.DB);
     const settlement = new SettlementClient(env);
-    const [latestRow, historyRow] = await Promise.all([repo.getState(STATE_LATEST), repo.getState(STATE_HISTORY)]);
+    const [latestRow, historyRow, confirmedRow] = await Promise.all([repo.getState(STATE_LATEST), repo.getState(STATE_HISTORY), repo.getState(STATE_CONFIRMED)]);
     const latest = latestRow ? JSON.parse(latestRow.value) as LatestState : null;
     const history = historyRow ? JSON.parse(historyRow.value) as Publication[] : [];
+    const confirmed = confirmedRow ? JSON.parse(confirmedRow.value) as Publication : null;
+    if (confirmed && !history.some((entry) => entry.holdingsHash === confirmed.holdingsHash)) history.push(confirmed);
 
     let onchain: OnchainNav | null = null;
     let onchainError: string | null = null;
@@ -27,6 +29,10 @@ export async function GET() {
       }
     } else {
       onchainError = "NAV_REGISTRY_ADDRESS is not configured";
+    }
+    if (onchain?.effectiveAt && !history.some((entry) => entry.holdingsHash === onchain!.holdingsHash)) {
+      const documentRow = await repo.getState(`${STATE_DOCUMENT_PREFIX}${onchain.holdingsHash}`);
+      if (documentRow) history.push(JSON.parse(documentRow.value) as Publication);
     }
 
     return noStoreJson({

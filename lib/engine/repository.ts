@@ -75,9 +75,12 @@ function validateWallet(wallet: string | null | undefined): string | null {
 }
 
 export class EngineRepository {
-  constructor(readonly db: D1Database) {}
+  readonly db: D1Database;
+  constructor(db: D1Database) { this.db = db; }
 
   async seed(): Promise<void> {
+    const version = await sha256Hex(stableJson({ schema: 1, products: PRODUCT_DEFINITIONS, assets: ASSET_UNIVERSE }));
+    if ((await this.getState("seed:version"))?.value === version) return;
     const statements: D1PreparedStatement[] = [];
     for (const product of PRODUCT_DEFINITIONS) {
       statements.push(this.db.prepare(`
@@ -151,6 +154,8 @@ export class EngineRepository {
       }
     }
     for (let index = 0; index < statements.length; index += 75) await this.db.batch(statements.slice(index, index + 75));
+    // Written only after every batch succeeds, so an interrupted seed is retryable.
+    await this.setState("seed:version", version);
   }
 
   async acquireLease(name: string, owner: string, ttlSeconds: number): Promise<boolean> {
@@ -206,6 +211,12 @@ export class EngineRepository {
             close_krw = excluded.close_krw,
             volume_krw = excluded.volume_krw,
             source = excluded.source
+          WHERE price_candles.open_krw != excluded.open_krw
+             OR price_candles.high_krw != excluded.high_krw
+             OR price_candles.low_krw != excluded.low_krw
+             OR price_candles.close_krw != excluded.close_krw
+             OR price_candles.volume_krw != excluded.volume_krw
+             OR price_candles.source != excluded.source
         `).bind(candle.symbol, candle.candleDate, candle.openKrw.toString(), candle.highKrw.toString(), candle.lowKrw.toString(), candle.closeKrw.toString(), candle.volumeKrw.toString(), candle.source));
       }
     }

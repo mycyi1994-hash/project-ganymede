@@ -69,53 +69,47 @@ export function normalizeQuoteTime(value: unknown): string {
 }
 
 type PriceRow = { chainIndex?: string; tokenContractAddress?: string; price?: string; time?: string | number };
-type PricePayload = { code?: string | number; msg?: string; data?: PriceRow[] };
-
-/** Trial keys allow one request per second, so a retry waits at least that long. */
-const PRICE_RETRY_DELAY_MS = 1_500;
 
 export async function fetchXStockQuotes(
   credentials: OnchainOsCredentials | null,
   constituents: Array<{ symbol: string; address: string | null }>,
   fetcher: typeof fetch = fetch,
-  retryDelayMs = PRICE_RETRY_DELAY_MS,
-): Promise<{ quotes: Map<string, Quote>; warnings: string[] }> {
+): Promise<{ quotes: Map<string, Quote>; warnings: string[]; retryAt?: string }> {
   const quotes = new Map<string, Quote>();
   const priced = constituents.filter((constituent): constituent is { symbol: string; address: string } => Boolean(constituent.address));
   if (!credentials) return { quotes, warnings: ["OKX OnchainOS credentials are not configured (OKX_API_KEY / OKX_API_SECRET / OKX_API_PASSPHRASE)"] };
   if (priced.length === 0) return { quotes, warnings: ["No xStocks addresses configured"] };
 
   const body = JSON.stringify(priced.map((constituent) => ({ chainIndex: XSTOCKS_CHAIN.chainIndex, tokenContractAddress: constituent.address.toLowerCase() })));
-  const request = async () => {
-    const response = await fetcher(`${credentials.baseUrl}${PRICE_PATH}`, {
-      method: "POST",
-      headers: await signedHeaders(credentials, "POST", PRICE_PATH, body),
-      body,
-    });
-    const text = await response.text();
-    let payload: PricePayload | null = null;
-    try {
-      payload = JSON.parse(text) as PricePayload;
-    } catch {
-      // The rate limiter in front of the API answers with an HTML page.
-    }
-    return { response, payload, text };
-  };
   try {
-    let attempt = await request();
-    if (!attempt.response.ok || !attempt.payload) {
-      // One paced retry: the limiter in front of OKX occasionally rejects a first request.
-      await new Promise((resolve) => setTimeout(resolve, retryDelayMs));
-      attempt = await request();
+    // Only transient server errors get one bounded retry. Rate limits wait for
+    // the next scheduled cycle rather than adding pressure to the provider.
+    let response!: Response;
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      response = await fetcher(`${credentials.baseUrl}${PRICE_PATH}`, {
+        method: "POST",
+        headers: await signedHeaders(credentials, "POST", PRICE_PATH, body),
+        body,
+        signal: AbortSignal.timeout(10_000),
+      });
+      if (![502, 503, 504].includes(response.status) || attempt === 1) break;
+      await response.body?.cancel();
+      await new Promise((resolve) => setTimeout(resolve, 500));
     }
-    const { response, payload, text } = attempt;
-    if (!payload) return { quotes, warnings: [`OnchainOS price API ${response.status}: ${text.trim().slice(0, 80) || "empty response"}`] };
-    if (!response.ok || String(payload.code) !== "0") {
+    if (!response.ok) {
+      const limited = response.status === 429 || response.status === 403;
+      const retryAfter = response.headers.get("Retry-After");
+      const retryMs = retryAfter && /^\d+$/.test(retryAfter) ? Number(retryAfter) * 1000 : retryAfter ? Date.parse(retryAfter) - Date.now() : 0;
+      const retryAt = limited ? new Date(Date.now() + Math.max(10 * 60_000, Number.isFinite(retryMs) ? retryMs : 0)).toISOString() : undefined;
+      return { quotes, retryAt, warnings: [`OnchainOS price API HTTP ${response.status}${limited ? ": provider access or rate limit; waiting before retry" : ": service unavailable"}`] };
+    }
+    const payload = await response.json() as { code?: string | number; msg?: string; data?: PriceRow[] };
+    if (String(payload.code) !== "0") {
       return { quotes, warnings: [`OnchainOS price API ${response.status}: ${payload.msg || `code ${payload.code}`}`] };
     }
     const warnings: string[] = [];
     for (const constituent of priced) {
-      const row = payload.data?.find((candidate) => candidate.tokenContractAddress?.toLowerCase() === constituent.address.toLowerCase());
+      const row = payload.data?.find((candidate) => String(candidate.chainIndex) === XSTOCKS_CHAIN.chainIndex && candidate.tokenContractAddress?.toLowerCase() === constituent.address.toLowerCase());
       if (!row?.price) {
         warnings.push(`OnchainOS returned no price for ${constituent.symbol}`);
         continue;

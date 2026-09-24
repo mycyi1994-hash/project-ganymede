@@ -26,8 +26,8 @@ which tokens, how many units, or which prices produced that number.
 ## How to verify (≈30 seconds)
 
 1. Open `/proof` on the demo site.
-2. All three checks run in your browser: on-chain record, composition hash and
-   NAV arithmetic.
+2. All three checks run in your browser: a direct `latestNav` read from the X Layer
+   RPC, the composition hash, and the recalculated NAV.
 3. Click the transaction link to see the `publishNav` call on the X Layer explorer.
 4. Optional: COPY JSON, run `sha256sum`, and compare with `latestNav` on the
    registry contract.

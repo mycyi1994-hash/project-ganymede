@@ -47,17 +47,9 @@ const worker = {
       }, allowedWidths);
     }
 
-    const response = await handler.fetch(request, env, ctx);
-    const shouldWakeEngine = !url.pathname.startsWith("/_next/")
-      && !url.pathname.startsWith("/_vinext/")
-      && !url.pathname.startsWith("/api/operations/run")
-      && !url.pathname.match(/\.(?:png|jpg|jpeg|gif|webp|svg|ico|css|js|map|woff2?)$/i);
-    if (shouldWakeEngine && env.DB) {
-      ctx.waitUntil(runEngineCycle(env, "request").catch((error) => {
-        console.error("Ganymede engine request wake failed", error);
-      }));
-    }
-    return response;
+    // Public reads must not consume the database's write budget or start trades.
+    // Pricing runs on the cron schedule or through the authenticated operator API.
+    return handler.fetch(request, env, ctx);
   },
 
   async scheduled(controller: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {

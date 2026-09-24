@@ -7,8 +7,8 @@ export async function generateMetadata(): Promise<Metadata> {
   const host = requestHeaders.get("x-forwarded-host") ?? requestHeaders.get("host") ?? "neptune-onboarding-seoul.duddlfqotl.chatgpt.site";
   const protocol = requestHeaders.get("x-forwarded-proto") ?? "https";
   const imageUrl = `${protocol}://${host}/og-v4.png`;
-  const title = "Ganymede Index — Know the strategy. See the evidence.";
-  const description = "Explore four digital-asset strategies and a tokenized US tech basket. Compare the rules and inspect on-chain NAV evidence in a private pre-launch test environment.";
+  const title = "Ganymede Index — Tokenized stocks. Traceable NAV.";
+  const description = "Six US tech xStocks in one model basket. Inspect its composition and compare the published NAV with the record on X Layer Testnet.";
 
   return {
     title,
