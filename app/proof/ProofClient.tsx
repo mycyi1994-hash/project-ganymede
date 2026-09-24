@@ -245,9 +245,12 @@ export default function ProofClient() {
 
       <section className="proof-section proof-chain-summary" aria-labelledby="proof-record"><header><h2 id="proof-record">Read the chain record.</h2><p>{checks?.record ? "Fetched directly by your browser from X Layer Testnet." : "Server snapshot only until the direct browser read succeeds."}</p></header><dl><div><dt>Recorded NAV / USD</dt><dd>{record ? usd(record.navPerShareMicros, 4) : "—"}</dd></div><div><dt>Composition fingerprint</dt><dd><code>{record?.holdingsHash ?? "Awaiting a record"}</code></dd></div><div><dt>Effective at</dt><dd><RecordTime value={record?.effectiveAt} /></dd></div></dl><p>The fingerprint identifies the exact published document. A matching fingerprint does not establish custody or backing.</p></section>
 
+      <div className="proof-status-pair" aria-label="Data availability">
       <section className="proof-pricing-status" aria-label="Latest pricing status"><div><span>LATEST PRICING</span><strong className={"pricing-label pricing-" + pricing.tone}>{data || error ? pricing.label : "Loading pricing status…"}</strong><p>{data || error ? pricing.detail : "Retrieving the latest pricing attempt."}</p></div><div className="pricing-last-attempt"><span>LAST PRICING ATTEMPT</span><RecordTime value={data?.latest?.evaluatedAt} /></div></section>
 
       <section className="proof-pricing-status" aria-label="Publication status"><div><span>Publication</span><strong className={"pricing-label pricing-" + publication.tone}>{data || error ? publication.label : "Loading publication status…"}</strong><p>{publication.detail}</p></div><div className="pricing-last-attempt"><span>Quote eligibility policy</span><p>{data?.pricing.maxQuoteAgeMinutes ? `Quotes up to ${data.pricing.maxQuoteAgeMinutes} minutes old may be accepted at evaluation. This is not a guarantee of live market prices.` : "Quote-age policy unavailable in this response."}</p></div></section>
+
+      </div>
 
       <details className="proof-section detail-disclosure journey-examples"><summary>Explore synthetic report examples <span aria-hidden="true">+</span></summary><p>Optional offline examples. These are not the published USTX record.</p><ReportExamples /></details>
 

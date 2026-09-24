@@ -5600,3 +5600,39 @@ button:active:not(:disabled),.button:active {
 .experiment-check-details { margin-block: 12px 20px; color: var(--copy); }
 .experiment-check-details summary { cursor: pointer; padding-block: 10px; text-decoration: underline; text-underline-offset: 4px; }
 .experiment-check-details p { max-width: 78ch; line-height: 1.6; }
+/* Product-surface follow-up: finite illustration motion and cohesive record details. */
+@keyframes sculpture-lift {
+  0% { transform: translateY(12px) rotate(-1deg); opacity: .45; }
+  25% { transform: translateY(-8px) rotate(.6deg); opacity: 1; }
+  65% { transform: translateY(3px) rotate(-.35deg); opacity: 1; }
+  100% { transform: none; opacity: 1; }
+}
+@media (prefers-reduced-motion: no-preference) {
+ .hero-sculpture img { animation: sculpture-lift 3600ms cubic-bezier(.77,0,.175,1) 1; }
+}
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+ .hero-sculpture img { transition: transform 250ms cubic-bezier(.23,1,.32,1); }
+ .hero-sculpture:hover img { transform: translateY(-6px) rotate(.6deg); }
+}
+.proof-page > .proof-chain-summary { margin-block: 48px 24px; padding: 28px; border: 1px solid var(--line); border-radius: 16px; background: #fff; }
+.proof-chain-summary header { padding-bottom: 20px; border-bottom: 1px solid var(--line); }
+.proof-chain-summary header h2 { margin: 0 0 10px; }
+.proof-chain-summary header p { margin: 0; color: var(--copy); }
+.proof-chain-summary dl { grid-template-columns: minmax(140px,.8fr) minmax(0,2fr) minmax(160px,1fr); gap: 24px; }
+.proof-chain-summary dl > div { min-width: 0; }
+.proof-chain-summary dd { line-height: 1.6; }
+.proof-chain-summary dl > div:first-child dd { font-size: 28px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.proof-chain-summary code { display: block; padding: 12px; background: var(--soft); border-radius: 8px; font-size: 13px; }
+.proof-chain-summary > p { padding-top: 16px; border-top: 1px solid var(--line); line-height: 1.65; margin: 0; }
+.proof-status-pair { width: min(calc(100% - var(--gutter)*2),var(--content)); margin: 0 auto 32px; display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 16px; }
+.proof-status-pair > .proof-pricing-status { width: 100%; margin: 0; padding: 24px; display: flex; flex-direction: column; align-items: stretch; gap: 20px; }
+.proof-status-pair .proof-pricing-status > div:first-child { display: block; }
+.proof-status-pair .proof-pricing-status strong { display: block; margin-top: 8px; }
+.proof-status-pair .pricing-last-attempt { text-align: left; padding-top: 16px; border-top: 1px solid var(--line); }
+.proof-status-pair .pricing-last-attempt p { margin-bottom: 0; }
+@media(max-width: 760px) {
+ .proof-page > .proof-chain-summary { margin-block: 32px 16px; padding: 22px 18px; }
+ .proof-chain-summary dl { grid-template-columns: 1fr; }
+ .proof-status-pair { grid-template-columns: 1fr; }
+}
+@media(prefers-reduced-motion: reduce) { .hero-sculpture img,.hero-sculpture:hover img { animation: none !important; transition: none !important; transform: none !important; } }
