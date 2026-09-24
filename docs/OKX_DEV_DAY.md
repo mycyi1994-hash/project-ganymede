@@ -44,6 +44,8 @@ The earlier codebase provided a crypto strategy engine, fixed-point accounting a
 
 ## Submission items still owned by the team
 
+Repository access check on 24 September: GitHub reports PRIVATE, and an unauthenticated request returns 404. The team must grant the reviewers access or explicitly approve a public release before submission. The source and commit links above are not currently public.
+
 The official builder kit requires a 2–4 minute public demo, team/track/route details, accessible source and product links, and a final declaration. Video production is deferred at the user's request; no video or submission receipt exists in this work. Confirm the roster, attendance route and eligibility before submitting. No submission or acceptance of terms has been performed here.
 
 Deadline in the kit: 25 September 2026, 23:59 UTC (26 September, 08:59 KST). The kit lists an October 7 finale while the terms list October 6; obtain written organizer clarification before travel planning. Private onboarding instructions were not reviewed.
