@@ -47,6 +47,7 @@ Ganymede began in July 2026 as a Korean-won crypto strategy engine with Upbit ma
 | Full-code review fixes: paper-ledger integrity, publication retries, relayer hardening, interface defects | [7b18cf9](https://github.com/mycyi1994-hash/project-ganymede/commit/7b18cf9), [dc66eee](https://github.com/mycyi1994-hash/project-ganymede/commit/dc66eee), [8cd427f](https://github.com/mycyi1994-hash/project-ganymede/commit/8cd427f), [1e0a6bf](https://github.com/mycyi1994-hash/project-ganymede/commit/1e0a6bf), [df6c41e](https://github.com/mycyi1994-hash/project-ganymede/commit/df6c41e) |
 | Product redesign: Markets, USTX, Transparency | [f4d67c1](https://github.com/mycyi1994-hash/project-ganymede/commit/f4d67c1), [ff04920](https://github.com/mycyi1994-hash/project-ganymede/commit/ff04920), [1bfed8e](https://github.com/mycyi1994-hash/project-ganymede/commit/1bfed8e) |
 | Verification-led screens, three-way tamper experiment, evidence file and command, sanitized public errors | [c0ce112](https://github.com/mycyi1994-hash/project-ganymede/commit/c0ce112), [80a0316](https://github.com/mycyi1994-hash/project-ganymede/commit/80a0316), [11829e8](https://github.com/mycyi1994-hash/project-ganymede/commit/11829e8), [124bebe](https://github.com/mycyi1994-hash/project-ganymede/commit/124bebe) |
+| Read-only xStocks Portfolio at verified prices, mainnet token-contract check, NAV series from receipts | [ebef0fa](https://github.com/mycyi1994-hash/project-ganymede/commit/ebef0fa), [d055246](https://github.com/mycyi1994-hash/project-ganymede/commit/d055246) |
 
 ## Evidence aligned with judging
 
@@ -55,7 +56,7 @@ The official criteria are holistic and unweighted. The evidence behind each one:
 - **Innovation.** On-chain NAV exists elsewhere, for example in the DTCC Smart NAV pilot and in Centrifuge. The contribution here is narrower: any visitor reproduces a basket NAV row by row against an X Layer record. The experiment isolates what the chain fingerprint adds, and the result travels as a verifiable file.
 - **Product completeness.** Markets → USTX → automatic browser verification → tamper experiment → evidence download → command-line re-check, plus a Portfolio that values real xStocks holdings. Every visible action works. Investing and redemption are not offered and not claimed.
 - **User value.** A reviewer can confirm in seconds that a published NAV matches its document and chain record. They can also pass that confirmation on as a file instead of a screenshot.
-- **Technical execution.** Integer arithmetic, canonical document bytes, a pinned registry and network, direct RPC reads, receipt-event matching, failure tests (97 application tests, 16 relayer tests) and isolated visitor records.
+- **Technical execution.** Integer arithmetic, canonical document bytes, a pinned registry and network, direct RPC reads, receipt-event matching, failure tests (110 application tests, 16 relayer tests) and isolated visitor records.
 - **Integration.** Real OnchainOS prices for real xStock tokens on X Layer mainnet, published to and verified against an X Layer registry. The six token contracts and any wallet's balances are read from X Layer mainnet in the browser.
 - **Growth and ecosystem.** The registry format, verifier and evidence command are reusable by other basket operators on X Layer. This is a proposed direction; no adoption is claimed.
 

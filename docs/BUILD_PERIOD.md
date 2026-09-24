@@ -19,10 +19,10 @@ Those modules still power the separate paper Lab. They are not part of the submi
 | X Layer | Moved the settlement rail from GIWA Sepolia to X Layer Testnet; deployed the registry, share ledger and relayer; exported sources for explorer verification | `8b9b2ab`, `4cb6dc9`, `c3016cf`, `a8ea5f2` |
 | Tokenized stocks | Six-xStock basket (USTX) priced through OKX OnchainOS on X Layer mainnet, with publication gates; NAV and document fingerprint published every five minutes | `0feca68`, `9562bdb`, `dc66eee` |
 | Verification | The browser reads the registry directly and recalculates the NAV; a three-way tamper experiment; a downloadable evidence file and the `verify:evidence` command | `27350f2`, `4641ddc`, `80a0316`, `11829e8` |
-| Product | Clearform redesign; Markets, USTX and Verify screens led by the browser check | `e5d1d8f`, `f4d67c1`, `ff04920`, `c0ce112` |
+| Product | Clearform redesign; Markets, USTX and Verify screens led by the browser check; read-only xStocks Portfolio at verified prices; NAV chart from publication receipts | `e5d1d8f`, `f4d67c1`, `ff04920`, `c0ce112`, `ebef0fa`, `d055246` |
 | Hardening | Public reads without writes, identity header gate, relayer retry and nonce handling, paper-ledger integrity, sanitized public errors | `c98e7ea`, `387ec35`, `8cd427f`, `7b18cf9`, `124bebe` |
 
-From `7a33392` to `124bebe`: 172 files changed, 16481 insertions(+), 7376 deletions(-).
+From `7a33392` to `d055246`: 180 files changed, 17375 insertions(+), 7370 deletions(-).
 
 ## Every commit in the build period (UTC)
 
@@ -92,3 +92,7 @@ From `7a33392` to `124bebe`: 172 files changed, 16481 insertions(+), 7376 deleti
 | 2026-09-24 13:17 | `80a0316` | Show what the verification covers and what the chain record adds | 6 | +189 / −7 |
 | 2026-09-24 13:21 | `11829e8` | Let anyone take the verification result and re-check it | 8 | +302 / −3 |
 | 2026-09-24 13:23 | `124bebe` | Keep upstream RPC error text out of the public proof API | 2 | +24 / −2 |
+| 2026-09-24 13:27 | `333ee0d` | Explain the build-period work, project history and prior art | 7 | +220 / −59 |
+| 2026-09-24 13:33 | `f65c672` | Record the verification-led release | 1 | +18 / −2 |
+| 2026-09-24 13:45 | `ebef0fa` | Value any wallet's xStocks at the verified prices | 13 | +478 / −23 |
+| 2026-09-24 13:50 | `d055246` | Chart the NAV since the first publication | 8 | +271 / −3 |

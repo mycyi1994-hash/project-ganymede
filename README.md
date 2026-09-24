@@ -92,7 +92,7 @@ npm test
 npm run dev
 ```
 
-`npm test` type-checks and builds the application, then runs the suite: USTX market data, integer NAV verification, the tamper experiment, evidence files, tampered documents, unavailable data, publication retries, paper-ledger integrity and server-rendered routes. It needs no production credentials and submits no transactions. The public UI renders locally, but live data needs a configured D1 database and provider settings.
+`npm test` type-checks and builds the application, then runs the suite: USTX market data, integer NAV verification, the tamper experiment, evidence files, wallet valuation, the NAV series, tampered documents, unavailable data, publication retries, paper-ledger integrity and server-rendered routes. It needs no production credentials and submits no transactions. The public UI renders locally, but live data needs a configured D1 database and provider settings.
 
 For optional local database setup after building:
 
