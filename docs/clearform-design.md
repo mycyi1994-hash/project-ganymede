@@ -45,3 +45,10 @@ The known pricing/publication delay is a separate backend issue. This visual rel
 The approved palette (paper #f7f8fa, surface #ffffff, ink #20262f, copy #566274, line #dde3e9) and Instrument Sans / Source Sans 3 remain unchanged. Overview introduces basket operators and analysts, then leads into Funds. Funds presents USTX composition and price provenance before the separate paper strategy lab. Proof reads in calculation → chain record → comparison order. Portfolio and crypto details explicitly identify their simulation scope and offer a route back to USTX.
 
 The Funds table uses the latest pricing snapshot, with its timestamp, and never labels it independently verified. Proof uses the document matching the selected chain record; missing matching evidence stays unavailable. The added calculation total sums integer USD-micro holding values and clearly separates display rounding from verification precision. No trading, pricing policy or verification algorithm changes are included.
+
+
+## Browser verification experiment (2026-09-24)
+
+After all three original evidence checks pass, Proof offers a local copy experiment. It adds exactly USD 1 to the first holding price without changing its reported value, NAV or chain record, then calls the same `verifyComposition` function used for the original document. Restore verifies the original bytes again. The experiment does not fetch, submit, sign or persist anything. Results are actual returned checks, not preset pass/fail illustrations. Missing documents remain pending with retry guidance; actual arithmetic/hash mismatches and unavailable RPC reads have separate messages. Pricing freshness continues to be displayed independently.
+
+Regression coverage verifies a single-field edit, real hash and arithmetic failures, unchanged original bytes and successful restoration.

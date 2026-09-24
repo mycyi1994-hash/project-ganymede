@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import ProofExperiment from "./ProofExperiment";
 import SiteHeader from "../SiteHeader";
 import { formatUsdMicros as usd } from "@/lib/nav-display";
 import { PROOF_DEPLOYMENT, parseComposition, verifyComposition, type Check } from "@/lib/xstocks/proof";
@@ -132,7 +133,7 @@ export default function ProofClient() {
             hash = result.hash;
             nav = result.nav;
           } else {
-            hash = { state: "fail", detail: "The directly read hash has no matching document in this response. A publication may have occurred during loading; retry to fetch its composition." };
+            hash = { state: "pending", detail: "The directly read hash has no matching document in this response. A publication may have occurred during loading; retry to fetch its composition." };
             nav = { state: "pending", detail: "A matching document is required to recalculate NAV." };
           }
         }
@@ -162,7 +163,7 @@ export default function ProofClient() {
   ];
   const passed = checkList.filter(({ check }) => check?.state === "pass").length;
   const summaryState = error || checks?.rpcError ? "unavailable" : !data ? "loading" : !record ? "waiting" : !checks ? "checking" : checkList.some(({ check }) => check?.state === "fail") ? "fail" : passed === 3 ? "pass" : "waiting";
-  const summaryText = { unavailable: "Verification is unavailable.", loading: "Loading NAV evidence.", waiting: "Awaiting a published record.", checking: "Checking the published record.", fail: "The checks need attention.", pass: "This NAV record checks out." }[summaryState];
+  const summaryText = { unavailable: "Verification is unavailable.", loading: "Loading NAV evidence.", waiting: record ? "Awaiting matching evidence." : "Awaiting a published record.", checking: "Checking the published record.", fail: "The checks need attention.", pass: "This NAV record checks out." }[summaryState];
   let prettyDocument = canonical ?? "No composition yet.";
   if (canonical) { try { prettyDocument = JSON.stringify(JSON.parse(canonical), null, 2); } catch { /* Keep the original bytes inspectable. */ } }
   const status = data ? data.latest?.status ?? "awaiting_configuration" : error ? "unavailable" : "loading";
@@ -224,6 +225,8 @@ export default function ProofClient() {
         </div>
         {error && <p className="proof-refresh-error" role="alert">{data ? "The latest refresh failed. The record shown is from the last successful load." : "NAV evidence could not be loaded."} <button type="button" onClick={() => void load()}>TRY AGAIN</button></p>}
         {checks?.rpcError && <p className="proof-refresh-error" role="alert">Your browser could not complete a direct chain read. The server snapshot is shown for reference; independent verification has not passed.</p>}
+        {record && checks && !checks.rpcError && checks.hash.state === "pending" && <p className="proof-refresh-error" role="status">Matching document unavailable. The chain may have updated during loading. Check again to retrieve its evidence; this is not a confirmed data mismatch.</p>}
+        {summaryState === "fail" && <p className="proof-refresh-error" role="alert">Evidence mismatch detected. Do not treat this document as verified. Inspect the failed checks and source records below, then check again.</p>}
         <div className="proof-recheck"><span>Checks apply to the record above, regardless of current price availability.</span><button type="button" onClick={() => void load()} disabled={refreshing || Boolean(data && !checks)}>{refreshing || Boolean(data && !checks) ? "CHECKING…" : "CHECK AGAIN"}</button></div>
         <ol className="proof-checks">{checkList.map(({ label, check, description }, index) => <li key={label} className={`proof-check proof-check-${check?.state ?? "pending"}`}><div className="proof-check-top"><span>0{index + 1} / {index === 0 ? "RECORD" : index === 1 ? "DOCUMENT" : "VALUE"}</span><b aria-hidden="true">{check?.state === "pass" ? "✓" : check?.state === "fail" ? "!" : "…"}</b></div><div><strong>{label}</strong><p>{check?.state === "pass" ? description : check?.state === "fail" ? "Could not confirm a match. Open the details below." : checks?.rpcError ? "Direct verification unavailable." : "Waiting for evidence."}</p><span className="check-state-label">{check?.state === "pass" ? "MATCHED" : check?.state === "fail" ? "NEEDS ATTENTION" : checks?.rpcError ? "UNAVAILABLE" : "PENDING"}</span></div></li>)}</ol>
         <p className="proof-footnote">These checks establish record and calculation consistency. They do not verify custody, backing or investment safety.</p>
@@ -233,6 +236,8 @@ export default function ProofClient() {
           <p>Published {time(record?.publishedAt)} · Network {data?.registry.chainName ?? "—"}{data ? ` / ${data.registry.chainId}` : ""}</p>
         </div></details>
       </section>
+
+      {summaryState === "pass" && verifiedCanonical && checks?.record ? <ProofExperiment key={`${checks.record.holdingsHash}:${checks.record.effectiveAt}`} canonical={verifiedCanonical} record={checks.record} /> : <section className="proof-section proof-experiment-unavailable"><h2>Try changing one price.</h2><p>The local experiment becomes available after the original document passes all three checks. Resolve any missing data or connection problem above first.</p></section>}
 
       <section id="proof-source" className="proof-section proof-supporting" aria-label="Supporting evidence">
         <details className="detail-disclosure"><summary><span>On-chain publications<small>{data ? `${data.history.length} recent records` : error ? "Publications unavailable" : "Loading publications…"}</small></span><span aria-hidden="true">+</span></summary><div className="disclosure-content">

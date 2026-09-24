@@ -5437,3 +5437,30 @@ button:active:not(:disabled),.button:active {
   .nav-calculation { padding: 20px; }
   .basket-overview .proof-table { min-width: 580px; }
 }
+
+.proof-experiment { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: clamp(22px, 3vw, 48px); }
+.proof-experiment header > p { max-width: 75ch; color: var(--copy); }
+.proof-experiment h2, .proof-experiment-unavailable h2 { font: 500 clamp(26px, 2.5vw, 38px)/1.2 var(--font-display); }
+.experiment-prices { display: flex; align-items: center; gap: 32px; padding: 28px 0; }
+.experiment-prices div { display: grid; gap: 8px; }
+.experiment-prices span { color: var(--copy); font-size: 15px; }
+.experiment-prices strong { font: 500 clamp(25px, 3vw, 38px)/1.2 var(--font-display); }
+.experiment-actions { display: flex; flex-wrap: wrap; gap: 12px; }
+.experiment-actions button:disabled { opacity: .6; cursor: wait; }
+.experiment-outcome { margin: 26px 0; border-top: 1px solid var(--line); padding-top: 22px; }
+.experiment-outcome h3 { font-size: 19px; }
+.experiment-outcome dl { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+.experiment-check { border-left: 3px solid var(--line); padding-left: 18px; }
+.experiment-check dd { margin: 8px 0 0; }
+.experiment-check p { color: var(--copy); font-size: 15px; }
+.experiment-check.is-fail { border-color: var(--red); }
+.experiment-check.is-fail strong { color: var(--red); }
+.experiment-check.is-pass { border-color: var(--green); }
+.experiment-check.is-pass strong { color: var(--green); }
+.proof-experiment-unavailable p { color: var(--copy); }
+@media (max-width: 600px) {
+  .experiment-prices { gap: 16px; }
+  .experiment-prices strong { font-size: 25px; }
+  .experiment-outcome dl { grid-template-columns: 1fr; }
+  .experiment-actions { flex-direction: column; }
+}
