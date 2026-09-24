@@ -1,118 +1,69 @@
-# Ganymede ETF Operating System
+# Ganymede — inspectable NAV for tokenized-stock baskets
 
-Production source: the repository default branch (`main`). Releases are built from a committed revision and the Cloudflare deployment message records that revision. See [release and portfolio identity notes](docs/release-identity.md).
+Ganymede helps basket operators publish the data behind a net asset value (NAV), and gives analysts a way to check that calculation against a public chain record. It demonstrates this with **GMD USTX**, a model basket of six US technology xStocks.
 
-Ganymede is a full-stack operating system for passive and systematic-active digital-asset ETF products. It combines the investor product surface with portfolio construction, market data, NAV, rebalancing, execution, subscriptions, redemptions, on-chain settlement evidence on X Layer and an append-only audit trail.
+[Open the product](https://ganymede-xlayer.gana003.workers.dev/) · [Explore USTX](https://ganymede-xlayer.gana003.workers.dev/?app=select) · [Verify NAV](https://ganymede-xlayer.gana003.workers.dev/proof)
 
-The deployed system defaults to `paper` mode. Live public issuance is deliberately gated until licensed fund, custody, transfer-agent, venue, administrator, distribution and approved offering-document integrations are configured.
+## Try the core flow
 
-## OKX Dev Day 2026: Proof of NAV for tokenized stocks
+1. In Funds, inspect AAPLx, MSFTx, NVDAx, AMZNx, METAx and TSLAx, their fixing weights and the latest price snapshot.
+2. Open Proof of NAV. Review the published composition, its holding values and the chain record.
+3. Your browser reads the pinned X Layer Testnet registry directly, hashes the original document and recalculates every holding value.
+4. After all three checks pass, increase one price by $1 in a local copy. The real verifier detects both hash and arithmetic mismatches. Restore the original and verify again.
 
-**GMD US TECH x** is an equal-weight basket of xStocks (AAPLx, MSFTx, NVDAx, AMZNx, METAx, TSLAx) priced from live X Layer liquidity through OKX OnchainOS. Every NAV is published to `GanymedeNavRegistry` on X Layer with `holdingsHash = sha256(composition)`, and `/proof` verifies it in the browser against the chain. Submission notes, build-period changes and the demo script are in [`docs/OKX_DEV_DAY.md`](docs/OKX_DEV_DAY.md).
+No wallet, account or transaction is needed for this flow. A missing document or unavailable RPC stays unverified; pricing freshness is reported separately from record consistency.
 
-```bash
-npm run xstocks:check    # discover, verify and price the constituents (needs OKX_API_* and XSTOCKS_ADDRESSES)
-```
+## Meaningful OKX integration
 
-## Product mandates
+| Component | Use |
+| --- | --- |
+| OKX OnchainOS Market API | Signed requests for token prices on X Layer mainnet (196) |
+| X Layer mainnet | Network on which the six constituent token addresses are priced |
+| X Layer Testnet (1952) | Stores NAV and the SHA-256 fingerprint of the canonical composition |
+| Browser verifier | Reads the registry directly and verifies exact integer arithmetic and document bytes |
+| Optional injected wallet | Test-network connection for the separate paper strategy lab; not needed to verify NAV |
 
-| Product | Style | Method |
-| --- | --- | --- |
-| GMD CORE | Passive | Liquidity-screened square-root float-market-cap index |
-| GMD YIELD | Passive | Liquidity-screened inverse-volatility index with cash buffer |
-| GMD TECH | Active | Momentum, liquidity and inverse-volatility composite |
-| GMD ALPHA | Active | Higher-frequency emerging-network composite with tighter caps |
-| GMD USTX | Passive | Equal-weight xStocks basket on X Layer, fixed units per share, re-fixed quarterly |
+NAV registry: [`0xf320d2a7f280b7ab61e24374986869d7be34289c`](https://web3.okx.com/explorer/x-layer-testnet/address/0xf320d2a7f280b7ab61e24374986869d7be34289c).
 
-Stablecoins are excluded from the eligible investment universe. Every mandate enforces minimum history and liquidity, custody eligibility, position floors/caps, cash buffers and turnover limits.
+The older crypto strategy engine and paper portfolio remain available as a separate lab. They are not USTX holdings or evidence of a live fund. [Engine reference](docs/ENGINE_REFERENCE.md).
 
-## Operating loop
+## What the checks mean
 
-The Cloudflare Worker runs every five minutes and may also wake opportunistically on requests. A D1 lease prevents overlapping cycles.
+They establish agreement between a published document, its arithmetic and an on-chain record. They do **not** establish custody, backing, price accuracy, liquidity, investment safety or regulated fund status. Ganymede does not hold or custody the modeled xStocks. Contracts are unaudited. There is no public offering.
 
-1. Refresh Upbit tickers, order books and daily candles; use clearly labelled deterministic reference data if the venue is unavailable.
-2. Process controlled subscription and redemption states.
-3. Evaluate all passive and active mandates.
-4. Validate eligibility, weights, turnover and rebalance cadence.
-5. Create idempotent sell-before-buy order intents.
-6. Execute through paper or explicitly enabled live Upbit adapters.
-7. Reconcile positions and publish fixed-point NAV snapshots with holdings hashes.
-8. Queue fund-share mint/burn and NAV/rebalance evidence on X Layer through an external relayer.
-9. Persist engine state and tamper-evident audit hashes.
+Pricing uses one provider. Publication is attempted on a five-minute schedule but can be delayed or fail. USTX never substitutes reference prices for missing eligible quotes. The code's quote-age default is 360 minutes and can be overridden; the provider timestamp is not a guarantee of the last trade time. This differs from the UI's 15-minute cycle-delay indicator. Do not interpret either as an execution-price guarantee.
 
-Monetary values and shares are stored as integer strings. No floating-point arithmetic is used for fund accounting or settlement.
+[Calculation method](https://ganymede-xlayer.gana003.workers.dev/methodology) · [Limitations and data policy](https://ganymede-xlayer.gana003.workers.dev/limitations) · [Portfolio identity](docs/release-identity.md)
 
-## Data model
+## Reproduce locally
 
-The migration in `drizzle/0000_giant_speedball.sql` creates 20 D1 tables covering products, assets, strategy configuration and signals, target allocations, prices, positions, NAVs, rebalances, orders, fills, investors, subscriptions, redemptions, investor positions, on-chain settlements (table `giwa_settlements`, named for the original rail), audit events, engine state and distributed leases.
+Use Node.js 24 (the tested version) and npm. From a clean checkout:
 
-Generate a new migration after schema changes:
-
-```bash
-npm run db:generate
-```
-
-## API surface
-
-- `GET /api/market` — product NAV, target weights and latest engine cycle
-- `GET /api/health` — D1, Upbit and settlement-chain readiness
-- `GET /api/xstocks` — xStocks basket composition, publication history and the registry's on-chain `latestNav`
-- `GET|POST|DELETE /api/portfolio` — investor ledger, subscriptions and redemptions
-- `GET /api/operations/status` — orders, rebalances, settlements and cycle counters
-- `POST /api/operations/run` — authorized controlled cycle
-- `POST /api/operations/actions` — KYC, funding, redemption and product pause/resume controls
-
-Investor writes use the private Sites identity header or a browser wallet (OKX Wallet or any EIP-1193 wallet) in paper mode. Live mode requires authenticated investor identity. Operator writes require an allowlisted identity or bearer token.
-
-## Settlement contracts on X Layer
-
-`contracts/GanymedeFundShare.sol` implements a permissioned, pausable, six-decimal fund-share registry with idempotent subscription/redemption settlement. `contracts/GanymedeNavRegistry.sol` stores monotonic NAV and rebalance evidence hashes. Private keys are never accepted by the application; contract writes go through the configured external relayer and should be controlled by a multisig.
-
-Settlement runs on **X Layer testnet** (chain ID 1952, gas in OKB) by default. `SETTLEMENT_CHAIN` selects the rail in both the app and the relayer:
-
-| `SETTLEMENT_CHAIN` | Network | Chain ID | Explorer |
-| --- | --- | --- | --- |
-| `xlayer-testnet` (default) | X Layer Testnet | 1952 | https://www.okx.com/web3/explorer/xlayer-test |
-| `giwa-sepolia` | GIWA Sepolia | 91342 | https://sepolia-explorer.giwa.io |
-
-The chain registry lives in `lib/chains.ts` (app and wallet UI) and `relayer/src/chain.ts` (signer); keep them in step. Either rail is a settlement test rail, not proof of custody, licensing or a venue relationship.
-
-## Local development
-
-Requires Node.js `>=22.13.0`.
-
-```bash
-npm install
-npm run dev
+```sh
+npm ci
 npm test
+npm run dev
 ```
 
-The Sites configuration provisions the `DB` D1 binding and the build registers the five-minute cron. Apply the bundled migration to a local or hosted database before exercising APIs.
+`npm test` builds the application and runs the test suite, including isolated SQLite portfolio isolation, integer NAV verification, tampered documents, unavailable data and server-rendered navigation. It needs no production credentials and submits no transactions. Public UI renders locally, but API-backed live data requires a configured D1 database and provider settings; an unconfigured local preview is not a full production replica.
 
-To deploy straight to Cloudflare Workers instead of Sites, name the Worker and its D1 database at build time, then deploy the build output:
+For optional local database setup after building:
 
-```bash
-npx wrangler d1 create ganymede-xlayer   # once; note the database_id
-export CLOUDFLARE_WORKER_NAME=ganymede-xlayer CLOUDFLARE_D1_DATABASE_NAME=ganymede-xlayer CLOUDFLARE_D1_DATABASE_ID=<database_id>
-npm run build
-npx wrangler d1 execute ganymede-xlayer --remote --file=drizzle/0000_giant_speedball.sql   # once
-npx wrangler deploy   # set the environment below with `npx wrangler secret put` or `--secrets-file`
+```sh
+npx wrangler d1 execute site-creator-d1 --local --config dist/server/wrangler.json --file drizzle/0000_giant_speedball.sql
 ```
 
-## Environment and live activation
+See `.env.example` for setting names and [the engine reference](docs/ENGINE_REFERENCE.md) for deployment details. Never copy production secrets into a review checkout. Tests do not require enabling live trading or a signing key.
 
-Copy `.env.example` into the appropriate secret store. Never commit credentials.
+## Source and release
 
-Live Upbit execution is enabled only when all three conditions are true:
+The default branch `main` and `codex/design-refinement` track the released source. Cloudflare deployment messages identify the exact source commit. [Release rules and identity model](docs/release-identity.md).
 
-1. `TRADING_MODE=live`
-2. Valid `UPBIT_ACCESS_KEY` and `UPBIT_SECRET_KEY`
-3. `LIVE_TRADING_CONFIRMATION=ENABLE_GANYMEDE_LIVE_UPBIT_ORDERS`
+- [Dev Day submission notes and build-period evidence](docs/OKX_DEV_DAY.md)
+- [Asset credits](public/ASSET-CREDITS.md)
+- Calculation: `lib/xstocks/basket.ts`
+- Publication: `lib/xstocks/cycle.ts`
+- Direct browser verification: `lib/xstocks/proof.ts`, `lib/xstocks/onchain.ts`
+- Local failure experiment: `lib/xstocks/proof-experiment.ts`
 
-On-chain writes additionally require `SETTLEMENT_RELAYER_URL`/`SETTLEMENT_RELAYER_TOKEN` and deployed `FUND_SHARE_ADDRESS`/`NAV_REGISTRY_ADDRESS`. The application accepts no signing key.
-
-Before live activation, complete legal classification, approved offering documents, fund administrator NAV sign-off, custody reconciliation, cash banking, venue whitelisting, transfer-agent controls, sanctions/KYC/AML workflows, disaster recovery, monitoring, key rotation, smart-contract audit and staged low-limit production testing.
-
-## Verification
-
-`npm test` builds the Cloudflare target and verifies server-rendered routes, fixed-point accounting, passive constraints, active turnover controls and rebalance cadence. A local integration run should also verify the complete D1 flow: initial engine cycle, subscription request, controlled settlement cycle and resulting investor position.
+AI-assisted development was used. The submitting team remains responsible for explaining, reviewing and maintaining the work. No customer adoption or independent audit is claimed.

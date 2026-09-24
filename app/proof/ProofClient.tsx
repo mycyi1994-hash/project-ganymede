@@ -257,6 +257,7 @@ export default function ProofClient() {
         </div></details>
       </section>
 
+      <nav className="proof-document-links" aria-label="Methodology and limitations"><a href="/methodology">Read the calculation method ↗</a><a href="/limitations">Understand the limits ↗</a></nav>
       <p className="proof-custody-note">Test environment. NAV evidence only. xStocks are issued by Backed; Ganymede does not custody them.</p><SiteFooter />
     </main>
   );

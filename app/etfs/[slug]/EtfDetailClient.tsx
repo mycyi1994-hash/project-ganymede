@@ -339,26 +339,24 @@ function MethodologyPanel({ etf }: { etf: Etf }) {
 
 function DocumentsPanel({ etf }: { etf: Etf }) {
   const documents = [
-    ["PRODUCT SUMMARY", "Key product facts, objective, costs and risks", "DRAFT / PRE-LAUNCH"],
-    ["INDEX METHODOLOGY", "Selection, weighting and rebalancing rules", "DRAFT / V2.1"],
-    ["RISK DISCLOSURE", "Digital asset, liquidity, custody and testnet risks", "DRAFT / PRE-LAUNCH"],
-    ["HOLDINGS REPORT", `Current ${etf.assetCount}-asset model basket composition`, "MODEL PORTFOLIO"],
+    ["CALCULATION METHOD", "USTX NAV arithmetic and the separate paper strategy lab", "/methodology"],
+    ["LIMITS & DATA POLICY", "Pricing, testnet, verification and browser-session limitations", "/limitations"],
   ];
   return (
     <div className="documents-panel">
       <section>
         <span>PRODUCT DOCUMENTS</span>
-        <h3>Review before adding a strategy</h3>
-        {documents.map(([name, description, version], index) => (
-          <article key={name}><span>{String(index + 1).padStart(2, "0")}</span><div><b>{name}</b><p>{description}</p></div><small>{version}</small><span className="document-status">Not yet available</span></article>
+        <h3>Understand this simulation</h3><p>{etf.name} is a paper crypto strategy. Its methodology and holdings tabs describe the model; these documents explain the wider system and its limits.</p>
+        {documents.map(([name, description, href], index) => (
+          <article key={name}><span>{String(index + 1).padStart(2, "0")}</span><div><b>{name}</b><p>{description}</p></div><Link href={href} className="document-status">Read document ↗</Link></article>
         ))}
       </section>
       <aside id="risk-disclosure">
         <span>IMPORTANT INFORMATION</span>
-        <h3>Controlled product launch</h3>
+        <h3>Model strategy only</h3>
         <p>This is a model strategy in a test environment. Allocations are simulations and no fund shares are offered to the public.</p>
         <p>{DEFAULT_SETTLEMENT_CHAIN.name} is the current share-settlement rail. Testnet assets have no economic value and the relayer remains isolated from fund custody.</p>
-        <p>Performance history shown in this interface is illustrative until an administrator-verified live track record is available. Review the approved prospectus before investing.</p>
+        <p>Displayed performance is illustrative, not an administrator-verified investor track record. No approved prospectus or investable fund is provided.</p>
       </aside>
     </div>
   );
