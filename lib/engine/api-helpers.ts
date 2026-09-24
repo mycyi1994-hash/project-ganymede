@@ -17,8 +17,14 @@ function walletFromRequest(request: Request, payloadWallet?: unknown): string | 
   return raw && /^0x[a-fA-F0-9]{40}$/.test(raw) ? raw.toLowerCase() : null;
 }
 
+function authenticatedEmail(request: Request): string | null {
+  const trusted = engineEnv().IDENTITY_HEADER_TRUSTED;
+  if (trusted !== "true" && trusted !== "1") return null;
+  return request.headers.get("oai-authenticated-user-email")?.trim().toLowerCase() || null;
+}
+
 export function requestIdentity(request: Request, payloadWallet?: unknown): RequestIdentity | null {
-  const email = request.headers.get("oai-authenticated-user-email")?.trim().toLowerCase() ?? null;
+  const email = authenticatedEmail(request);
   const walletAddress = walletFromRequest(request, payloadWallet);
   if (email) return { subject: `email:${email}`, email, walletAddress };
   if (walletAddress && engineEnv().TRADING_MODE !== "live") return { subject: `paper-wallet:${walletAddress}`, email: null, walletAddress };
@@ -40,7 +46,7 @@ export async function operatorIdentity(request: Request): Promise<string | null>
   const suppliedToken = authorization?.startsWith("Bearer ") ? authorization.slice(7) : null;
   if (currentEnv.OPERATOR_TOKEN && suppliedToken && await constantTimeTokenMatch(currentEnv.OPERATOR_TOKEN, suppliedToken)) return "operator:token";
 
-  const email = request.headers.get("oai-authenticated-user-email")?.trim().toLowerCase();
+  const email = authenticatedEmail(request);
   const allowlist = (currentEnv.OPERATIONS_ALLOW_EMAILS ?? "").split(",").map((value) => value.trim().toLowerCase()).filter(Boolean);
   if (email && (allowlist.includes(email) || (currentEnv.TRADING_MODE !== "live" && allowlist.length === 0))) return `operator:${email}`;
   return null;
