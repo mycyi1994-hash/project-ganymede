@@ -3,7 +3,7 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { isAddress, sharedWalletAccount } from "@/lib/product-ledger";
 
-type WalletState = { address: string; source: "wallet" | "watch"; busy: boolean; message: string; connect: () => Promise<void>; watch: (address: string) => boolean };
+type WalletState = { address: string; source: "wallet" | "watch"; busy: boolean; message: string; connect: () => Promise<void>; watch: (address: string) => boolean; clearWatch: () => void };
 const Context = createContext<WalletState | null>(null);
 const WATCH_KEY = "ganymede-public-ledger-address";
 
@@ -63,7 +63,12 @@ export function WalletAccountProvider({ children }: { children: ReactNode }) {
     activeSource.current = "watch";
     setAddress(normalized); setSource("watch"); setMessage(""); remember(normalized); return true;
   }
-  return <Context.Provider value={{ address, source, busy, message, connect, watch }}>{children}</Context.Provider>;
+  function clearWatch() {
+    revision.current += 1;
+    activeSource.current = "wallet";
+    setAddress(""); setSource("wallet"); setMessage(""); remember("");
+  }
+  return <Context.Provider value={{ address, source, busy, message, connect, watch, clearWatch }}>{children}</Context.Provider>;
 }
 
 export function useWalletAccount() {

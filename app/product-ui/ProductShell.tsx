@@ -15,7 +15,7 @@ export function designLink(screen: DesignScreen, scenario?: string) { return `/d
 
 function AccountControl() {
   const router = useRouter();
-  const { address, source, busy, message, connect, watch } = useWalletAccount();
+  const { address, source, busy, message, connect, watch, clearWatch } = useWalletAccount();
   const [input, setInput] = useState("");
   const details = useRef<HTMLDetailsElement>(null);
   useEffect(() => {
@@ -29,6 +29,7 @@ function AccountControl() {
       <p>{address || "Connect to read your testnet share records. No signature or transaction is requested."}</p>
       {(!address || source === "watch") && <button className="gmd-button" disabled={busy} onClick={() => void connect()}>{busy ? "Connecting…" : "Connect browser wallet"}</button>}
       <form className="gmd-watch-form" onSubmit={event => { event.preventDefault(); if (watch(input)) { if (details.current) details.current.open = false; router.push("/portfolio"); } }}><label htmlFor="public-ledger-address">View a public address</label><input id="public-ledger-address" value={input} onChange={event => setInput(event.target.value)} placeholder="0x…" spellCheck={false} autoComplete="off" /><button className="gmd-small-button" type="submit">View records</button></form>
+      {source === "watch" && address && <button className="gmd-inline-link" onClick={() => { clearWatch(); setInput(""); if (details.current) details.current.open = false; }}>Stop viewing address</button>}
       <p role="status">{message}</p><p className="gmd-caption">Read-only public records on X Layer Testnet. No deposits or withdrawals.</p>
     </div>
   </details>;
