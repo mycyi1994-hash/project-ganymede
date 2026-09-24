@@ -788,6 +788,13 @@ export class EngineRepository {
     return row ? { value: row.value, updatedAt: row.updated_at } : null;
   }
 
+  /** Delete every state row whose key starts with `prefix`, except the keys listed. */
+  async deleteStatesWithPrefix(prefix: string, keep: string[]): Promise<void> {
+    const pattern = `${prefix.replace(/[\\%_]/g, (character) => `\\${character}`)}%`;
+    const exclusions = keep.length ? ` AND key NOT IN (${keep.map(() => "?").join(", ")})` : "";
+    await this.db.prepare(`DELETE FROM engine_state WHERE key LIKE ? ESCAPE '\\'${exclusions}`).bind(pattern, ...keep).run();
+  }
+
   async setState(key: string, value: string): Promise<void> {
     await this.db.prepare(`
       INSERT INTO engine_state (key, value, updated_at) VALUES (?, ?, CURRENT_TIMESTAMP)

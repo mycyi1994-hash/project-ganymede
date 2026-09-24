@@ -139,7 +139,7 @@ test("price timeouts and transient retries are bounded", async () => {
 
 test("repeated failed publications retain the last confirmed composition", async (t) => {
   const rows = new Map();
-  const repo = { async getState(key) { return rows.has(key) ? { value: rows.get(key) } : null; }, async setState(key, value) { rows.set(key, value); }, async saveSettlement() {} };
+  const repo = { async getState(key) { return rows.has(key) ? { value: rows.get(key) } : null; }, async setState(key, value) { rows.set(key, value); }, async saveSettlement() {}, async deleteStatesWithPrefix(prefix, keep) { for (const key of [...rows.keys()]) if (key.startsWith(prefix) && !keep.includes(key)) rows.delete(key); } };
   const addresses = XSTOCKS_CONSTITUENTS.map((item, i) => ({ ...item, address: "0x" + String(i + 1).repeat(40) }));
   const configured = { OKX_API_KEY: "test", OKX_API_SECRET: "test", OKX_API_PASSPHRASE: "test", XSTOCKS_ADDRESSES: addresses.map((item) => item.symbol + "=" + item.address).join(",") };
   const now = new Date().toISOString();

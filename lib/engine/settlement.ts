@@ -2,6 +2,25 @@ import { resolveSettlementChain, type SettlementChain } from "../chains";
 import { newId, sha256Hex, stableJson } from "./fixed";
 import type { EngineEnv } from "./types";
 
+/** Longer than the relayer's worst case (simulate, send, then up to its receipt wait). */
+const SETTLEMENT_TIMEOUT_MS = 45_000;
+
+/**
+ * A short, public-safe description of a relayer error. Relayer and RPC messages can
+ * carry provider URLs with keys in them, and this text is served by /api/xstocks.
+ */
+async function relayerErrorSummary(response: Response): Promise<string> {
+  const text = await response.text().catch(() => "");
+  let summary = text;
+  try {
+    const payload = JSON.parse(text) as { code?: unknown; error?: unknown };
+    summary = [payload.code, payload.error].filter((part) => typeof part === "string" && part).join(": ") || text;
+  } catch {
+    // Not JSON: keep the text.
+  }
+  return summary.replace(/[a-z][a-z0-9+.-]*:\/\/\S+/gi, "[url]").replace(/\s+/g, " ").trim().slice(0, 160) || "no details";
+}
+
 export type SettlementRequest = {
   entityType: "nav" | "subscription" | "redemption" | "rebalance";
   entityId: string;
@@ -115,7 +134,7 @@ export class SettlementClient {
     }
     try {
       const response = await fetch(`${this.env.SETTLEMENT_RELAYER_URL.replace(/\/$/, "")}/v1/settlements`, {
-        signal: AbortSignal.timeout(20_000),
+        signal: AbortSignal.timeout(SETTLEMENT_TIMEOUT_MS),
         method: "POST",
         headers: { Authorization: `Bearer ${this.env.SETTLEMENT_RELAYER_TOKEN}`, "Content-Type": "application/json", "Idempotency-Key": `${request.entityType}:${request.entityId}:${request.action}` },
         body: JSON.stringify({
@@ -126,11 +145,18 @@ export class SettlementClient {
           ...request,
         }),
       });
-      if (!response.ok) throw new Error(`Settlement relayer ${response.status}: ${await response.text()}`);
+      if (!response.ok) {
+        // A 4xx other than a timeout or rate limit is the relayer's definitive answer about this
+        // request. Anything else may already have been broadcast, so the same key is retried.
+        const definitive = response.status >= 400 && response.status < 500 && response.status !== 408 && response.status !== 429;
+        return { id, payloadHash, status: definitive ? "failed" : "queued", txHash: null, blockNumber: null, error: `Settlement relayer ${response.status}: ${await relayerErrorSummary(response)}` };
+      }
       const payload = await response.json() as { status?: "queued" | "submitted" | "confirmed"; txHash?: string; blockNumber?: string };
       return { id, payloadHash, status: payload.status ?? "queued", txHash: payload.txHash ?? null, blockNumber: payload.blockNumber ?? null, error: null };
     } catch (error) {
-      return { id, payloadHash, status: "failed", txHash: null, blockNumber: null, error: error instanceof Error ? error.message : "Settlement failed" };
+      // No answer says nothing about whether the relayer broadcast; the next cycle asks again with the same key.
+      const reason = error instanceof Error && error.name === "TimeoutError" ? "no answer in time" : "unreachable";
+      return { id, payloadHash, status: "queued", txHash: null, blockNumber: null, error: `Settlement relayer ${reason}; the result will be checked again` };
     }
   }
 }
