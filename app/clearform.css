@@ -457,7 +457,6 @@ button:active:not(:disabled),.button:active {
   font-size: clamp(58px,6.2vw,106px);
   font-weight: 700;
   letter-spacing: -.075em;
-  word-spacing: .09em;
   line-height: 1.02;
 }
 
@@ -2680,7 +2679,6 @@ button:active:not(:disabled),.button:active {
 .proof-hero h1 {
   font-size: clamp(42px,5vw,76px);
   letter-spacing: -.06em;
-  word-spacing: .07em;
 }
 
 .proof-lede {
