@@ -26,10 +26,12 @@ export async function GET() {
       try {
         onchain = await readLatestNav(settlement.rpcUrl, registry);
       } catch (error) {
-        onchainError = error instanceof Error ? error.message : "On-chain read failed";
+        // Upstream messages can name the provider or its URL; keep them in the operator log only.
+        console.error("Ganymede registry read failed", (error instanceof Error ? error.message : String(error)).replace(/https?:\/\/\S+/g, "[rpc]"));
+        onchainError = "The chain read is unavailable.";
       }
     } else {
-      onchainError = "NAV_REGISTRY_ADDRESS is not configured";
+      onchainError = "The NAV registry is not configured.";
     }
     if (onchain?.effectiveAt && !history.some((entry) => entry.holdingsHash === onchain!.holdingsHash)) {
       const documentRow = await repo.getState(`${STATE_DOCUMENT_PREFIX}${onchain.holdingsHash}`);
