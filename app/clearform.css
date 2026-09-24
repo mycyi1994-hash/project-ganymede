@@ -4690,7 +4690,8 @@ button:active:not(:disabled),.button:active {
     padding-top: 24px;
   }
   .product-overview-panel {
-    grid-template-columns: 1fr;
+    /* minmax(0,…) lets the column shrink below its content's min-content width. */
+    grid-template-columns: minmax(0,1fr);
     gap: 24px;
   }
   .product-order-card {
@@ -5500,6 +5501,12 @@ button:active:not(:disabled),.button:active {
   .home-verification-intro { display: block; }
   .home-verification-intro .text-link { display: inline-block; margin-top: 12px; }
   .example-selector { align-items: stretch; flex-direction: column; gap: 8px; }
+}
+
+/* 320 CSS px (400% zoom, smallest phones): stack the price comparison instead of overflowing. */
+@media (max-width: 340px) {
+  .experiment-prices { flex-direction: column; align-items: flex-start; gap: 8px; }
+  .experiment-prices > span[aria-hidden="true"] { transform: rotate(90deg); }
 }
 
 .site-utilities .wallet-connect>button:not(.is-connected) { background: transparent; color: #566274; border: 1px solid #dde3e9; box-shadow: none; }
