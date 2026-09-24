@@ -2,19 +2,26 @@
 
 ## Product and scope
 
-The public UI leads with verification: Markets, USTX detail, Verify (the
+The public UI presents USTX as a fund product built on verification: Markets,
+USTX detail (demo investing, the fund overview and look-through holdings),
+Portfolio (the demo account looked through to each xStock, and read-only
+valuation of any wallet's xStocks on X Layer mainnet) and Verify (the
 transparency page with the tamper experiment and the evidence download, which
-`npm run verify:evidence` re-checks) and Portfolio (read-only valuation of any
-wallet's xStocks on X Layer mainnet). The GMDCORE test ledger page
-(`/activity`) and the paper Lab are earlier work and stay out of the primary
-navigation. Production is the `ganymede-xlayer` Worker; the
-settlement relayer is `ganymede-settlement-relayer`.
+`npm run verify:evidence` re-checks). Partner surfaces are `/issuers`,
+`/developers`, the `/embed/ustx` badge and the public `GET /api/v1/ustx`. The
+GMDCORE test ledger page (`/activity`) and the paper Lab are earlier work and
+stay out of the primary navigation. Production is the `ganymede-xlayer` Worker;
+the settlement relayer is `ganymede-settlement-relayer`.
 `docs/PRODUCT_RELEASE.md` records the current source and Worker version.
 
-Real deposits, withdrawals, custody, settlement tokens and payment destinations
-are out of scope. Never create or name an address that would receive real funds,
-and keep the testnet and simulation labels. `lib/product-contract.ts` keeps
-`canSubscribe`, `canRedeem`, `settlementAsset` and `custodyAddress` closed.
+Demo investing (`lib/demo/`, `app/api/demo/`) uses demo dollars in the D1 demo
+ledger. It never moves real money and never issues shares on chain; each NAV
+record carries the demo shares outstanding. Real deposits, withdrawals, custody,
+settlement tokens and payment destinations are out of scope. Never create or
+name an address that would receive real funds, and keep the demo, testnet and
+simulation labels. `lib/product-contract.ts` keeps `canSubscribe`, `canRedeem`,
+`settlementAsset` and `custodyAddress` closed: demo orders are not real
+subscriptions.
 
 ## Branches
 
