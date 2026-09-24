@@ -27,13 +27,14 @@ test("Markets renders the actual product path without fabricated values or the v
 });
 
 test("public product routes share navigation and select the right destination before hydration", async () => {
-  const expected = [["/", "Markets"], ["/portfolio", "Portfolio"], ["/activity", "Activity"]];
+  const expected = [["/", "Markets"], ["/products/ustx/transparency", "Verify"]];
   for (const [path, current, heading] of [
     ["/", "/", "US Tech Basket"],
     ["/products/ustx", "/", "Terms &amp; approach"],
-    ["/products/ustx/transparency", "/", "Transparency"],
-    ["/portfolio", "/portfolio", "Your testnet share records"],
-    ["/activity", "/activity", "Your testnet share records"],
+    ["/products/ustx/transparency", "/products/ustx/transparency", "Transparency"],
+    // The separate test share ledger stays reachable by address but is not a primary destination.
+    ["/portfolio", null, "Your testnet share records"],
+    ["/activity", null, "Your testnet share records"],
   ]) {
     const response = await render(path);
     assert.equal(response.status, 200, path);
@@ -43,10 +44,22 @@ test("public product routes share navigation and select the right destination be
     const anchors = [...nav.matchAll(/<a\b([^>]*)>([\s\S]*?)<\/a>/g)];
     assert.deepEqual(anchors.map(([, attrs, label]) => [attrs.match(/href="([^"]*)"/)?.[1], label.replace(/<svg\b[\s\S]*?<\/svg>/g, "").replace(/<[^>]*>/g, "")]), expected);
     const selected = anchors.filter(([, attrs]) => attrs.includes('aria-current="page"'));
-    assert.equal(selected.length, 1);
-    assert.ok(selected[0][1].includes(`href="${current}"`));
+    assert.equal(selected.length, current ? 1 : 0, path);
+    if (current) assert.ok(selected[0][1].includes(`href="${current}"`));
     assert.ok(html.includes(heading), path);
   }
+});
+
+test("product pages lead with verification instead of closed investment access", async () => {
+  for (const path of ["/", "/products/ustx", "/products/ustx/transparency"]) {
+    const html = visible(await (await render(path)).text());
+    assert.doesNotMatch(html, /Subscriptions not open|Investment access|Invest in USTX|Know what you own|before investing|Connect wallet/, path);
+    assert.match(html, /href="\/products\/ustx\/transparency"/, path);
+    assert.match(html, /X Layer Testnet/, path);
+  }
+  const product = visible(await (await render("/products/ustx")).text());
+  assert.match(product, /Verify this record/);
+  assert.match(product, /None are issued/);
 });
 
 test("legacy URLs route to their matching product or simulation destination", async () => {
@@ -67,12 +80,22 @@ test("public Portfolio and Activity do not contain the local example account or 
   assert.equal(response.status, 404, "design fixtures must not be served by the production build");
 });
 
-test("transparency auto-read starts unverified and excludes customer-facing tampering experiments", async () => {
+test("transparency starts unverified, states its scope and keeps the experiment on a local copy", async () => {
   const response = await render("/products/ustx/transparency");
   const html = visible(await response.text());
   assert.equal(response.status, 200);
   assert.match(html, /Reading the published record/);
   assert.match(html, /Original composition document/);
+  assert.match(html, /What a match confirms/);
+  assert.match(html, /What it does not confirm/);
+  assert.match(html, /latest 12 publications/);
+  assert.match(html, /Download evidence/);
+  assert.match(html, /npm run verify:evidence/);
+  // The experiment is labelled as a browser copy and shows no result before the record is read.
+  assert.match(html, /Try to break it/);
+  assert.match(html, /edits a copy of the published document in your browser/);
+  assert.match(html, /The published record is not changed/);
+  assert.match(html, /starts once this browser has read the published record/);
   assert.doesNotMatch(html, /record and calculation match|Try changing one price|Try a change/);
   assert.doesNotMatch(html, /<details[^>]*\bopen(?:[=>\s])/);
 });

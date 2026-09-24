@@ -101,6 +101,26 @@ test("unchanged candles consume no additional writes", async () => {
   } finally { sql.close(); }
 });
 
+test("the public proof API reports a registry read failure without its error text", async (t) => {
+  const { db, sql } = database();
+  try {
+    db.readOnly = true;
+    env.DB = db;
+    env.NAV_REGISTRY_ADDRESS = "0x" + "b".repeat(40);
+    env.SETTLEMENT_RPC_URL = "https://rpc.example.test/v1/secret-provider-key";
+    const logged = [];
+    t.mock.method(console, "error", (...args) => logged.push(args.join(" ")));
+    t.mock.method(globalThis, "fetch", async () => { throw new TypeError("request to https://rpc.example.test/v1/secret-provider-key failed"); });
+    const response = await xstocksGET();
+    const body = await response.text();
+    assert.equal(response.status, 200);
+    assert.doesNotMatch(body, /secret-provider-key|rpc\.example|request to/);
+    assert.equal(JSON.parse(body).onchainError, "The chain read is unavailable.");
+    assert.ok(logged.some((line) => line.includes("registry read failed")));
+    assert.ok(logged.every((line) => !line.includes("secret-provider-key")));
+  } finally { delete env.DB; delete env.NAV_REGISTRY_ADDRESS; delete env.SETTLEMENT_RPC_URL; sql.close(); }
+});
+
 test("proof API recovers the current chain document after rolling history has expired", async (t) => {
   const { db, sql } = database();
   try {

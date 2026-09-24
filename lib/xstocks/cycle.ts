@@ -185,7 +185,8 @@ export async function runXStocksCycle(env: EngineEnv, repo: EngineRepository, se
     const confirmed = history.find((entry) => entry.status === "confirmed");
     if (confirmed && !(await repo.getState(STATE_CONFIRMED))) await repo.setState(STATE_CONFIRMED, JSON.stringify(confirmed));
     const pending: Publication = { asOf: now, navPerShareMicros: evaluation.composition.navPerShareMicros, holdingsHash: evaluation.holdingsHash, canonical: evaluation.canonical, status: "queued", txHash: null, error: null };
-    // Content-addressed evidence survives a lost receipt or history rotation.
+    // Content-addressed evidence survives a lost receipt. Documents are pruned with the
+    // rolling history below, except for the latest confirmed one.
     await repo.setState(`${STATE_DOCUMENT_PREFIX}${pending.holdingsHash}`, JSON.stringify(pending));
     const previousHistory = history.filter((entry) => entry.holdingsHash !== pending.holdingsHash);
     await repo.setState(STATE_HISTORY, JSON.stringify([pending, ...previousHistory].slice(0, HISTORY_LIMIT)));

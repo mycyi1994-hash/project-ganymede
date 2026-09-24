@@ -2,9 +2,12 @@
 
 ## Product and scope
 
-The public UI is the product redesign: Markets, USTX detail, Transparency,
-read-only testnet Portfolio/Activity, and a separate paper Lab. Production is the
-`ganymede-xlayer` Worker; the settlement relayer is `ganymede-settlement-relayer`.
+The public UI leads with verification: Markets, USTX detail and Verify (the
+transparency page with the tamper experiment and the evidence download, which
+`npm run verify:evidence` re-checks). The GMDCORE test ledger pages
+(`/portfolio`, `/activity`) and the paper Lab are earlier work and stay out of
+the primary navigation. Production is the `ganymede-xlayer` Worker; the
+settlement relayer is `ganymede-settlement-relayer`.
 `docs/PRODUCT_RELEASE.md` records the current source and Worker version.
 
 Real deposits, withdrawals, custody, settlement tokens and payment destinations
