@@ -80,12 +80,20 @@ test("public Portfolio and Activity do not contain the local example account or 
   assert.equal(response.status, 404, "design fixtures must not be served by the production build");
 });
 
-test("transparency auto-read starts unverified and excludes customer-facing tampering experiments", async () => {
+test("transparency starts unverified, states its scope and keeps the experiment on a local copy", async () => {
   const response = await render("/products/ustx/transparency");
   const html = visible(await response.text());
   assert.equal(response.status, 200);
   assert.match(html, /Reading the published record/);
   assert.match(html, /Original composition document/);
+  assert.match(html, /What a match confirms/);
+  assert.match(html, /What it does not confirm/);
+  assert.match(html, /latest 12 publications/);
+  // The experiment is labelled as a browser copy and shows no result before the record is read.
+  assert.match(html, /Try to break it/);
+  assert.match(html, /edits a copy of the published document in your browser/);
+  assert.match(html, /The published record is not changed/);
+  assert.match(html, /starts once this browser has read the published record/);
   assert.doesNotMatch(html, /record and calculation match|Try changing one price|Try a change/);
   assert.doesNotMatch(html, /<details[^>]*\bopen(?:[=>\s])/);
 });
