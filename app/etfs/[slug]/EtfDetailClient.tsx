@@ -228,8 +228,8 @@ function OverviewPanel({ etf, liveProduct, engineMode, amountKrw, subscriptionSt
         <p>See what a sample allocation could look like. No real order is placed and no money moves.</p>
         <ol className="subscription-steps" aria-label="Simulation steps"><li className={!hasRequest ? "is-active" : ""} aria-current={!hasRequest ? "step" : undefined}><b>01</b><span>AMOUNT</span></li><li><b>02</b><span>REVIEW</span></li><li className={hasRequest ? "is-active" : ""} aria-current={hasRequest ? "step" : undefined}><b>03</b><span>SAVE</span></li></ol>
         {hasRequest ? <div className="subscription-success" role="status"><b>Simulation saved.</b><p>{subscriptionStatus === "settled" ? "Your paper allocation is ready in your portfolio." : "Your request is saved. Follow its progress in your portfolio."}</p></div> : <>
-          <label className="subscription-amount"><span>SAMPLE AMOUNT / KRW</span><input type="number" min="100000" step="1" inputMode="numeric" value={amountKrw} onChange={(event) => onAmountChange(event.target.value)} aria-invalid={Boolean(estimate.amountError)} aria-describedby={`${amountHelpId}${estimate.amountError ? ` ${amountErrorId}` : ""}`} /></label>
-          <p className="amount-help" id={amountHelpId}>Minimum ₩100,000 · whole KRW amounts.</p>
+          <label className="subscription-amount"><span>SAMPLE AMOUNT / KRW</span><input type="number" min="100000" max="1000000000" step="1" inputMode="numeric" value={amountKrw} onChange={(event) => onAmountChange(event.target.value)} aria-invalid={Boolean(estimate.amountError)} aria-describedby={`${amountHelpId}${estimate.amountError ? ` ${amountErrorId}` : ""}`} /></label>
+          <p className="amount-help" id={amountHelpId}>₩100,000 to ₩1,000,000,000 · whole KRW amounts.</p>
           {estimate.amountError && <p className="amount-error" id={amountErrorId}>{estimate.amountError}</p>}
           <div className="amount-presets" aria-label="Quick amount selection">{["500000", "1000000", "5000000"].map((value) => <button key={value} type="button" aria-pressed={amountKrw === value} onClick={() => onAmountChange(value)}>{formatKrw(value)}</button>)}</div>
           <div className="simulation-estimate" aria-live="polite" aria-atomic="true"><span>ESTIMATED PAPER SHARES</span><strong>{estimate.shares?.toLocaleString("en-US", { minimumFractionDigits: 3, maximumFractionDigits: 3 }) ?? "—"}</strong><small>At {formatNav(liveProduct?.nav?.navPerShareMicros, "—")} per share</small></div>
@@ -452,7 +452,12 @@ export default function EtfDetailClient({ etf }: { etf: Etf }) {
         headers: { "Content-Type": "application/json", ...(walletAddress ? { "x-ganymede-wallet": walletAddress } : {}) },
         body: JSON.stringify({ productId: etf.id, amountKrw, walletAddress, clientReference: crypto.randomUUID() }),
       });
-      const payload = await response.json() as { subscription?: { status?: string }; error?: string };
+      const payload = await response.json() as { subscription?: { status?: string }; error?: string; code?: string };
+      if (response.status === 400 && payload.code === "INVALID_REQUEST") {
+        // The ledger refused the request, so nothing was saved and its reason is safe to show.
+        setOrderError(`${payload.error ?? "The request was not accepted"}. Nothing was saved.`);
+        return false;
+      }
       if (!response.ok) throw new Error(payload.error || "Subscription request failed");
       setSubscriptionStatus(payload.subscription?.status ?? "submitted");
       return true;

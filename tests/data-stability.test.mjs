@@ -60,6 +60,22 @@ test("public market, portfolio and health GETs work with database writes disable
   } finally { delete env.DB; delete env.TRADING_MODE; sql.close(); }
 });
 
+test("the public health check reports an RPC failure without its error text", async (t) => {
+  const { db, sql } = database();
+  try {
+    await new EngineRepository(db).seed();
+    env.DB = db;
+    env.SETTLEMENT_RPC_URL = "https://rpc.example.test/v1/secret-provider-key";
+    t.mock.method(console, "error", () => {});
+    t.mock.method(globalThis, "fetch", async () => { throw new TypeError("request to https://rpc.example.test/v1/secret-provider-key failed"); });
+    const response = await healthGET();
+    const body = await response.text();
+    assert.equal(response.status, 503);
+    assert.doesNotMatch(body, /secret-provider-key|rpc\.example/);
+    assert.equal(JSON.parse(body).settlement.connected, false);
+  } finally { delete env.DB; delete env.SETTLEMENT_RPC_URL; sql.close(); }
+});
+
 test("a cycle that is not due performs no writes or outbound requests", async (t) => {
   const { db, sql, changes } = database();
   try {

@@ -16,11 +16,12 @@ const time = (value: unknown) => {
 /** A link the home page switches views for in place instead of navigating. */
 type ViewLink = { href: string; onNavigate?: (event: { preventDefault: () => void }) => void };
 
-export default function PortfolioView({ data, loading, error, actionError, removing, onBrowse, onRetry, onRedeem, onOpen, basketLink }: {
+export default function PortfolioView({ data, loading, error, actionError, actionRejection, removing, onBrowse, onRetry, onRedeem, onOpen, basketLink }: {
   data: PortfolioData | null;
   loading: boolean;
   error: string;
   actionError: string;
+  actionRejection: string;
   removing: boolean;
   onBrowse: () => void;
   onRetry: () => void;
@@ -46,6 +47,7 @@ export default function PortfolioView({ data, loading, error, actionError, remov
 
     {error && data && <DataNotice title="Portfolio refresh is unavailable." onRetry={onRetry} loading={loading}>Showing your last loaded snapshot. Values and request statuses may have changed.</DataNotice>}
     {actionError && !error && <DataNotice title="We couldn’t confirm the removal." onRetry={onRetry} loading={loading}>Refresh your portfolio to check the request before trying again. No real funds move in this simulation.</DataNotice>}
+    {actionRejection && <DataNotice title="The removal was not saved.">{actionRejection}. Your allocation is unchanged.</DataNotice>}
 
     {!data ? <section className="portfolio-state" aria-busy={loading}>
       <div className="portfolio-state-art" aria-hidden="true"><StrategyGlyph /></div>
