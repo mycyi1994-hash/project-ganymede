@@ -84,3 +84,12 @@ customer validation or an award prediction.
 - Production rechecked: app is still source 28e0ce2 / version
   8e4a251b-a187-4680-9d8d-af8db977154a; relayer latest deployment is
   5ec81f5d-53ce-48fe-ae96-65c5b4b61f29 (2026-09-23 12:43 UTC).
+
+
+## Release status
+Stages 1–3 implemented and deployed. Stage 4 automated and supported browser
+checks passed, with native 200% zoom and runtime reduced-motion emulation explicitly
+unverified in this environment (see REFINEMENT_RELEASE.md). Stage 5 app/relayer
+released; public export build passed and export published as 5f22710. Native
+zoom and runtime reduced-motion verification remain open; no claim of full
+completion of those validation gates is made.
