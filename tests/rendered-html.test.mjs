@@ -89,6 +89,8 @@ test("transparency starts unverified, states its scope and keeps the experiment 
   assert.match(html, /What a match confirms/);
   assert.match(html, /What it does not confirm/);
   assert.match(html, /latest 12 publications/);
+  assert.match(html, /Download evidence/);
+  assert.match(html, /npm run verify:evidence/);
   // The experiment is labelled as a browser copy and shows no result before the record is read.
   assert.match(html, /Try to break it/);
   assert.match(html, /edits a copy of the published document in your browser/);

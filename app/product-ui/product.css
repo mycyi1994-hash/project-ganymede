@@ -354,6 +354,9 @@
 .gmd-evidence-value > span { font-size: 12px; color: var(--gmd-copy); }
 .gmd-evidence-value strong { display: block; font-size: 32px; margin-top: 4px; font-family: "Instrument Sans",Arial,sans-serif; }
 .gmd-evidence-value small { display: block; font-size: 12px; color: var(--gmd-copy); margin-top: 6px; }
+.gmd-evidence-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; margin-top: 16px; }
+.gmd-evidence-actions > span { font-size: 12px; color: var(--gmd-copy); }
+.gmd-evidence-actions code { font-size: 12px; padding: 2px 6px; border-radius: 4px; background: #e7edef; color: var(--gmd-ink); }
 .gmd-scope { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 16px; }
 .gmd-scope > div { border: 1px solid var(--gmd-line); border-radius: 10px; background: #fff; padding: 22px 24px; }
 .gmd-scope h2 { font-size: 16px; }
