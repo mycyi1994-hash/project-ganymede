@@ -37,7 +37,7 @@ function shortAddress(address: string) {
 export default function WalletConnect({ compact = false }: { compact?: boolean }) {
   const [address, setAddress] = useState("");
   const [chainId, setChainId] = useState("");
-  const [status, setStatus] = useState("CONNECT WALLET");
+  const [status, setStatus] = useState("Connect wallet");
   const [error, setError] = useState("");
   const [missingWallet, setMissingWallet] = useState(false);
   const errorId = useId();
@@ -102,37 +102,37 @@ export default function WalletConnect({ compact = false }: { compact?: boolean }
       return;
     }
 
-    setStatus("CONNECTING…");
+    setStatus("Connecting…");
     try {
       const accounts = await provider.request({ method: "eth_requestAccounts" }) as string[];
       setAddress(accounts[0] ?? "");
       const currentChain = await provider.request({ method: "eth_chainId" }) as string;
       if (currentChain.toLowerCase() !== WALLET_CHAIN.chainId.toLowerCase()) await ensureSettlementChain(provider);
       else setChainId(currentChain);
-      setStatus("CONNECTED");
+      setStatus("Connected");
     } catch (walletError) {
       const code = (walletError as { code?: number }).code;
       setError(code === 4001 ? "Connection request was cancelled." : `Could not connect to ${DEFAULT_SETTLEMENT_CHAIN.name}. Please try again.`);
-      setStatus("CONNECT WALLET");
+      setStatus("Connect wallet");
     }
   };
 
   return (
-    <div className={`wallet-connect${compact ? " is-compact" : ""}`}>
+    <div className={`wallet-connect${compact ? " is-compact" : ""}`} onKeyDown={(event) => { if (event.key === "Escape" && error) { setError(""); event.currentTarget.querySelector("button")?.focus(); } }}>
       <button
         type="button"
         className={address && onCorrectChain ? "is-connected" : ""}
         onClick={connect}
         aria-describedby={`${statusId}${error ? ` ${errorId}` : ""}`}
         aria-label={address && onCorrectChain ? `${shortAddress(address)}, connected to ${DEFAULT_SETTLEMENT_CHAIN.name}` : address ? `Switch wallet to ${DEFAULT_SETTLEMENT_CHAIN.name}` : "Connect optional test wallet"}
-        disabled={status === "CONNECTING…"}
+        disabled={status === "Connecting…"}
       >
         <span className="wallet-network-dot" />
-        {address && onCorrectChain ? shortAddress(address) : address ? "SWITCH NETWORK" : status}
+        {address && onCorrectChain ? shortAddress(address) : address ? "Switch network" : compact && status === "Connect wallet" ? "Optional wallet" : status}
       </button>
       {!compact && <span id={statusId} className="wallet-chain-label" aria-live="polite">OPTIONAL TEST WALLET · {DEFAULT_SETTLEMENT_CHAIN.label} {DEFAULT_SETTLEMENT_CHAIN.chainId}</span>}
       {compact && <span id={statusId} className="sr-only" aria-live="polite">Optional {DEFAULT_SETTLEMENT_CHAIN.name} test wallet</span>}
-      {error && <small id={errorId} role="alert">{error}{missingWallet && !compact && <> <a href="https://web3.okx.com/download" target="_blank" rel="noreferrer">INSTALL OKX WALLET ↗</a></>}</small>}
+      {error && <small id={errorId} role="alert">{error}<button type="button" className="wallet-dismiss" aria-label="Dismiss wallet message" onClick={(event) => { setError(""); event.currentTarget.closest(".wallet-connect")?.querySelector<HTMLButtonElement>("button")?.focus(); }}>×</button>{missingWallet && <> <a href="https://web3.okx.com/download" target="_blank" rel="noreferrer">Install OKX Wallet ↗</a></>}</small>}
     </div>
   );
 }

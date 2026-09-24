@@ -1,3 +1,4 @@
+import { changedPriceCopy } from "../lib/xstocks/proof-experiment.ts";
 import assert from "node:assert/strict";
 import test from "node:test";
 import { evaluateBasket, constituentsWithAddresses, XSTOCKS_CONSTITUENTS } from "../lib/xstocks/basket.ts";
@@ -89,6 +90,26 @@ test("historical record age and current pricing are independent", () => {
   assert.equal(pricingStatus({ status: "priced", evaluatedAt: "2026-09-23T11:00:00Z" }, clock).label, "Pricing update delayed");
   assert.equal(pricingStatus({ status: "awaiting_prices", evaluatedAt: now }, clock).label, "Awaiting fresh prices");
   assert.equal(pricingStatus({ status: "priced", evaluatedAt: now }, clock, true).label, "Refresh unavailable");
+  const firstLoadFailure = pricingStatus(null, clock, true);
+  assert.equal(firstLoadFailure.label, "Pricing unavailable");
+  assert.doesNotMatch(firstLoadFailure.detail, /last loaded record/i);
   assert.equal(elapsedTime("2026-09-23T10:26:11Z", clock), "2 hr 0 min ago");
   assert.equal(formatRecordTime(now), "2026-09-23 12:26:11 UTC");
+});
+
+
+test("price experiment edits exactly one field, fails real checks, and restores the original", async () => {
+  const {canonical, record} = await fixture();
+  const copy = changedPriceCopy(canonical);
+  const original = JSON.parse(canonical), edited = JSON.parse(copy.canonical);
+  assert.equal(BigInt(edited.holdings[0].priceMicros) - BigInt(original.holdings[0].priceMicros), 1000000n);
+  edited.holdings[0].priceMicros = original.holdings[0].priceMicros;
+  assert.deepEqual(edited, original);
+  const failed = await verifyComposition(copy.canonical, record);
+  assert.equal(failed.hash.state, "fail");
+  assert.equal(failed.nav.state, "fail");
+  const restored = await verifyComposition(canonical, record);
+  assert.equal(restored.hash.state, "pass");
+  assert.equal(restored.nav.state, "pass");
+  assert.deepEqual(JSON.parse(canonical), original);
 });

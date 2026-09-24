@@ -61,7 +61,7 @@ Other reverts map to actionable responses: `TransferRestricted` →
 cd relayer
 npm install
 npm run typecheck
-npm test                   # request mapping, revert handling and id derivation, no network
+npm test                   # request mapping, revert handling, ids and submission lifecycle; no network
 
 # wrangler.jsonc already names the deployed `ganymede-settlement-relayer`
 # database. On a fresh Cloudflare account, create one and put its id there:

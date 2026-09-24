@@ -7,6 +7,6 @@ export default function DataNotice({ title, children, onRetry, loading = false }
   return <div className="data-notice" role="status">
     <span className="data-notice-mark" aria-hidden="true">i</span>
     <div><strong>{title}</strong><p>{children}</p></div>
-    {onRetry && <button type="button" disabled={loading} onClick={onRetry}>{loading ? "CHECKING…" : "TRY AGAIN"}<span aria-hidden="true"> ↻</span></button>}
+    {onRetry && <button type="button" disabled={loading} onClick={onRetry}>{loading ? "Checking…" : "Try again"}<span aria-hidden="true"> ↻</span></button>}
   </div>;
 }

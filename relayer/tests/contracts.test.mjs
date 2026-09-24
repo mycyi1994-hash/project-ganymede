@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { classifyRevert, planCall, RequestError } from "../src/contracts";
-import { idempotencyKey, productKey, settlementKey, toBytes32, toMicros, toUnixSeconds } from "../src/ids";
+import { classifyRevert, planCall, RequestError } from "../src/contracts.ts";
+import { idempotencyKey, productKey, settlementKey, toBytes32, toMicros, toUnixSeconds } from "../src/ids.ts";
 
 const HASH = "23ab95cb6f4d59b7a12e61c8a61c960d0e1b064f0bb430c1cdb3820709c6c1c7";
 const EFFECTIVE_AT = "2026-09-23T11:15:53.624Z";
@@ -20,13 +20,13 @@ test("publish_nav maps to publishNav on the registry with the product key", () =
 test("publish_nav without a holdings hash is rejected before any RPC call", () => {
   assert.throws(
     () => planCall({ entityType: "nav", entityId: "x", action: "publish_nav", productId: "us-tech-x", navPerShareMicros: "1", effectiveAt: EFFECTIVE_AT }),
-    (error: unknown) => error instanceof RequestError && error.status === 400,
+    (error) => error instanceof RequestError && error.status === 400,
   );
 });
 
 test("mint_subscription derives its settlement id from the idempotency key, not the payload", () => {
   const request = {
-    entityType: "subscription" as const, entityId: "sub_123", action: "mint_subscription" as const,
+    entityType: "subscription", entityId: "sub_123", action: "mint_subscription",
     productId: "core-20", walletAddress: INVESTOR, sharesMicros: "2500000", effectiveAt: EFFECTIVE_AT,
   };
   const plan = planCall(request);
@@ -42,14 +42,16 @@ test("mint_subscription derives its settlement id from the idempotency key, not 
 test("a mint or burn without an investor wallet is rejected", () => {
   assert.throws(
     () => planCall({ entityType: "redemption", entityId: "red_1", action: "burn_redemption", productId: "core-20", sharesMicros: "1", effectiveAt: EFFECTIVE_AT }),
-    (error: unknown) => error instanceof RequestError && error.code === "invalid_wallet",
+    (error) => error instanceof RequestError && error.code === "invalid_wallet",
   );
 });
 
 test("reverts that mean the chain already holds the state count as settled", () => {
-  for (const name of ["SettlementAlreadyProcessed", "DuplicatePayload", "StalePublication"]) {
+  for (const name of ["SettlementAlreadyProcessed", "DuplicatePayload"]) {
     assert.equal(classifyRevert(name)?.kind, "settled", name);
   }
+  // A newer snapshot alone does not prove this payload landed; the submitter checks publishedPayload.
+  assert.equal(classifyRevert("StalePublication")?.status, 409);
   assert.deepEqual(classifyRevert("TransferRestricted"), {
     kind: "client", status: 409, code: "investor_not_allowlisted",
     reason: "investor wallet is not allowlisted; the transfer agent must permit it first",

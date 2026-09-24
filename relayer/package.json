@@ -5,8 +5,8 @@
   "description": "Signs and submits Ganymede settlement transactions to X Layer (or GIWA). The only component in the system that holds an EVM private key.",
   "type": "module",
   "scripts": {
+    "test": "node --experimental-transform-types --experimental-loader ../tests/cloudflare-loader.mjs --test tests/*.test.mjs",
     "typecheck": "tsc --noEmit",
-    "test": "node --experimental-transform-types --experimental-loader ../tests/cloudflare-loader.mjs --test test/*.test.ts",
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
     "db:create": "wrangler d1 create ganymede-settlement-relayer",

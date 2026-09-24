@@ -17,15 +17,14 @@ function configure(values) {
 test("a client-supplied identity header grants nothing by default", async () => {
   configure({});
   assert.equal(await operatorIdentity(request({ [HEADER]: "attacker@example.com" })), null);
-  const identity = requestIdentity(request({ [HEADER]: "attacker@example.com" }));
-  assert.equal(identity?.email, null);
-  assert.equal(identity?.subject, "paper:private-site-owner");
+  // Without the trusted-edge flag or a private session cookie there is no investor identity at all.
+  assert.equal(await requestIdentity(request({ [HEADER]: "attacker@example.com" })), null);
 });
 
 test("the header identifies operators only where the platform sets it", async () => {
   configure({ IDENTITY_HEADER_TRUSTED: "true" });
   assert.equal(await operatorIdentity(request({ [HEADER]: "Ops@Example.com" })), "operator:ops@example.com");
-  assert.equal(requestIdentity(request({ [HEADER]: "ops@example.com" }))?.subject, "email:ops@example.com");
+  assert.equal((await requestIdentity(request({ [HEADER]: "ops@example.com" })))?.subject, "email:ops@example.com");
 
   configure({ IDENTITY_HEADER_TRUSTED: "true", OPERATIONS_ALLOW_EMAILS: "ops@example.com" });
   assert.equal(await operatorIdentity(request({ [HEADER]: "ops@example.com" })), "operator:ops@example.com");

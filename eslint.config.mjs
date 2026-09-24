@@ -18,6 +18,9 @@ const eslintConfig = defineConfig([
     "onchain/artifacts/**",
     "onchain/cache/**",
     "relayer/.wrangler/**",
+    // Local scratch folders (git-ignored).
+    "work/**",
+    "outputs/**",
   ]),
 ]);
 
