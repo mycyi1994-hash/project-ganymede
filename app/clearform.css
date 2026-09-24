@@ -5569,3 +5569,34 @@ button:active:not(:disabled),.button:active {
  .basket-overview-facts span { font-size: 12px; line-height: 1.4; }
  .basket-overview-facts b { font-size: 13px; }
 }
+/* Stage 4: short, state-driven motion. No artificial verification delay. */
+@keyframes sculpture-arrive { from { opacity: 0; transform: translateY(16px) scale(.985); } to { opacity: 1; transform: none; } }
+@keyframes evidence-arrive { from { opacity: .45; transform: translateY(5px); } to { opacity: 1; transform: none; } }
+@keyframes price-emphasis { from { background-color: #dce9f2; } to { background-color: transparent; } }
+@media (prefers-reduced-motion: no-preference) {
+ .hero-sculpture img { animation: sculpture-arrive 500ms cubic-bezier(.16,1,.3,1) both; }
+ .experiment-check { animation: evidence-arrive 240ms ease-out both; }
+ .experiment-copy-price strong { animation: price-emphasis 360ms ease-out; }
+ .basket-overview .proof-table tr { transition: background-color 180ms ease-out; }
+ .basket-contribution strong { animation: evidence-arrive 180ms ease-out; }
+ .proof-result-pass .proof-check,.proof-result-fail .proof-check { animation: evidence-arrive 240ms ease-out; }
+}
+.proof-experiment .experiment-outcome { min-height: 245px; }
+.proof-experiment .experiment-outcome h3 { min-height: 30px; }
+.proof-experiment .experiment-check { min-height: 150px; border-left: 3px solid #aab6c1; padding: 18px; border-radius: 10px; background: #f4f6f8; }
+.proof-experiment .experiment-check.is-pass { border-color: #417a63; background: #eef5f1; }
+.proof-experiment .experiment-check.is-fail { border-color: #a75638; background: #fbf1ec; }
+.proof-experiment[data-copy="changed"] .experiment-copy-price strong { color: #944329; }
+.proof-experiment .experiment-check p { min-height: 3.2em; line-height: 1.6; }
+@media(max-width: 700px) {
+ .proof-experiment .experiment-outcome { min-height: 440px; }
+ .proof-experiment .experiment-outcome h3 { min-height: 52px; }
+ .proof-experiment .experiment-check { min-height: 170px; }
+}
+@media (prefers-reduced-motion: reduce) {
+ .hero-sculpture img,.experiment-check,.experiment-copy-price strong,.basket-contribution strong,.proof-check { animation: none !important; transform: none !important; }
+ .basket-overview .proof-table tr { transition: none !important; }
+}
+.experiment-check-details { margin-block: 12px 20px; color: var(--copy); }
+.experiment-check-details summary { cursor: pointer; padding-block: 10px; text-decoration: underline; text-underline-offset: 4px; }
+.experiment-check-details p { max-width: 78ch; line-height: 1.6; }

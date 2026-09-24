@@ -1,7 +1,8 @@
 # Ganymede production release
 
-The approved public UI is Clearform on `codex/design-refinement` in
-`C:\Users\gana0\project-ganymede-design`. Production is `ganymede-xlayer`.
+The approved public UI is Clearform. Use the latest integrated source in this
+repository; production is `ganymede-xlayer`. The journey release integrates
+`codex/journey-stages-1-3` with the reviewed Claude branch.
 
 Before deploying, compare the currently deployed Worker against the proposed
 build. Preserve later backend/security changes. Never deploy an older checkout

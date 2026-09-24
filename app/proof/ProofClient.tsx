@@ -209,7 +209,7 @@ export default function ProofClient() {
         </aside>
       </section>
 
-      <section className="proof-section proof-result" aria-label="Evidence checks">
+      <section className={`proof-section proof-result proof-result-${summaryState}`} aria-label="Evidence checks">
         <div className={`proof-result-heading proof-result-${summaryState}`} aria-live="polite" aria-atomic="true">
           <div><span className="proof-result-eyebrow">VERIFICATION / IN YOUR BROWSER</span><h2 id="proof-verify">{summaryText}</h2></div>
           <span className="proof-count">{summaryState === "pass" || summaryState === "fail" ? `${passed} / 3 CHECKS PASSED` : summaryState === "unavailable" ? "DATA UNAVAILABLE" : summaryState === "loading" ? "LOADING DATA" : summaryState === "waiting" ? "NOT YET VERIFIED" : "CHECKING…"}</span>
