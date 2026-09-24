@@ -21,9 +21,11 @@
 4. 다음 파일은 **공개하지 않는다**. 복사됐으면 지운다.
    - `docs/CLAUDE_HANDOFF_2026-09-24_KO.md` — D1 ID와 개인 PC 경로가 들어 있다.
    - `docs/SUBMISSION_EXPORT.md` — 이 문서
+   - `docs/SUBMISSION_CHECKLIST_KO.md` — 팀 내부 제출 체크리스트
    - `outputs/`, `.env*`, 인증 파일
 5. 개발 트리에 없는 파일은 공개본에서도 지운다. 3번의 유지 파일은 예외다.
 6. `README.md`와 `docs/OKX_DEV_DAY.md`는 개발본을 쓰되, 아래 공개용 수정을 적용한다.
+7. `docs/BUILD_PERIOD.md`는 그대로 내보낸다. 커밋은 링크 없는 코드 표기라 수정이 필요 없다. 내보내기 직전에 다시 생성해 마지막 커밋까지 포함한다.
 
 ### README.md 공개용 수정
 
