@@ -1,5 +1,7 @@
 # Product direction: an operating index product
 
+> Superseded for design and implementation planning by [the detailed Korean product redesign plan](PRODUCT_REDESIGN_PLAN_KO.md), dated 2026-09-24. The user explicitly authorized replacing the existing design. The notes below retain the earlier product-gap and deployment record; they do not constrain the new visual design.
+
 ## Decision
 The primary experience must serve a user's investment lifecycle, not a hackathon judge's verification exercise. Retain transparent records as supporting evidence. Move price-tampering exercises and synthetic reports out of the default customer journey.
 

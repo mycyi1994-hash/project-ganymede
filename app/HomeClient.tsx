@@ -317,9 +317,10 @@ export default function HomeClient({ initialView }: { initialView: View | "overv
   const [actionNotice, setActionNotice] = useState("");
 
   const openView = useCallback((nextView: View, anchor?: string) => {
+    if (nextView === "select") { window.location.assign("/products/ustx"); return; }
     setAppOpen(true);
     setView(nextView);
-    const url = `/?app=${nextView}${anchor ? `#${anchor}` : ""}`;
+    const url = `${nextView === "portfolio" ? "/lab" : `/?app=${nextView}`}${anchor ? `#${anchor}` : ""}`;
     if (`${window.location.pathname}${window.location.search}${window.location.hash}` !== url) window.history.pushState({ ganymedeView: nextView }, "", url);
     requestAnimationFrame(() => {
       const section = anchor ? document.getElementById(anchor) : null;
@@ -330,7 +331,7 @@ export default function HomeClient({ initialView }: { initialView: View | "overv
 
   // Links between these views are handled here: a client navigation to the same page would keep the current view.
   const viewLink = (nextView: View, anchor?: string) => ({
-    href: `/?app=${nextView}${anchor ? `#${anchor}` : ""}`,
+    href: `${nextView === "portfolio" ? "/lab" : nextView === "select" ? "/products/ustx" : `/?app=${nextView}`}${anchor ? `#${anchor}` : ""}`,
     onNavigate: (event: { preventDefault: () => void }) => { event.preventDefault(); openView(nextView, anchor); },
   });
 
@@ -404,7 +405,7 @@ export default function HomeClient({ initialView }: { initialView: View | "overv
       setPendingRedeem(null);
       setConfirmCycle(false);
       setGuideOpen(false);
-      const appView = new URLSearchParams(window.location.search).get("app");
+      const appView = window.location.pathname === "/lab" ? "portfolio" : new URLSearchParams(window.location.search).get("app");
       if (appView === "select" || appView === "portfolio" || appView === "operations") {
         setAppOpen(true);
         setView(appView);
