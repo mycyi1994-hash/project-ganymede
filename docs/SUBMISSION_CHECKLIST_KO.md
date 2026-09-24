@@ -105,13 +105,15 @@
 
 ### 장면별 대본
 
-영어 문장을 천천히 읽는다. 영어 녹음이 어려우면 5절의 "목소리 대안"을 쓴다.
+영어 문장을 천천히 읽는다. 영어 녹음이 어려우면 5절의 "목소리 대안"을 쓴다. 시간은 대략이며, 전체가 3분 안팎이면 된다.
 
 **장면 1 — Markets (0:00~0:20)**
 화면: 첫 화면. 제목과 차트, 여섯 종목 비중을 천천히 보여 준다.
-> Hi, this is Ganymede, built on X Layer for OKX Dev Day. USTX is a model basket of six tokenized US stocks: the xStocks for Apple, Microsoft, NVIDIA, Amazon, Meta and Tesla. Every five minutes we price them with OKX OnchainOS on X Layer mainnet and record the NAV on X Layer.
+> Hi, this is Ganymede, built on X Layer for OKX Dev Day. USTX is a model basket of six tokenized US stocks: the xStocks for Apple, Microsoft, NVIDIA, Amazon, Meta and Tesla. Every five minutes we price them with OKX OnchainOS on X Layer mainnet and record the NAV on X Layer. The xStocks product, the X Layer integration and every screen in this demo were built during the Dev Day build period.
 
-뜻: USTX는 미국 기술주 토큰 6종 모델 바스켓이고, 5분마다 OKX OnchainOS로 가격을 매겨 X Layer에 NAV를 기록한다.
+뜻: USTX는 미국 기술주 토큰 6종 모델 바스켓이고, 5분마다 OKX OnchainOS로 가격을 매겨 X Layer에 NAV를 기록한다. 이 데모의 제품·X Layer 연동·모든 화면은 대회 빌드 기간에 만들었다.
+
+기존 프로젝트는 "새로 만든 기능을 보여 주는 데모"를 내야 하므로 마지막 문장을 빼지 않는다. 레지스트리 컨트랙트 코드는 대회 전에 있던 것을 X Layer에 새로 배포했으므로 "컨트랙트를 새로 만들었다"고는 말하지 않는다.
 
 **장면 2 — 문제와 초록 표시 (0:20~0:35)**
 화면: 오른쪽 위 "Verified in your browser" 표시에 마우스를 올린다. 차트 아래 "… published records since …" 문구를 보여 준다.
