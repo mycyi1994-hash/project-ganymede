@@ -24,7 +24,7 @@ Those modules still power the separate paper Lab. They are not part of the submi
 | Fund and ecosystem | Fund overview with size, investors and return since launch; the shares outstanding recorded on X Layer with every NAV; a public NAV API with open CORS, an embeddable self-verifying badge, and issuer and developer pages | `0c38037`, `23d35d2` |
 | Hardening | Public reads without writes, identity header gate, relayer retry and nonce handling, paper-ledger integrity, sanitized public errors | `c98e7ea`, `387ec35`, `8cd427f`, `7b18cf9`, `124bebe` |
 
-From `7a33392` to `cbadccd`: 202 files changed, 19485 insertions(+), 7370 deletions(-).
+From `7a33392` to `69bde0c`: 202 files changed, 19497 insertions(+), 7370 deletions(-).
 
 ## Every commit in the build period (UTC)
 
@@ -110,4 +110,6 @@ From `7a33392` to `cbadccd`: 202 files changed, 19485 insertions(+), 7370 deleti
 | 2026-09-24 17:50 | `1327a6a` | Let visitors invest in USTX with demo dollars | 15 | +767 / −16 |
 | 2026-09-24 18:31 | `0c38037` | Show what a USTX share holds, fund figures and partner tools | 26 | +914 / −33 |
 | 2026-09-24 18:37 | `23d35d2` | Let keyboard users scroll code samples and give the badge a heading | 4 | +5 / −4 |
+| 2026-09-24 18:42 | `9f807c2` | Add demo investing and partner tools to the build-period record | 1 | +11 / −1 |
 | 2026-09-24 18:42 | `cbadccd` | Describe the fund product, partner tools and the new releases | 4 | +114 / −46 |
+| 2026-09-24 18:44 | `2e17e99` | Update the submission checklist, video script and form text for the fund product | 1 | +90 / −88 |
