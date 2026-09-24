@@ -13,7 +13,10 @@ const time = (value: unknown) => {
   return Number.isNaN(parsed.getTime()) ? "Time unavailable" : parsed.toLocaleString("en-GB", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit", timeZone: "UTC", timeZoneName: "short" });
 };
 
-export default function PortfolioView({ data, loading, error, actionError, removing, onBrowse, onRetry, onRedeem, onOpen }: {
+/** A link the home page switches views for in place instead of navigating. */
+type ViewLink = { href: string; onNavigate?: (event: { preventDefault: () => void }) => void };
+
+export default function PortfolioView({ data, loading, error, actionError, removing, onBrowse, onRetry, onRedeem, onOpen, basketLink }: {
   data: PortfolioData | null;
   loading: boolean;
   error: string;
@@ -23,6 +26,7 @@ export default function PortfolioView({ data, loading, error, actionError, remov
   onRetry: () => void;
   onRedeem: (position: PortfolioPosition) => void;
   onOpen: (position: PortfolioPosition) => void;
+  basketLink: ViewLink;
 }) {
   const positions = data?.positions ?? [];
   const { invested, value, gain, returnPct } = portfolioSummary(positions);
@@ -38,7 +42,7 @@ export default function PortfolioView({ data, loading, error, actionError, remov
       <div className="portfolio-heading-actions"><button type="button" className="portfolio-refresh" disabled={loading || removing} onClick={onRetry}>{loading ? "Refreshing…" : "Refresh"} <span aria-hidden="true">↻</span></button><button type="button" className="portfolio-primary" onClick={onBrowse}>Explore strategies <span aria-hidden="true">↗</span></button></div>
     </header>
 
-    <aside className="portfolio-context"><p>This workspace holds crypto strategy simulations. USTX is an inspectable model basket and cannot be purchased or allocated here.</p><Link href="/?app=select#ustx-basket" prefetch={false}>Explore USTX</Link><a href="/proof">Inspect NAV ↗</a></aside>
+    <aside className="portfolio-context"><p>This workspace holds crypto strategy simulations. USTX is an inspectable model basket and cannot be purchased or allocated here.</p><Link {...basketLink} prefetch={false}>Explore USTX</Link><a href="/proof">Inspect NAV ↗</a></aside>
 
     {error && data && <DataNotice title="Portfolio refresh is unavailable." onRetry={onRetry} loading={loading}>Showing your last loaded snapshot. Values and request statuses may have changed.</DataNotice>}
     {actionError && !error && <DataNotice title="We couldn’t confirm the removal." onRetry={onRetry} loading={loading}>Refresh your portfolio to check the request before trying again. No real funds move in this simulation.</DataNotice>}
