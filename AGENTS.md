@@ -1,20 +1,53 @@
-# Ganymede production release
+# Ganymede development and release
 
-The approved public UI is Clearform. Use the latest integrated source in this
-repository; production is `ganymede-xlayer`. The journey release integrates
-`codex/journey-stages-1-3` with the reviewed Claude branch.
+## Product and scope
 
-Before deploying, compare the currently deployed Worker against the proposed
-build. Preserve later backend/security changes. Never deploy an older checkout
-or a stale `dist` directory over the approved design. Build and test from the
-current source, preserve remote variables/secrets, and verify Overview, Funds,
-Portfolio and Proof on the public URL after deployment.
+The public UI is the product redesign: Markets, USTX detail, Transparency,
+read-only testnet Portfolio/Activity, and a separate paper Lab. Production is the
+`ganymede-xlayer` Worker; the settlement relayer is `ganymede-settlement-relayer`.
+`docs/PRODUCT_RELEASE.md` records the current source and Worker version.
 
-The 2026-09-24 00:24 UTC release replaced Clearform while adding an identity
-header trust check. That check must be retained. Public requests must not gain
-operator access from `oai-authenticated-user-email` unless the deployment
-explicitly trusts an authenticating edge.
+Real deposits, withdrawals, custody, settlement tokens and payment destinations
+are out of scope. Never create or name an address that would receive real funds,
+and keep the testnet and simulation labels. `lib/product-contract.ts` keeps
+`canSubscribe`, `canRedeem`, `settlementAsset` and `custodyAddress` closed.
 
-Coordinate releases to this shared Worker. Record the source commit and version
-in the deployment message. Other checkouts must integrate current design and
-security changes before publishing to this Worker.
+## Branches
+
+`main` holds the source that production runs. Start work from the latest `main`
+on a feature branch and merge back through a pull request. Deploy only a commit
+that contains the current `main`, so later design and security changes are never
+dropped.
+
+## Checks
+
+Run `npm test` (typecheck, clean build and the full suite) and `npm run lint`
+(0 errors). After relayer changes, also run `npm run typecheck` and `npm test` in
+`relayer/`; after contract or script changes, run the checks in `onchain/`.
+
+## Deploying
+
+Before deploying, compare the currently deployed Worker (`npx wrangler
+deployments list --name ganymede-xlayer`) against the proposed build. Build from
+a clean tree (`rm -rf .vinext dist`) with `CLOUDFLARE_WORKER_NAME=ganymede-xlayer`,
+`CLOUDFLARE_D1_DATABASE_NAME=ganymede-xlayer` and the existing
+`CLOUDFLARE_D1_DATABASE_ID`. Then run `npx wrangler deploy -c dist/server/wrangler.json --keep-vars`.
+Never reuse an older `dist`. Record the source commit and the prior version in
+the deployment message, and add the new version to `docs/PRODUCT_RELEASE.md`.
+
+After deploying, verify Markets, USTX, Transparency, Portfolio, Activity, Lab and
+the legacy redirects on the public URL.
+
+## Security rules that must stay
+
+Public requests must not gain operator access from `oai-authenticated-user-email`
+unless the deployment explicitly trusts an authenticating edge
+(`IDENTITY_HEADER_TRUSTED`). Public GET requests must not write to the engine
+database. Never print or commit secrets.
+
+## Public submission repository
+
+`project-ganymede-submission` is the public snapshot for reviewers. After a
+release, refresh it as described in `docs/SUBMISSION_EXPORT.md`, keeping its
+publication-only files and never exporting handoff notes, local outputs or
+secrets.

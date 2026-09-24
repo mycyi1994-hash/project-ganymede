@@ -457,7 +457,6 @@ button:active:not(:disabled),.button:active {
   font-size: clamp(58px,6.2vw,106px);
   font-weight: 700;
   letter-spacing: -.075em;
-  word-spacing: .09em;
   line-height: 1.02;
 }
 
@@ -860,25 +859,30 @@ button:active:not(:disabled),.button:active {
   font-style: normal;
   font-size: 21px;
 }
-/* Product identities have shared geometry and restrained accents. */
+/* Product identities have shared geometry and restrained accents.
+   --product-ink is the accent darkened to 4.5:1 on white, the page tone and the soft tint, for text. */
 
 .product-core-20 {
   --product-accent: #527992;
+  --product-ink: #4b6e85;
   --product-soft: #eaf0f5;
 }
 
 .product-tech-leaders {
   --product-accent: #756895;
+  --product-ink: #70648f;
   --product-soft: #efedf5;
 }
 
 .product-digital-income {
   --product-accent: #5c846b;
+  --product-ink: #50735e;
   --product-soft: #ecf2ed;
 }
 
 .product-next-frontier {
   --product-accent: #a77b60;
+  --product-ink: #88634c;
   --product-soft: #f5eee8;
 }
 
@@ -1157,7 +1161,7 @@ button:active:not(:disabled),.button:active {
 
 .product-role-name {
   display: block;
-  color: var(--product-accent);
+  color: var(--product-ink);
   font-size: 14px;
   font-weight: 600;
   margin-bottom: 18px;
@@ -1359,7 +1363,7 @@ button:active:not(:disabled),.button:active {
 
 .chain-testnet-notice>span {
   font-weight: 600;
-  color: var(--product-accent);
+  color: var(--product-ink);
 }
 
 .chain-testnet-notice>p {
@@ -1391,7 +1395,7 @@ button:active:not(:disabled),.button:active {
   gap: 14px;
   margin-bottom: 20px;
   font-size: 13px;
-  color: var(--product-accent);
+  color: var(--product-ink);
 }
 
 .product-detail-copy h1 {
@@ -2243,7 +2247,7 @@ button:active:not(:disabled),.button:active {
 
 .methodology-panel-v2>article>span {
   font: 500 16px var(--font-display);
-  color: var(--product-accent);
+  color: var(--product-ink);
   padding-top: 3px;
 }
 
@@ -2680,7 +2684,6 @@ button:active:not(:disabled),.button:active {
 .proof-hero h1 {
   font-size: clamp(42px,5vw,76px);
   letter-spacing: -.06em;
-  word-spacing: .07em;
 }
 
 .proof-lede {
@@ -3330,7 +3333,7 @@ button:active:not(:disabled),.button:active {
 
 .choice-guide-options button>span {
   font-size: 10px;
-  color: var(--product-accent);
+  color: var(--product-ink);
   font-weight: 600;
 }
 
