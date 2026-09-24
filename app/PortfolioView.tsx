@@ -33,7 +33,7 @@ export default function PortfolioView({ data, loading, error, actionError, remov
 
   return <main className="portfolio-workspace">
     <header className="portfolio-heading">
-      <div><p className="section-kicker">MY PORTFOLIO / PAPER MODE</p><h1>Your strategies, together.</h1><p>Explore a portfolio with sample allocations. No real money moves.</p></div>
+      <div><p className="section-kicker">MY PORTFOLIO / PAPER MODE</p><h1>Your strategies, together.</h1><p>Sample allocations are saved for this browser for 30 days. Clearing cookies or using another browser starts a separate portfolio. No real money moves.</p></div>
       <div className="portfolio-heading-actions"><button type="button" className="portfolio-refresh" disabled={loading || removing} onClick={onRetry}>{loading ? "Refreshing…" : "Refresh"} <span aria-hidden="true">↻</span></button><button type="button" className="portfolio-primary" onClick={onBrowse}>Explore strategies <span aria-hidden="true">↗</span></button></div>
     </header>
 

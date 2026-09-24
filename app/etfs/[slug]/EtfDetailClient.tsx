@@ -445,6 +445,8 @@ export default function EtfDetailClient({ etf }: { etf: Etf }) {
     setOrderError("");
     try {
       const walletAddress = await currentWalletAddress();
+      const session = await fetch("/api/portfolio", { cache: "no-store" });
+      if (!session.ok) throw new Error("Your private portfolio session could not be started");
       const response = await fetch("/api/portfolio", {
         method: "POST",
         headers: { "Content-Type": "application/json", ...(walletAddress ? { "x-ganymede-wallet": walletAddress } : {}) },

@@ -1,5 +1,7 @@
 # Ganymede ETF Operating System
 
+Production source: the repository default branch (`main`). Releases are built from a committed revision and the Cloudflare deployment message records that revision. See [release and portfolio identity notes](docs/release-identity.md).
+
 Ganymede is a full-stack operating system for passive and systematic-active digital-asset ETF products. It combines the investor product surface with portfolio construction, market data, NAV, rebalancing, execution, subscriptions, redemptions, on-chain settlement evidence on X Layer and an append-only audit trail.
 
 The deployed system defaults to `paper` mode. Live public issuance is deliberately gated until licensed fund, custody, transfer-agent, venue, administrator, distribution and approved offering-document integrations are configured.

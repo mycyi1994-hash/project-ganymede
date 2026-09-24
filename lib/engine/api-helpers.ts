@@ -23,13 +23,36 @@ function authenticatedEmail(request: Request): string | null {
   return request.headers.get("oai-authenticated-user-email")?.trim().toLowerCase() || null;
 }
 
-export function requestIdentity(request: Request, payloadWallet?: unknown): RequestIdentity | null {
+const PAPER_COOKIE = "__Host-ganymede-paper";
+
+export function paperSessionCookie(request: Request): string | null {
+  const matches = (request.headers.get("cookie") ?? "").split(";")
+    .map((part) => part.trim()).filter((part) => part.startsWith(`${PAPER_COOKIE}=`));
+  if (matches.length !== 1) return null;
+  const token = matches[0].slice(PAPER_COOKIE.length + 1);
+  return /^[a-f0-9]{64}$/.test(token) ? token : null;
+}
+
+export function newPaperSession(): { cookie: string; token: string } {
+  const token = Array.from(crypto.getRandomValues(new Uint8Array(32)), (byte) => byte.toString(16).padStart(2, "0")).join("");
+  return { token, cookie: `${PAPER_COOKIE}=${token}; Path=/; Secure; HttpOnly; SameSite=Strict; Max-Age=2592000` };
+}
+
+// A wallet address is metadata, never proof of ownership. Only the private cookie
+// (hashed before use in the ledger) or an explicitly trusted edge identifies a user.
+export async function requestIdentity(request: Request, payloadWallet?: unknown, newToken?: string): Promise<RequestIdentity | null> {
   const email = authenticatedEmail(request);
   const walletAddress = walletFromRequest(request, payloadWallet);
   if (email) return { subject: `email:${email}`, email, walletAddress };
-  if (walletAddress && engineEnv().TRADING_MODE !== "live") return { subject: `paper-wallet:${walletAddress}`, email: null, walletAddress };
-  if (engineEnv().TRADING_MODE !== "live") return { subject: "paper:private-site-owner", email: null, walletAddress: null };
-  return null;
+  if (engineEnv().TRADING_MODE === "live") return null;
+  const token = paperSessionCookie(request) ?? newToken;
+  return token ? { subject: `paper-session:${await sha256Hex(token)}`, email: null, walletAddress } : null;
+}
+
+export function isSameSiteRequest(request: Request): boolean {
+  if (request.headers.get("sec-fetch-site") === "cross-site") return false;
+  const origin = request.headers.get("origin");
+  return !origin || origin === new URL(request.url).origin;
 }
 
 async function constantTimeTokenMatch(expected: string, supplied: string): Promise<boolean> {

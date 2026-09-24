@@ -1,25 +1,33 @@
-import { engineEnv, jsonError, noStoreJson, readJson, requestIdentity } from "@/lib/engine/api-helpers";
+import { engineEnv, jsonError, noStoreJson, readJson, requestIdentity, newPaperSession, isSameSiteRequest } from "@/lib/engine/api-helpers";
 import { asBigInt } from "@/lib/engine/fixed";
 import { EngineRepository } from "@/lib/engine/repository";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
-  const identity = requestIdentity(request);
-  if (!identity) return noStoreJson({ error: "Authenticated investor identity required" }, { status: 401 });
+  if (!isSameSiteRequest(request)) return noStoreJson({ error: "Same-origin request required" }, { status: 403 });
   try {
+    let identity = await requestIdentity(request);
+    let cookie: string | undefined;
+    if (!identity && engineEnv().TRADING_MODE !== "live") {
+      const session = newPaperSession();
+      cookie = session.cookie;
+      identity = await requestIdentity(request, undefined, session.token);
+    }
+    if (!identity) return noStoreJson({ error: "Authenticated investor identity required" }, { status: 401 });
     const repo = new EngineRepository(engineEnv().DB);
-    return noStoreJson(await repo.portfolio(identity.subject));
+    return noStoreJson(await repo.portfolio(identity.subject), { headers: cookie ? { "Set-Cookie": cookie } : undefined });
   } catch (error) {
     return jsonError(error);
   }
 }
 
 export async function POST(request: Request) {
+  if (!isSameSiteRequest(request)) return noStoreJson({ error: "Same-origin request required" }, { status: 403 });
   try {
     const payload = await readJson<{ productId?: string; amountKrw?: string | number; walletAddress?: string; clientReference?: string }>(request);
-    const identity = requestIdentity(request, payload.walletAddress);
-    if (!identity) return noStoreJson({ error: "Authenticated investor identity required" }, { status: 401 });
+    const identity = await requestIdentity(request, payload.walletAddress);
+    if (!identity) return noStoreJson({ error: "Open your portfolio first to start a private session. Cookies must be enabled." }, { status: 401 });
     if (!payload.productId) return noStoreJson({ error: "productId is required" }, { status: 400 });
     const amountKrw = asBigInt(payload.amountKrw ?? "0");
     const repo = new EngineRepository(engineEnv().DB);
@@ -39,10 +47,11 @@ export async function POST(request: Request) {
 }
 
 export async function DELETE(request: Request) {
+  if (!isSameSiteRequest(request)) return noStoreJson({ error: "Same-origin request required" }, { status: 403 });
   try {
     const payload = await readJson<{ productId?: string; sharesMicros?: string; walletAddress?: string; clientReference?: string }>(request);
-    const identity = requestIdentity(request, payload.walletAddress);
-    if (!identity) return noStoreJson({ error: "Authenticated investor identity required" }, { status: 401 });
+    const identity = await requestIdentity(request, payload.walletAddress);
+    if (!identity) return noStoreJson({ error: "Open your portfolio first to start a private session. Cookies must be enabled." }, { status: 401 });
     if (!payload.productId || !payload.sharesMicros) return noStoreJson({ error: "productId and sharesMicros are required" }, { status: 400 });
     const repo = new EngineRepository(engineEnv().DB);
     await repo.seed();

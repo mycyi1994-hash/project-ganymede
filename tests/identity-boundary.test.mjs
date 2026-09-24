@@ -10,15 +10,15 @@ test('public headers cannot impersonate a user or operator; explicit trusted edg
     env.OPERATIONS_ALLOW_EMAILS = 'operator@example.test';
     for (const flag of [undefined, 'false', '0']) {
       env.IDENTITY_HEADER_TRUSTED = flag;
-      assert.equal(requestIdentity(request), null);
+      assert.equal((await requestIdentity(request)), null);
       assert.equal(await operatorIdentity(request), null);
     }
     env.TRADING_MODE = 'paper';
     env.OPERATIONS_ALLOW_EMAILS = '';
     assert.equal(await operatorIdentity(request), null);
-    assert.equal(requestIdentity(request).email, null);
+    assert.equal(await requestIdentity(request), null);
     env.IDENTITY_HEADER_TRUSTED = 'true';
-    assert.equal(requestIdentity(request).subject, 'email:operator@example.test');
+    assert.equal((await requestIdentity(request)).subject, 'email:operator@example.test');
     assert.equal(await operatorIdentity(request), 'operator:operator@example.test');
     env.IDENTITY_HEADER_TRUSTED = 'false';
     env.OPERATOR_TOKEN = 'test-only-token';
