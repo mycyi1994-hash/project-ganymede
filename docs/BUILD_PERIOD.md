@@ -22,7 +22,7 @@ Those modules still power the separate paper Lab. They are not part of the submi
 | Product | Clearform redesign; Markets, USTX and Verify screens led by the browser check; read-only xStocks Portfolio at verified prices; NAV chart from publication receipts | `e5d1d8f`, `f4d67c1`, `ff04920`, `c0ce112`, `ebef0fa`, `d055246` |
 | Hardening | Public reads without writes, identity header gate, relayer retry and nonce handling, paper-ledger integrity, sanitized public errors | `c98e7ea`, `387ec35`, `8cd427f`, `7b18cf9`, `124bebe` |
 
-From `7a33392` to `d055246`: 180 files changed, 17375 insertions(+), 7370 deletions(-).
+From `7a33392` to `079a102`: 180 files changed, 17395 insertions(+), 7370 deletions(-).
 
 ## Every commit in the build period (UTC)
 
@@ -96,3 +96,4 @@ From `7a33392` to `d055246`: 180 files changed, 17375 insertions(+), 7370 deleti
 | 2026-09-24 13:33 | `f65c672` | Record the verification-led release | 1 | +18 / −2 |
 | 2026-09-24 13:45 | `ebef0fa` | Value any wallet's xStocks at the verified prices | 13 | +478 / −23 |
 | 2026-09-24 13:50 | `d055246` | Chart the NAV since the first publication | 8 | +271 / −3 |
+| 2026-09-24 13:56 | `3a8171f` | Record the Portfolio and NAV series release | 4 | +26 / −6 |
