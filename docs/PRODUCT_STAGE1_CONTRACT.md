@@ -1,5 +1,6 @@
 # Product stages 1–3: decisions and integration contract
 
+> 2026-09-24 범위 확정: 사용자가 실제 입출금·보관 계약 및 결제 토큰이 없음을 확인했다. 이번 후속 배포는 기존 테스트넷 장부 조회·NAV·모의 운용 범위로 완성한다. 아래 실제 투자·회수 계획은 후속 제품 과제이며 이번 완료 범위가 아니다. 최신 구현·검수·배포 기록은 [PRODUCT_RELEASE.md](PRODUCT_RELEASE.md)를 따른다.
 2026-09-24 · implementation branch `codex/product-redesign-1-3`
 
 ## Decisions made in this delivery

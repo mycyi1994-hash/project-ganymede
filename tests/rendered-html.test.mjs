@@ -32,8 +32,8 @@ test("public product routes share navigation and select the right destination be
     ["/", "/", "US Tech Basket"],
     ["/products/ustx", "/", "Terms &amp; approach"],
     ["/products/ustx/transparency", "/", "Transparency"],
-    ["/portfolio", "/portfolio", "A place for your investments"],
-    ["/activity", "/activity", "Your transactions will live here"],
+    ["/portfolio", "/portfolio", "Your testnet share records"],
+    ["/activity", "/activity", "Your testnet share records"],
   ]) {
     const response = await render(path);
     assert.equal(response.status, 200, path);
@@ -50,7 +50,7 @@ test("public product routes share navigation and select the right destination be
 });
 
 test("legacy URLs route to their matching product or simulation destination", async () => {
-  for (const [path, target] of [["/?app=select", "/products/ustx"], ["/?app=portfolio", "/lab"], ["/proof", "/products/ustx/transparency"]]) {
+  for (const [path, target] of [["/?app=select", "/products/ustx"], ["/?app=portfolio", "/lab"], ["/proof", "/products/ustx/transparency"], ["/etfs/gmd-core", "/lab/strategies/gmd-core"]]) {
     const response = await render(path);
     assert.ok([307, 308].includes(response.status), `${path}: ${response.status}`);
     assert.equal(new URL(response.headers.get("location"), "http://localhost").pathname, target);
@@ -78,7 +78,7 @@ test("transparency auto-read starts unverified and excludes customer-facing tamp
 });
 
 test("legacy paper products remain reachable and distinct from the customer portfolio", async () => {
-  const response = await render("/etfs/gmd-core");
+  const response = await render("/lab/strategies/gmd-core");
   assert.equal(response.status, 200);
   const html = visible(await response.text());
   assert.match(html, /GANYMEDE CORE 20/);

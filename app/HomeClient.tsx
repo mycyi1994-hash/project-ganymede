@@ -137,7 +137,7 @@ function EtfCard({ etf, liveProduct, dataState, onOpen, onNavigate }: {
   const targetHoldings = allTargetHoldings.slice(0, 3);
   return (
     <article className={`etf-card etf-product-card product-${etf.id}`}>
-      <a id={`etf-card-${etf.id}`} className="etf-card-hit" href={`/etfs/${etf.slug}`} aria-label={`View ${etf.name}, ${etf.roleName}, ${etf.risk.toLowerCase()} risk, product details`} onClick={(event) => { if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return; event.preventDefault(); onOpen(etf.id); }} onKeyDown={handleKeyDown} />
+      <a id={`etf-card-${etf.id}`} className="etf-card-hit" href={`/lab/strategies/${etf.slug}`} aria-label={`View ${etf.name}, ${etf.roleName}, ${etf.risk.toLowerCase()} risk, product details`} onClick={(event) => { if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return; event.preventDefault(); onOpen(etf.id); }} onKeyDown={handleKeyDown} />
       <div className="product-card-index" aria-hidden="true"><span>{String(etfs.findIndex((candidate) => candidate.id === etf.id) + 1).padStart(2, "0")}</span><i /></div>
       <div className="etf-card-hero">
         <div className="etf-card-copy">
@@ -445,7 +445,7 @@ export default function HomeClient({ initialView }: { initialView: View | "overv
     const etf = etfs.find((candidate) => candidate.id === id);
     if (!etf) return;
     rememberFilter(activeFilter);
-    window.location.assign(`/etfs/${etf.slug}`);
+    window.location.assign(`/lab/strategies/${etf.slug}`);
   };
 
   const navigateCards = (id: string, direction: number) => {
@@ -508,7 +508,7 @@ export default function HomeClient({ initialView }: { initialView: View | "overv
             <BasketOverview /><aside className="journey-lab-link"><span>Looking for crypto simulations?</span><Link {...viewLink("portfolio", "paper-strategy-lab")} prefetch={false}>Explore Paper lab</Link></aside>
           </main>
         ) : view === "portfolio" ? (
-          <><PortfolioView data={portfolio} loading={portfolioLoading} error={portfolioError} actionError={removeError} actionRejection={removeRejected} removing={removing} onRetry={() => void refreshPortfolio()} onBrowse={() => document.getElementById("paper-strategy-lab")?.scrollIntoView()} onOpen={(position) => window.location.assign(`/etfs/${position.slug}`)} onRedeem={(position) => setPendingRedeem(position)} basketLink={viewLink("select", "ustx-basket")} /><div className="lab-catalog"><section className="paper-strategy-lab" id="paper-strategy-lab" aria-labelledby="paper-lab-title"><div className="collection-heading"><div><h2 id="paper-lab-title">Paper strategy lab</h2><p>Four digital-asset simulations, separate from the USTX basket and its NAV evidence. Compare strategies and save sample allocations.</p></div><span>Simulation only</span></div>
+          <><PortfolioView data={portfolio} loading={portfolioLoading} error={portfolioError} actionError={removeError} actionRejection={removeRejected} removing={removing} onRetry={() => void refreshPortfolio()} onBrowse={() => document.getElementById("paper-strategy-lab")?.scrollIntoView()} onOpen={(position) => window.location.assign(`/lab/strategies/${position.slug}`)} onRedeem={(position) => setPendingRedeem(position)} basketLink={viewLink("select", "ustx-basket")} /><div className="lab-catalog"><section className="paper-strategy-lab" id="paper-strategy-lab" aria-labelledby="paper-lab-title"><div className="collection-heading"><div><h2 id="paper-lab-title">Paper strategy lab</h2><p>Four digital-asset simulations, separate from the USTX basket and its NAV evidence. Compare strategies and save sample allocations.</p></div><span>Simulation only</span></div>
             <div className="product-market-toolbar">
               <div className="etf-filters strategy-filters" role="group" aria-label="Filter ETF strategies">{filters.map((filter) => <button key={filter.id} type="button" className={activeFilter === filter.id ? "is-active" : ""} aria-pressed={activeFilter === filter.id} onClick={() => { setActiveFilter(filter.id); rememberFilter(filter.id); }}>{filter.label}</button>)}</div>
               <div className="market-toolbar-status"><button type="button" className="choice-guide-trigger" onClick={() => setGuideOpen(true)}>Help me choose <span>?</span></button><p aria-live="polite" aria-atomic="true">{marketError ? market ? "Showing last loaded NAV" : "NAV unavailable" : market?.updatedAt ? `NAV updated ${displayTime(market.updatedAt)}` : "Loading indicative NAV…"}</p></div>

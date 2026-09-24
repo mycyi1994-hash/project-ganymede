@@ -10,7 +10,7 @@ async function fixture() {
   const quotes = new Map(assets.map((a, i) => [a.symbol, { ...a, priceMicros: 250_000_000n + BigInt(i), time: now, source: "test" }]));
   const evaluated = await evaluateBasket({ constituents, quotes, previous: null, now, maxQuoteAgeMinutes: 60 });
   const publication = { asOf: now, navPerShareMicros: evaluated.composition.navPerShareMicros, holdingsHash: evaluated.holdingsHash, canonical: evaluated.canonical, status: "confirmed", txHash: null };
-  return { product: { id: "us-tech-x" }, pricing: { constituents }, registry: {}, latest: { evaluatedAt: now, composition: evaluated.composition, canonical: evaluated.canonical, publication }, history: [publication], onchainError: null, onchain: { effectiveAt: "2026-09-24T07:00:00Z", navPerShareMicros: publication.navPerShareMicros, holdingsHash: publication.holdingsHash } };
+  return { product: { id: "us-tech-x" }, pricing: { constituents }, registry: {}, latest: { evaluatedAt: now, status: "ready", warnings: [], blockers: [], composition: evaluated.composition, canonical: evaluated.canonical, publication }, history: [publication], onchainError: null, onchain: { effectiveAt: "2026-09-24T07:00:00Z", navPerShareMicros: publication.navPerShareMicros, holdingsHash: publication.holdingsHash } };
 }
 
 test("customer composition belongs to the displayed record, never to an unmatched latest snapshot", async () => {
@@ -55,4 +55,6 @@ test("malformed API values fail loading instead of rendering an invented zero", 
   assert.equal(decodeMarketSnapshot(data).product.id, "us-tech-x");
   assert.throws(() => decodeMarketSnapshot({ ...data, onchain: { ...data.onchain, navPerShareMicros: "not a number" } }));
   assert.throws(() => decodeMarketSnapshot({ product: { id: "other" } }));
+  assert.throws(() => decodeMarketSnapshot({ ...data, history: [null] }));
+  assert.throws(() => decodeMarketSnapshot({ ...data, latest: { ...data.latest, warnings: null } }));
 });

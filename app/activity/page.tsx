@@ -1,4 +1,4 @@
 import { ProductShell } from "../product-ui/ProductShell";
-import { AccountUnavailable } from "../product-ui/ProductScreens";
+import { LedgerScreen } from "../product-ui/LedgerScreens";
 export const metadata = { title: "Activity · Ganymede" };
-export default function ActivityPage() { return <ProductShell section="activity"><AccountUnavailable activity /></ProductShell>; }
+export default function ActivityPage() { return <ProductShell section="activity"><LedgerScreen activity /></ProductShell>; }

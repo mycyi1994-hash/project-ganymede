@@ -1,5 +1,6 @@
 # Ganymede 제품·디자인 재설계 상세 계획서
 
+> 2026-09-24 범위 확정: 사용자가 실제 입출금·보관 계약 및 결제 토큰이 없음을 확인했다. 이번 후속 배포는 기존 테스트넷 장부 조회·NAV·모의 운용 범위로 완성한다. 아래 실제 투자·회수 계획은 후속 제품 과제이며 이번 완료 범위가 아니다. 최신 구현·검수·배포 기록은 [PRODUCT_RELEASE.md](PRODUCT_RELEASE.md)를 따른다.
 작성일: 2026-09-24 · 최초 계획 기준: `08f41cd` · 1–3단계 구현 기준: Claude 변경 `1e0a6bf` 통합 후
 
 1–3단계 구현 및 검수 결과는 [PRODUCT_STAGES_1_3.md](PRODUCT_STAGES_1_3.md), 제품 경로와 미정 연결 조건은 [PRODUCT_STAGE1_CONTRACT.md](PRODUCT_STAGE1_CONTRACT.md)에 기록한다. 거래·보관·회수의 실제 연결은 완료되지 않았다.

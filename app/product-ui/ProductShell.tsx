@@ -1,10 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState, type ReactNode } from "react";
+import { useRouter } from "next/navigation";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { BrandMark } from "../DesignElements";
 import { Icon } from "./Icons";
 import { MarketProvider } from "./MarketProvider";
+import { WalletAccountProvider, useWalletAccount } from "./WalletAccount";
 import "./product.css";
 
 export type ProductSection = "markets" | "portfolio" | "activity";
@@ -12,31 +14,24 @@ export type DesignScreen = "markets" | "product" | "order" | "portfolio" | "hold
 export function designLink(screen: DesignScreen, scenario?: string) { return `/design-preview?screen=${screen}${scenario ? `&scenario=${scenario}` : ""}`; }
 
 function AccountControl() {
-  const [address, setAddress] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [message, setMessage] = useState("");
+  const router = useRouter();
+  const { address, source, busy, message, connect, watch } = useWalletAccount();
+  const [input, setInput] = useState("");
+  const details = useRef<HTMLDetailsElement>(null);
   useEffect(() => {
-    const provider = window.okxwallet ?? window.ethereum;
-    let alive = true;
-    if (!provider) return;
-    void provider.request({ method: "eth_accounts" }).then(accounts => { if (alive) setAddress((accounts as string[])[0] ?? ""); }).catch(() => {});
-    const changed = (...args: unknown[]) => { setAddress((args[0] as string[])[0] ?? ""); setMessage(""); };
-    provider.on?.("accountsChanged", changed);
-    return () => { alive = false; provider.removeListener?.("accountsChanged", changed); };
+    const close = (event: PointerEvent) => { if (details.current && !details.current.contains(event.target as Node)) details.current.open = false; };
+    document.addEventListener("pointerdown", close);
+    return () => document.removeEventListener("pointerdown", close);
   }, []);
-  async function connect() {
-    const provider = window.okxwallet ?? window.ethereum;
-    setMessage("");
-    if (!provider) { setMessage("Open this page in your wallet browser, or install a browser wallet."); return; }
-    setBusy(true);
-    try {
-      const accounts = await provider.request({ method: "eth_requestAccounts" }) as string[];
-      setAddress(accounts[0] ?? "");
-      if (!accounts.length) setMessage("No account was shared. You can try again.");
-    } catch (error) { setMessage((error as { code?: number }).code === 4001 ? "Connection cancelled. You can keep browsing." : "Your wallet could not connect. Try again."); }
-    finally { setBusy(false); }
-  }
-  return <details className="gmd-account"><summary><Icon name="wallet" size={17} /><span>{address ? `${address.slice(0, 6)}…${address.slice(-4)}` : "Connect wallet"}</span></summary><div className="gmd-account-popover"><strong>{address ? "Connected wallet" : "Your wallet"}</strong><p>{address || "Choose an account in your browser wallet. No signature or transaction is requested."}</p>{!address && <button className="gmd-button" disabled={busy} onClick={() => void connect()}>{busy ? "Connecting…" : "Connect browser wallet"}</button>}<p role="status">{message}</p>{message.startsWith("Open") && <a href="https://web3.okx.com/download" target="_blank" rel="noreferrer">Get OKX Wallet <Icon name="external" size={14} /></a>}{address && <p className="gmd-muted">Wallet connection does not create an investment account. Investing is not open yet.</p>}</div></details>;
+  return <details ref={details} className="gmd-account" onKeyDown={event => { if (event.key === "Escape" && details.current?.open) { details.current.open = false; details.current.querySelector("summary")?.focus(); } }}>
+    <summary><Icon name="wallet" size={17} /><span>{address ? address.slice(0, 6) + "…" + address.slice(-4) : "Connect wallet"}</span></summary>
+    <div className="gmd-account-popover"><strong>{address ? source === "watch" ? "Viewing a public address" : "Connected wallet" : "Your wallet"}</strong>
+      <p>{address || "Connect to read your testnet share records. No signature or transaction is requested."}</p>
+      {(!address || source === "watch") && <button className="gmd-button" disabled={busy} onClick={() => void connect()}>{busy ? "Connecting…" : "Connect browser wallet"}</button>}
+      <form className="gmd-watch-form" onSubmit={event => { event.preventDefault(); if (watch(input)) { if (details.current) details.current.open = false; router.push("/portfolio"); } }}><label htmlFor="public-ledger-address">View a public address</label><input id="public-ledger-address" value={input} onChange={event => setInput(event.target.value)} placeholder="0x…" spellCheck={false} autoComplete="off" /><button className="gmd-small-button" type="submit">View records</button></form>
+      <p role="status">{message}</p><p className="gmd-caption">Read-only public records on X Layer Testnet. No deposits or withdrawals.</p>
+    </div>
+  </details>;
 }
 
 export function ProductHeader({ section = "markets", preview }: { section?: ProductSection | null; preview?: DesignScreen }) {
@@ -45,11 +40,11 @@ export function ProductHeader({ section = "markets", preview }: { section?: Prod
 }
 
 export function ProductShell({ children, section = "markets", preview }: { children: ReactNode; section?: ProductSection; preview?: DesignScreen }) {
-  return <MarketProvider><div className="gmd-app">
+  return <WalletAccountProvider><MarketProvider enabled={section === "markets"}><div className="gmd-app">
     <a className="gmd-skip" href="#product-main">Skip to content</a>
     {preview && <div className="gmd-design-toolbar"><span><b>Design preview</b> Example account data. No transactions.</span><nav aria-label="Design screens">{(["markets", "product", "order", "portfolio", "transaction"] as const).map(screen => <Link prefetch={false} key={screen} href={designLink(screen)} aria-current={preview === screen ? "page" : undefined}>{({ markets: "Markets", product: "Product", order: "Order", portfolio: "Portfolio", transaction: "Transaction" })[screen]}</Link>)}</nav></div>}
     <ProductHeader section={section} preview={preview} />
     <main id="product-main" className="gmd-main">{children}</main>
     <footer className="gmd-footer"><div><b>Ganymede</b><span>Model basket · No public offering</span></div><nav aria-label="Resources"><Link prefetch={false} href="/products/ustx/transparency">Transparency</Link><Link prefetch={false} href="/methodology">Methodology</Link><Link prefetch={false} href="/limitations">Limitations</Link><Link prefetch={false} href="/lab">Lab</Link></nav></footer>
-  </div></MarketProvider>;
+  </div></MarketProvider></WalletAccountProvider>;
 }

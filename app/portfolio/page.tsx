@@ -1,4 +1,4 @@
 import { ProductShell } from "../product-ui/ProductShell";
-import { AccountUnavailable } from "../product-ui/ProductScreens";
+import { LedgerScreen } from "../product-ui/LedgerScreens";
 export const metadata = { title: "Portfolio · Ganymede" };
-export default function PortfolioPage() { return <ProductShell section="portfolio"><AccountUnavailable /></ProductShell>; }
+export default function PortfolioPage() { return <ProductShell section="portfolio"><LedgerScreen /></ProductShell>; }

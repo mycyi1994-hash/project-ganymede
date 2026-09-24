@@ -22,6 +22,10 @@ export function decodeMarketSnapshot(value: unknown): MarketSnapshot {
     || !data.registry || !Array.isArray(data.history)) throw new Error("The market response is incomplete.");
   if (data.onchain && (!integer(data.onchain.navPerShareMicros) || !hash(data.onchain.holdingsHash)
     || (data.onchain.effectiveAt !== null && !timestamp(data.onchain.effectiveAt)))) throw new Error("The published value is invalid.");
+  const publication = (entry: MarketPublication | null) => Boolean(entry && timestamp(entry.asOf) && integer(entry.navPerShareMicros) && hash(entry.holdingsHash) && typeof entry.canonical === "string" && typeof entry.status === "string" && (entry.txHash === null || hash(entry.txHash)));
+  if (data.history.some(entry => !publication(entry)) || (data.latest?.publication && !publication(data.latest.publication))) throw new Error("The publication history is invalid.");
+  if (data.latest && (!timestamp(data.latest.evaluatedAt) || typeof data.latest.status !== "string" || !Array.isArray(data.latest.warnings) || !data.latest.warnings.every(item => typeof item === "string") || !Array.isArray(data.latest.blockers) || !data.latest.blockers.every(item => typeof item === "string"))) throw new Error("The latest market evaluation is invalid.");
+  if (data.pricing.maxQuoteAgeMinutes !== undefined && (!Number.isFinite(data.pricing.maxQuoteAgeMinutes) || data.pricing.maxQuoteAgeMinutes < 0)) throw new Error("The pricing policy is invalid.");
   return data;
 }
 
