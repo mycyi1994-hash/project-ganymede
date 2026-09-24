@@ -98,12 +98,14 @@ export class SettlementClient {
         error: chainId === this.chain.chainId ? null : `RPC reports chain ${chainId}, expected ${this.chain.chainId}`,
       };
     } catch (error) {
+      // /api/health is public, and an RPC error can quote a provider URL with its key; details go to the log.
+      console.error("Settlement RPC health check failed", error);
       return {
         ...base,
         connected: false,
         blockNumber: null,
         chainId: this.chain.chainId,
-        error: error instanceof Error ? error.message : "Unknown settlement RPC error",
+        error: "Settlement RPC is unreachable or returned an error",
       };
     }
   }

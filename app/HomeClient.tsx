@@ -308,6 +308,7 @@ export default function HomeClient({ initialView }: { initialView: View | "overv
   const [marketLoading, setMarketLoading] = useState(false);
   const [removing, setRemoving] = useState(false);
   const [removeError, setRemoveError] = useState("");
+  const [removeRejected, setRemoveRejected] = useState("");
   const [marketError, setMarketError] = useState("");
   const [portfolioError, setPortfolioError] = useState("");
   const [operationsError, setOperationsError] = useState("");
@@ -368,6 +369,7 @@ export default function HomeClient({ initialView }: { initialView: View | "overv
       setPortfolio(payload);
       setPortfolioError("");
       setRemoveError("");
+      setRemoveRejected("");
     } catch (error) {
       setPortfolioError(error instanceof Error ? error.message : "Portfolio ledger is unavailable");
     } finally {
@@ -454,6 +456,7 @@ export default function HomeClient({ initialView }: { initialView: View | "overv
   const redeemPosition = async (position: PortfolioPosition) => {
     setRemoving(true);
     setRemoveError("");
+    setRemoveRejected("");
     try {
       const walletAddress = await currentWalletAddress();
       const response = await fetch("/api/portfolio", {
@@ -461,7 +464,12 @@ export default function HomeClient({ initialView }: { initialView: View | "overv
         headers: { "Content-Type": "application/json", ...(walletAddress ? { "x-ganymede-wallet": walletAddress } : {}) },
         body: JSON.stringify({ productId: position.productId, sharesMicros: position.sharesMicros, walletAddress, clientReference: crypto.randomUUID() }),
       });
-      const payload = await response.json() as { error?: string };
+      const payload = await response.json() as { error?: string; code?: string };
+      if (response.status === 400 && payload.code === "INVALID_REQUEST") {
+        // A refusal is certain, unlike a failed request: show why instead of asking to check.
+        setRemoveRejected(payload.error ?? "The request was not accepted");
+        return;
+      }
       if (!response.ok) throw new Error(payload.error || "Redemption request failed");
       await refreshPortfolio();
       setActionNotice("Removal request saved. Your allocation will update after processing.");
@@ -499,7 +507,7 @@ export default function HomeClient({ initialView }: { initialView: View | "overv
             <BasketOverview /><aside className="journey-lab-link"><span>Looking for crypto simulations?</span><Link {...viewLink("portfolio", "paper-strategy-lab")} prefetch={false}>Explore Paper lab</Link></aside>
           </main>
         ) : view === "portfolio" ? (
-          <><PortfolioView data={portfolio} loading={portfolioLoading} error={portfolioError} actionError={removeError} removing={removing} onRetry={() => void refreshPortfolio()} onBrowse={() => document.getElementById("paper-strategy-lab")?.scrollIntoView()} onOpen={(position) => window.location.assign(`/etfs/${position.slug}`)} onRedeem={(position) => setPendingRedeem(position)} basketLink={viewLink("select", "ustx-basket")} /><div className="lab-catalog"><section className="paper-strategy-lab" id="paper-strategy-lab" aria-labelledby="paper-lab-title"><div className="collection-heading"><div><h2 id="paper-lab-title">Paper strategy lab</h2><p>Four digital-asset simulations, separate from the USTX basket and its NAV evidence. Compare strategies and save sample allocations.</p></div><span>Simulation only</span></div>
+          <><PortfolioView data={portfolio} loading={portfolioLoading} error={portfolioError} actionError={removeError} actionRejection={removeRejected} removing={removing} onRetry={() => void refreshPortfolio()} onBrowse={() => document.getElementById("paper-strategy-lab")?.scrollIntoView()} onOpen={(position) => window.location.assign(`/etfs/${position.slug}`)} onRedeem={(position) => setPendingRedeem(position)} basketLink={viewLink("select", "ustx-basket")} /><div className="lab-catalog"><section className="paper-strategy-lab" id="paper-strategy-lab" aria-labelledby="paper-lab-title"><div className="collection-heading"><div><h2 id="paper-lab-title">Paper strategy lab</h2><p>Four digital-asset simulations, separate from the USTX basket and its NAV evidence. Compare strategies and save sample allocations.</p></div><span>Simulation only</span></div>
             <div className="product-market-toolbar">
               <div className="etf-filters strategy-filters" role="group" aria-label="Filter ETF strategies">{filters.map((filter) => <button key={filter.id} type="button" className={activeFilter === filter.id ? "is-active" : ""} aria-pressed={activeFilter === filter.id} onClick={() => { setActiveFilter(filter.id); rememberFilter(filter.id); }}>{filter.label}</button>)}</div>
               <div className="market-toolbar-status"><button type="button" className="choice-guide-trigger" onClick={() => setGuideOpen(true)}>Help me choose <span>?</span></button><p aria-live="polite" aria-atomic="true">{marketError ? market ? "Showing last loaded NAV" : "NAV unavailable" : market?.updatedAt ? `NAV updated ${displayTime(market.updatedAt)}` : "Loading indicative NAV…"}</p></div>
