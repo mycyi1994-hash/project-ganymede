@@ -1,5 +1,7 @@
 # Ganymede — inspectable NAV for tokenized-stock baskets
 
+> Current implementation and Claude continuation: [2026-09-24 handoff](docs/CLAUDE_HANDOFF_2026-09-24_KO.md) and [product release](docs/PRODUCT_RELEASE.md). The product redesign is on `codex/product-redesign-1-3`; the older overview below and the public submission export still need alignment.
+
 Ganymede helps basket operators publish the data behind a net asset value (NAV), and gives analysts a way to check that calculation against a public chain record. It demonstrates this with **GMD USTX**, a model basket of six US technology xStocks.
 
 [Open the product](https://ganymede-xlayer.gana003.workers.dev/) · [Explore USTX](https://ganymede-xlayer.gana003.workers.dev/?app=select) · [Verify NAV](https://ganymede-xlayer.gana003.workers.dev/proof)
