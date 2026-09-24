@@ -19,3 +19,16 @@ checks, typecheck configuration, unused-style removal and narrow-screen fixes.
 - Existing tests cover stale publication, quote status, unavailable RPC and report mismatches. These are distinct from runtime failure-preview checks.
 - Reduced-motion CSS is inspected; the connected browser currently reports no preference for reduced motion. Native 200% zoom and runtime reduced-motion testing remain unverified; narrow viewport checks are not a substitute. This does not claim a complete accessibility audit.
 - No relayer behavior change is needed for this UI release; the already deployed exact-payload/receipt reconciliation implementation is retained.
+
+## Release evidence
+- Application source: e8631c26ca9f6b384c32604c96bd0e3b92955111 (integrated on original main).
+- Worker version: 19417a86-37cf-4f6f-9d51-2c6c71426ac5.
+- Deployed with remote variables preserved and existing five-minute schedule retained.
+- Root typecheck/build and 57 tests passed. Relayer 11 tests and typecheck passed.
+- Full-tree lint: zero errors, seven existing warnings.
+- At 390px the final experiment outcome measured 440px for both original and edited states; at desktop it measured 245px. These observations do not imply no layout shift at every text scale.
+- This supersedes the deployment-pending note in JOURNEY_STAGES_1_3.md.
+- Post-deploy: Overview/Basket/Paper lab/Proof and market/health/portfolio/xstocks GETs all returned HTTP 200.
+- Production browser: original matched; local $1 edit produced both mismatches; restore matched again. Full proof passed 3/3 against the direct RPC record effective 2026-09-24 06:16:05 UTC.
+- Production mobile Proof: 390px viewport, 375px document width, offline examples closed. All four navigation links fit within the viewport.
+- Public submission export: independent root typecheck/build and 57 tests passed.
