@@ -136,6 +136,12 @@
 .gmd-status i { display: inline-block; height: 6px; width: 6px; background: currentColor; border-radius: 50%; }
 .gmd-status.is-waiting { color: var(--gmd-warn); }
 .gmd-status.is-positive { color: var(--gmd-accent); }
+.gmd-app .gmd-check-chip { display: inline-flex; align-items: center; gap: 8px; min-height: 36px; padding: 7px 12px 7px 11px; border: 1px solid var(--gmd-line); border-radius: 999px; background: var(--gmd-surface); color: var(--gmd-copy); font-size: 13px; font-weight: 600; white-space: nowrap; }
+.gmd-check-chip > i { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+.gmd-app .gmd-check-chip.is-matched { color: var(--gmd-accent); border-color: #9fc7bf; background: #eef6f4; }
+.gmd-app .gmd-check-chip:is(.is-failed,.is-unavailable) { color: var(--gmd-warn); }
+.gmd-check-chip:is(.is-loading,.is-waiting) > i { animation: gmd-pulse 1.2s ease-in-out infinite; }
+@keyframes gmd-pulse { 50% { opacity: .35; } }
 .gmd-chart-heading { display: flex; justify-content: space-between; align-items: center; gap: 12px; color: var(--gmd-copy); font-size: 13px; min-height: 32px; margin-bottom: 12px; }
 .gmd-segmented { padding: 3px; border-radius: 6px; background: #f0f3f4; display: flex; flex-shrink: 0; }
 .gmd-segmented button { font-size: 12px; padding: 4px 10px; min-height: 27px; border-radius: 4px; }
@@ -239,6 +245,7 @@
 .gmd-facts > div { display: flex; justify-content: space-between; align-items: baseline; gap: 20px; padding-block: 10px; }
 .gmd-facts dt { font-size: 14px; color: var(--gmd-copy); }
 .gmd-facts dd { font-size: 14px; text-align: end; overflow-wrap: anywhere; }
+.gmd-facts dd .gmd-inline-tx { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
 .gmd-order-panel > .gmd-button,.gmd-order-review > .gmd-button { width: 100%; margin-top: 23px; }
 .gmd-aside-note { display: flex; gap: 10px; padding: 20px 6px; }
 .gmd-aside-note p { font-size: 13px; }
@@ -379,7 +386,7 @@
   .gmd-composition-strip button:hover { outline: 1px solid var(--gmd-ink); outline-offset: 2px; }
   .gmd-asset-select:hover { color: var(--gmd-accent); }
   .gmd-activity-rows > a:hover { background: #edf3f180; }
-  .gmd-app a:not(.gmd-button,.gmd-brand):hover { text-decoration: underline; text-underline-offset: 4px; }
+  .gmd-app a:not(.gmd-button,.gmd-brand,.gmd-check-chip):hover { text-decoration: underline; text-underline-offset: 4px; }
 }
 @keyframes gmd-reveal { from { opacity: .25; clip-path: inset(0 100% 0 0); } to { opacity: 1; clip-path: inset(0); } }
 @keyframes gmd-fade { from { opacity: .4; } to { opacity: 1; } }
