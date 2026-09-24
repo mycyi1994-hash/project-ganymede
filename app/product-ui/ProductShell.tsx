@@ -36,7 +36,7 @@ function AccountControl() {
 }
 
 export function ProductHeader({ section = "markets", preview }: { section?: ProductSection | null; preview?: DesignScreen }) {
-  const links = [{ section: "markets", label: "Markets", href: "/", icon: "market" }, { section: "verify", label: "Verify", href: "/products/ustx/transparency", icon: "check" }, { section: "portfolio", label: "Portfolio", href: "/portfolio", icon: "portfolio" }] as const;
+  const links = [{ section: "markets", label: "Markets", href: "/", icon: "market" }, { section: "portfolio", label: "Portfolio", href: "/portfolio", icon: "portfolio" }, { section: "verify", label: "Verify", href: "/products/ustx/transparency", icon: "check" }] as const;
   // The header address control only serves the separate test share ledger page.
   const ledger = section === "activity";
   return <header className="gmd-header"><div className="gmd-header-inner"><Link href={preview ? designLink("markets") : "/"} prefetch={false} className="gmd-brand" aria-label="Ganymede markets"><BrandMark /><span>Ganymede</span></Link><nav className="gmd-navigation" aria-label="Primary navigation">{links.map(link => <Link prefetch={false} key={link.section} href={preview && link.section !== "verify" ? designLink(link.section) : link.href} aria-current={section === link.section ? "page" : undefined}><Icon name={link.icon} size={18} /><span>{link.label}</span></Link>)}</nav><div className="gmd-header-end">{preview ? <span className="gmd-example-account"><Icon name="wallet" size={17} />Example account</span> : ledger ? <><span className="gmd-environment"><i />Testnet ledger</span><AccountControl /></> : null}</div></div></header>;

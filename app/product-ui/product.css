@@ -676,3 +676,28 @@
   .gmd-wallet-bar,.gmd-wallet-holdings,.gmd-plan { padding: 18px 16px; }
   .gmd-wallet-bar > .gmd-button { width: 100%; }
 }
+
+/* Demo investing: order panel, demo account and recent orders */
+.gmd-app .gmd-order-panel .gmd-segmented { width: 100%; margin-bottom: 18px; }
+.gmd-app .gmd-order-panel .gmd-segmented button { flex: 1; font-size: 14px; min-height: 36px; }
+.gmd-app .gmd-detail-aside .gmd-order-panel + .gmd-order-panel { margin-top: 16px; }
+.gmd-app .gmd-inline-error { margin-top: 14px; padding: 10px 12px; border-radius: 6px; background: #fbeeee; color: #8a2f2f; font-size: 14px; }
+.gmd-app .gmd-demo-portfolio { margin-block: 8px 44px; }
+.gmd-app .gmd-demo-portfolio > .gmd-section-heading { align-items: flex-end; margin-bottom: 18px; }
+.gmd-app .gmd-demo-portfolio .gmd-section-heading p { margin-top: 6px; font-size: 14px; color: var(--gmd-copy); }
+.gmd-app .gmd-demo-portfolio .gmd-position-table { margin-top: 16px; }
+.gmd-app .gmd-empty-note { padding: 22px 24px; font-size: 14px; color: var(--gmd-copy); }
+.gmd-position-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.gmd-app .gmd-demo-activity { margin-top: 26px; }
+.gmd-app .gmd-demo-activity .gmd-section-heading { margin-bottom: 4px; align-items: baseline; }
+.gmd-app .gmd-demo-activity h3 { font-size: 17px; }
+.gmd-app .gmd-demo-activity .gmd-section-heading > span { font-size: 13px; color: var(--gmd-copy); }
+.gmd-activity-rows > .gmd-activity-row { display: grid; grid-template-columns: 38px 1fr auto; gap: 14px; align-items: center; padding: 16px 0; border-bottom: 1px solid var(--gmd-line); }
+.gmd-activity-rows > .gmd-activity-row > span:nth-child(3) { text-align: right; }
+.gmd-app .gmd-demo-activity .gmd-text-button { width: auto; margin-top: 12px; }
+.gmd-app .gmd-wallet-heading { margin-top: 8px; }
+.gmd-app .gmd-wallet-heading p { margin-top: 6px; font-size: 14px; color: var(--gmd-copy); }
+@media (max-width: 640px) {
+  .gmd-activity-rows > .gmd-activity-row { grid-template-columns: 32px 1fr auto; gap: 10px; }
+  .gmd-app .gmd-demo-portfolio > .gmd-section-heading { flex-wrap: wrap; align-items: flex-start; }
+}

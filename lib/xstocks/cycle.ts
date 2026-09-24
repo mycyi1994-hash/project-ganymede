@@ -33,6 +33,7 @@ const HISTORY_LIMIT = 12;
 const RECONCILE_LIMIT = 3;
 /** OnchainOS stamps each quote with the response time, so this bounds the quote's age, not the last trade's. */
 const DEFAULT_MAX_QUOTE_AGE_MINUTES = 360;
+const COOLDOWN_TOLERANCE_MS = 60_000;
 
 export type Publication = {
   asOf: string;
@@ -144,7 +145,9 @@ export async function runXStocksCycle(env: EngineEnv, repo: EngineRepository, se
   const previousLatest = JSON.parse((await repo.getState(STATE_LATEST))?.value ?? "null") as LatestState | null;
   const cooldownMs = previousLatest?.retryAt ? Date.parse(previousLatest.retryAt) - Date.parse(now) : 0;
   // A stored wait longer than the maximum can only come from an older, unbounded record; ignore it.
-  if (cooldownMs > 0 && cooldownMs <= MAX_COOLDOWN_MS) {
+  // Cycles start a few seconds either side of each five-minute mark, so a wait that ends within the
+  // next minute counts as over: a ten-minute cooldown then skips one cycle, not two.
+  if (cooldownMs > COOLDOWN_TOLERANCE_MS && cooldownMs <= MAX_COOLDOWN_MS) {
     return { navsPublished: 0, settlementsQueued, warnings: [`GMD USTX price provider cooldown until ${previousLatest!.retryAt}`] };
   }
   const constituents = constituentsWithAddresses(env.XSTOCKS_ADDRESSES);
