@@ -38,3 +38,10 @@ Browser inspection used local public-data fixtures with all mutation requests bl
 Asset provenance is in `public/ASSET-CREDITS.md`. The hero WebP is 68.7 kB and fonts are self-hosted with their OFL licenses.
 
 The known pricing/publication delay is a separate backend issue. This visual release does not claim its recovery. The scheduled read-only monitor remains active under its existing end time.
+
+
+## USTX journey refinement (2026-09-24)
+
+The approved palette (paper #f7f8fa, surface #ffffff, ink #20262f, copy #566274, line #dde3e9) and Instrument Sans / Source Sans 3 remain unchanged. Overview introduces basket operators and analysts, then leads into Funds. Funds presents USTX composition and price provenance before the separate paper strategy lab. Proof reads in calculation → chain record → comparison order. Portfolio and crypto details explicitly identify their simulation scope and offer a route back to USTX.
+
+The Funds table uses the latest pricing snapshot, with its timestamp, and never labels it independently verified. Proof uses the document matching the selected chain record; missing matching evidence stays unavailable. The added calculation total sums integer USD-micro holding values and clearly separates display rounding from verification precision. No trading, pricing policy or verification algorithm changes are included.

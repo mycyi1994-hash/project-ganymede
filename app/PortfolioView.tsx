@@ -1,3 +1,4 @@
+import Link from "next/link";
 import DataNotice from "./DataNotice";
 import { StrategyGlyph } from "./DesignElements";
 import { etfs } from "./data/etfs";
@@ -33,9 +34,11 @@ export default function PortfolioView({ data, loading, error, actionError, remov
 
   return <main className="portfolio-workspace">
     <header className="portfolio-heading">
-      <div><p className="section-kicker">MY PORTFOLIO / PAPER MODE</p><h1>Your strategies, together.</h1><p>Sample allocations are saved for this browser for 30 days. Clearing cookies or using another browser starts a separate portfolio. No real money moves.</p></div>
+      <div><p className="section-kicker">MY PORTFOLIO / STRATEGY LAB</p><h1>Your paper portfolio.</h1><p>Sample allocations are saved for this browser for 30 days. Clearing cookies or using another browser starts a separate portfolio. No real money moves.</p></div>
       <div className="portfolio-heading-actions"><button type="button" className="portfolio-refresh" disabled={loading || removing} onClick={onRetry}>{loading ? "Refreshing…" : "Refresh"} <span aria-hidden="true">↻</span></button><button type="button" className="portfolio-primary" onClick={onBrowse}>Explore strategies <span aria-hidden="true">↗</span></button></div>
     </header>
+
+    <aside className="portfolio-context"><p>This workspace holds crypto strategy simulations. USTX is an inspectable model basket and cannot be purchased or allocated here.</p><Link href="/?app=select#ustx-basket" prefetch={false}>Explore USTX</Link><a href="/proof">Inspect NAV ↗</a></aside>
 
     {error && data && <DataNotice title="Portfolio refresh is unavailable." onRetry={onRetry} loading={loading}>Showing your last loaded snapshot. Values and request statuses may have changed.</DataNotice>}
     {actionError && !error && <DataNotice title="We couldn’t confirm the removal." onRetry={onRetry} loading={loading}>Refresh your portfolio to check the request before trying again. No real funds move in this simulation.</DataNotice>}

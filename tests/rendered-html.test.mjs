@@ -76,8 +76,8 @@ test("all public screens keep the same primary links and select the requested se
   ];
   for (const [path, active, heading] of [
     ["/", "/", "An index you"],
-    ["/?app=select", "/?app=select", "A clearer way to explore"],
-    ["/?app=portfolio", "/?app=portfolio", "Your strategies, together"],
+    ["/?app=select", "/?app=select", "Start with what’s inside"],
+    ["/?app=portfolio", "/?app=portfolio", "Your paper portfolio"],
     ["/etfs/gmd-core", "/?app=select", "GANYMEDE CORE 20"],
     ["/proof", "/proof", "Last published NAV"],
   ]) {

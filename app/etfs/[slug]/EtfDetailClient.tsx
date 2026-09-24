@@ -467,6 +467,7 @@ export default function EtfDetailClient({ etf }: { etf: Etf }) {
   return (
     <main className={`product-detail-page ganymede-v4 product-${etf.id}`}>
       <SiteHeader current="select" />
+      <aside className="strategy-context"><Link href="/?app=select#paper-strategy-lab" prefetch={false}>← Paper strategy lab</Link><span>Crypto simulation · Separate from the USTX stock basket</span><a href="/proof">Inspect USTX NAV ↗</a></aside>
 
       <div className="chain-testnet-notice"><span><i /> PRE-LAUNCH TEST ENVIRONMENT</span><p>{DEFAULT_SETTLEMENT_CHAIN.name} · Chain ID {DEFAULT_SETTLEMENT_CHAIN.chainId} · Simulated fund-share registry</p><a href={DEFAULT_SETTLEMENT_CHAIN.explorerUrl} target="_blank" rel="noreferrer">OPEN EXPLORER ↗</a></div>
 

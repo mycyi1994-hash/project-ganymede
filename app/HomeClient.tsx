@@ -1,6 +1,8 @@
 "use client";
 
+import Link from "next/link";
 import { KeyboardEvent as ReactKeyboardEvent, useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
+import BasketOverview from "./BasketOverview";
 import NavPreview from "./NavPreview";
 import PortfolioView from "./PortfolioView";
 import DataNotice from "./DataNotice";
@@ -462,20 +464,20 @@ export default function HomeClient({ initialView }: { initialView: View | "overv
         {view === "select" ? (
           <main className="etf-select-page product-market-page">
             <header className="etf-page-intro product-market-intro">
-              <div><p className="section-kicker">The collection</p><h1>A clearer way to explore.</h1><p>Look inside a stock basket. Find a role for each digital-asset strategy.</p></div>
+              <div><p className="section-kicker">The USTX basket</p><h1>Start with what’s inside.</h1><p>Six tokenized US stocks. Inspect their composition, then follow the published NAV to its evidence.</p></div>
               <span className="catalog-environment"><i /> Testnet models</span>
             </header>
-            <section className="featured-basket" aria-label="US tech model basket"><div className="featured-basket-copy"><span className="eyebrow">GMD USTX · Stock basket</span><h2>Six companies.<br />One inspectable index.</h2><p>US technology xStocks, with a published NAV you can trace to X Layer.</p><div className="featured-symbols">{XSTOCKS_CONSTITUENTS.map((item) => <StockMark key={item.symbol} symbol={item.symbol} />)}</div><a className="button is-primary" href="/proof">Inspect NAV <Arrow /></a><a className="text-link" href="/proof#proof-holdings">Explore the basket</a></div><NavPreview compact /></section>
-            <div className="collection-heading"><div><h2>Digital-asset strategies</h2><p>Four roles for a paper portfolio. Compare the approach, risk and cost.</p></div><span>04 strategies</span></div>
+            <section className="featured-basket" aria-label="US tech model basket"><div className="featured-basket-copy"><span className="eyebrow">GMD USTX · Stock basket</span><h2>Six companies.<br />One inspectable index.</h2><p>A model basket for exploring transparent NAV reporting. Mainnet prices, with publication evidence on X Layer Testnet.</p><div className="featured-symbols">{XSTOCKS_CONSTITUENTS.map((item) => <StockMark key={item.symbol} symbol={item.symbol} />)}</div><a className="button is-primary" href="/proof">Inspect NAV <Arrow /></a><a className="text-link" href="#ustx-basket">Explore the basket</a></div><NavPreview compact /></section>
+            <BasketOverview /><section className="paper-strategy-lab" id="paper-strategy-lab" aria-labelledby="paper-lab-title"><div className="collection-heading"><div><h2 id="paper-lab-title">Paper strategy lab</h2><p>Four digital-asset simulations, separate from the USTX basket and its NAV evidence. Compare strategies and save sample allocations.</p></div><span>Simulation only</span></div>
             <div className="product-market-toolbar">
               <div className="etf-filters strategy-filters" role="group" aria-label="Filter ETF strategies">{filters.map((filter) => <button key={filter.id} type="button" className={activeFilter === filter.id ? "is-active" : ""} aria-pressed={activeFilter === filter.id} onClick={() => { setActiveFilter(filter.id); sessionStorage.setItem("ganymede-etf-filter", filter.id); }}>{filter.label}</button>)}</div>
               <div className="market-toolbar-status"><button type="button" className="choice-guide-trigger" onClick={() => setGuideOpen(true)}>Help me choose <span>?</span></button><p aria-live="polite" aria-atomic="true">{marketError ? market ? "Showing last loaded NAV" : "NAV unavailable" : market?.updatedAt ? `NAV updated ${displayTime(market.updatedAt)}` : "Loading indicative NAV…"}</p></div>
             </div>
             <>{marketError && <DataNotice title={market ? "NAV refresh is unavailable." : "Prices are temporarily unavailable."} onRetry={() => void refreshMarket()} loading={marketLoading}>{market ? "The values below are from the last successful load. You can still compare strategy details." : "You can still compare each strategy’s role, risk and fee. Share estimates will return when pricing is available."}</DataNotice>}</>
-            <section key={activeFilter} className="etf-card-grid is-filtered" aria-label="ETF products">{visibleEtfs.map((etf) => <EtfCard key={etf.id} etf={etf} liveProduct={marketById.get(etf.id)} dataState={marketError ? "error" : market ? "ready" : "loading"} onOpen={openEtfDetail} onNavigate={navigateCards} />)}</section>
+            <section key={activeFilter} className="etf-card-grid is-filtered" aria-label="Paper strategies">{visibleEtfs.map((etf) => <EtfCard key={etf.id} etf={etf} liveProduct={marketById.get(etf.id)} dataState={marketError ? "error" : market ? "ready" : "loading"} onOpen={openEtfDetail} onNavigate={navigateCards} />)}</section></section>
           </main>
         ) : view === "portfolio" ? (
-          <PortfolioView data={portfolio} loading={portfolioLoading} error={portfolioError} actionError={removeError} removing={removing} onRetry={() => void refreshPortfolio()} onBrowse={() => openView("select")} onOpen={(position) => window.location.assign(`/etfs/${position.slug}`)} onRedeem={(position) => setPendingRedeem(position)} />
+          <PortfolioView data={portfolio} loading={portfolioLoading} error={portfolioError} actionError={removeError} removing={removing} onRetry={() => void refreshPortfolio()} onBrowse={() => window.location.assign("/?app=select#paper-strategy-lab")} onOpen={(position) => window.location.assign(`/etfs/${position.slug}`)} onRedeem={(position) => setPendingRedeem(position)} />
         ) : (
           <OperationsView data={operations} loading={operationsLoading} error={operationsError} onRun={async () => setConfirmCycle(true)} />
         )}
@@ -495,8 +497,8 @@ export default function HomeClient({ initialView }: { initialView: View | "overv
       <div className="launch-layout">
       <section className="launch-copy etf-launch-copy">
         <h1 id="hero-title">An index you<br />can inspect.</h1>
-        <p className="launch-description">Six US tech xStocks. One model basket.<br className="desktop-break" /> Every published value open to inspection.</p>
-        <div className="launch-actions"><a className="button is-primary" href="/proof#proof-verify">Inspect NAV <Arrow /></a><a className="button" href="/proof#proof-holdings">Explore basket</a></div>
+        <p className="launch-description">For basket operators sharing NAV evidence and analysts checking it. Six US tech xStocks, with the calculation and published record open to inspection.</p>
+        <div className="launch-actions"><Link className="button is-primary" href="/?app=select" prefetch={false}>Explore USTX <Arrow /></Link><a className="button" href="/proof">Inspect NAV</a></div>
         <div className="launch-status-line"><span className="badge badge-blue">X Layer Testnet</span><span className="badge badge-sand">Model basket</span></div>
       </section>
       <div className="launch-observatory"><div className="hero-sculpture"><img src="/images/clearform-stack.webp" width="1024" height="1024" fetchPriority="high" alt="Six translucent layers representing the Apple, Microsoft, NVIDIA, Amazon, Meta and Tesla xStocks in the basket" /></div><NavPreview /></div>
@@ -508,7 +510,7 @@ export default function HomeClient({ initialView }: { initialView: View | "overv
         <div><span>03 · The evidence</span><h2>Check it for yourself.</h2><p>Your browser compares the document, its hash and the recorded NAV.</p></div>
       </section>
       <aside className="launch-fund-index" aria-label="Fund universe">
-        <span className="launch-fund-index-label">ALSO EXPLORE<span>Digital-asset strategies</span><small>Four approaches · Paper portfolios</small></span>
+        <span className="launch-fund-index-label">ALSO EXPLORE<span>Paper strategy lab</span><small>Digital-asset strategies · Simulations</small></span>
         {etfs.map((etf, index) => <button key={etf.id} type="button" className={`product-${etf.id}`} onClick={() => openEtfDetail(etf.id)}><i>{String(index + 1).padStart(2, "0")}</i><span><b>{etf.ticker.replace("GMD ", "")}</b><small>{etf.portfolioRole}</small></span><em aria-hidden="true">↗</em></button>)}
       </aside>
       </main><SiteFooter />
