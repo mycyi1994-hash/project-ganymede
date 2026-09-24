@@ -128,7 +128,7 @@
 .gmd-badge { display: inline-flex; border: 1px solid var(--gmd-line); color: var(--gmd-copy); padding: 4px 9px; font-size: 12px; border-radius: 5px; white-space: nowrap; }
 .gmd-nav-summary { display: flex; justify-content: space-between; align-items: end; gap: 16px; margin-top: 24px; margin-bottom: 20px; }
 .gmd-label { font-size: 14px; color: var(--gmd-copy); display: block; }
-.gmd-label > span { margin-inline-start: 4px; color: #687c86; }
+.gmd-label > span { margin-inline-start: 4px; color: var(--gmd-copy); }
 .gmd-value { display: block; font-size: clamp(36px,3.5vw,50px); font-family: "Instrument Sans",Arial,sans-serif; line-height: 1.2; margin-top: 8px; letter-spacing: -.03em; }
 .gmd-nav-meta { display: flex; align-items: flex-end; flex-direction: column; gap: 7px; padding-bottom: 6px; }
 .gmd-nav-meta time { font-size: 12px; color: var(--gmd-copy); }
