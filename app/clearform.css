@@ -5499,3 +5499,62 @@ button:active:not(:disabled),.button:active {
 }
 
 .site-utilities .wallet-connect>button:not(.is-connected) { background: transparent; color: #566274; border: 1px solid #dde3e9; box-shadow: none; }
+/* Journey stages 1–3: understand, test a copy, inspect the evidence. */
+.site-navigation .nav-lab { border-left: 1px solid var(--line); padding-left: 24px; margin-left: 12px; color: var(--copy); }
+.launch-layout { padding-top: 40px; padding-bottom: 40px; min-height: 0; }
+.launch-copy h1 { letter-spacing: -.045em; }
+.home-verification { width: min(calc(100% - var(--gutter)*2),var(--content)); max-width: none; margin: 24px auto 56px; padding: 32px; }
+.home-verification-intro { align-items: center; }
+.journey-composition { display: grid; grid-template-columns: 1fr 220px; gap: 24px; align-items: stretch; margin-block: 24px; }
+.journey-composition ol { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 12px; }
+.journey-composition li { display: grid; grid-template-columns: 28px 1fr; gap: 6px 12px; padding: 16px; background: var(--bg,#f5f7fa); border-radius: 12px; }
+.journey-composition li span:last-child { grid-column: 2; font-variant-numeric: tabular-nums; }
+.journey-composition li svg,.journey-composition li img { max-width: 28px; max-height: 28px; }
+.journey-total { display: flex; flex-direction: column; justify-content: center; gap: 12px; padding: 24px; background: #232b33; color: white; border-radius: 14px; }
+.journey-total strong { font-size: clamp(28px,3vw,42px); letter-spacing: -.03em; }
+.journey-total small { line-height: 1.5; color: #d5dde4; }
+.journey-baseline { display: flex; flex-wrap: wrap; gap: 12px 24px; padding: 18px 0; border-top: 1px solid var(--line); color: #285d4c; }
+.journey-baseline span { color: var(--copy); }
+.journey-next { display: flex; align-items: center; justify-content: space-between; gap: 24px; border-top: 1px solid var(--line); padding-top: 24px; margin-top: 24px; }
+.journey-next h3 { margin: 0 0 8px; font-size: 22px; }
+.journey-next p { margin: 0; color: var(--copy); }
+.journey-lab-link { width: min(calc(100% - var(--gutter)*2),var(--content)); margin: 32px auto; display: flex; flex-wrap: wrap; gap: 12px 24px; padding-block: 24px; border-top: 1px solid var(--line); color: var(--copy); }
+.journey-lab-link a { color: var(--ink); text-decoration: underline; text-underline-offset: 4px; }
+.product-market-page > .journey-lab-link { width: 100%; }
+.lab-catalog { width: min(calc(100% - var(--gutter)*2),var(--content)); margin: 32px auto 64px; }
+#paper-strategy-lab,#proof-experiment,#proof-holdings,#proof-record { scroll-margin-top: 110px; }
+.holding-select { border: 0; background: transparent; text-align: left; color: inherit; font: inherit; cursor: pointer; padding: 8px; min-height: 48px; width: 100%; border-radius: 8px; }
+.holding-selected { background: #eaf0f5; }
+.holding-select:focus-visible { outline: 2px solid #285d4c; outline-offset: 2px; }
+.basket-contribution { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; padding: 24px; background: #eaf0f5; border-radius: 14px; }
+.basket-contribution div { display: flex; flex-direction: column; gap: 10px; }
+.basket-contribution strong { font-size: 30px; font-variant-numeric: tabular-nums; }
+.basket-contribution p { grid-column: 1/-1; margin: 0; color: var(--copy); }
+.proof-hero { padding-block: 32px; }
+.proof-hero h1 { font-size: clamp(36px,4.2vw,60px); letter-spacing: -.04em; }
+.journey-examples > .proof-section { width: 100%; margin: 24px 0 0; padding: 0; border: 0; box-shadow: none; }
+.verification-placeholder .text-link { margin-left: 20px; }
+@media(max-width: 760px) {
+ .site-navigation .nav-lab { padding-left: 12px; margin-left: 0; }
+ .journey-composition { grid-template-columns: 1fr; }
+ .journey-composition ol { grid-template-columns: repeat(2,minmax(0,1fr)); }
+ .journey-total { gap: 8px; }
+ .home-verification { padding: 22px 18px; }
+ .journey-next { flex-direction: column; align-items: stretch; }
+ .basket-contribution { grid-template-columns: 1fr; }
+ .launch-layout { padding-block: 28px; }
+}
+.home-verification .journey-total strong { color: #fff; }
+.home-verification .proof-experiment { width: 100%; }
+.basket-overview .holding-select { justify-content: flex-start; }
+.basket-overview .proof-table th,.basket-overview .proof-table td { padding-block: 10px; }
+.product-market-page .product-market-intro { margin-bottom: 24px; }
+.basket-overview-facts { padding-block: 18px; margin-block: 20px; }
+@media(max-width: 760px) {
+ .product-market-page .product-market-intro { gap: 12px; margin-bottom: 18px; }
+ .product-market-page .product-market-intro h1 { font-size: 34px; line-height: 1.1; }
+ .basket-overview header h2 { font-size: 23px; }
+ .basket-overview-facts { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 10px; padding-block: 14px; }
+ .basket-overview-facts span { font-size: 12px; line-height: 1.4; }
+ .basket-overview-facts b { font-size: 13px; }
+}
