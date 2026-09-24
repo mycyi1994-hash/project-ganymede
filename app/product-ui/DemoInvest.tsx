@@ -2,36 +2,24 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { formatUsdMicros } from "@/lib/nav-display";
+import { formatUsdMicros, formatUsdRounded } from "@/lib/nav-display";
 import { shortTime } from "@/lib/product-market";
 import { parseUsd } from "@/lib/xstocks/wallet";
+import { DEMO_ORDER_EVENT, formatShares, parseShares } from "@/lib/demo/format";
 import { Icon } from "./Icons";
 import { useMarket } from "./MarketProvider";
+import { BasketList, BasketTable, useRecordComposition } from "./Basket";
 
 // Demo investing with demo dollars in a private browser session. No real money moves and no
 // shares are issued on chain; orders fill at the latest NAV recorded on X Layer.
 
 type Account = { cashMicros: string; sharesMicros: string; costMicros: string; ordersCount: number; exists: boolean };
-type Order = { id: string; side: "subscribe" | "redeem"; usdMicros: string; sharesMicros: string; navMicros: string; navEffectiveAt: string; createdAt: string };
+type Order = { id: string; side: "subscribe" | "redeem"; usdMicros: string; sharesMicros: string; navMicros: string; navEffectiveAt: string; navHoldingsHash: string; createdAt: string };
 type Side = "buy" | "sell";
 
 const VERIFY = "/products/ustx/transparency";
 const SHARE = 1_000_000n;
 const MIN_ORDER = 10_000_000n;
-
-export function formatShares(micros: string | bigint): string {
-  const value = BigInt(micros);
-  const whole = value / SHARE;
-  return `${whole.toLocaleString("en-US")}.${(value % SHARE).toString().padStart(6, "0")}`;
-}
-
-/** Up to six decimals, like the share ledger. */
-export function parseShares(input: string): bigint | null {
-  const text = input.trim().replace(/,/g, "");
-  if (!/^\d{1,9}(\.\d{0,6})?$/.test(text)) return null;
-  const [whole, fraction = ""] = text.split(".");
-  return BigInt(whole) * SHARE + BigInt(fraction.padEnd(6, "0"));
-}
 
 async function send(path: string, body?: unknown) {
   const response = await fetch(path, { method: "POST", credentials: "same-origin", headers: body ? { "Content-Type": "application/json" } : undefined, body: body ? JSON.stringify(body) : undefined });
@@ -55,7 +43,7 @@ export function useDemoAccount() {
   const apply = (body: { account: Account; orders: Order[] }) => { setAccount(body.account); setOrders(body.orders); setError(null); };
   return {
     account, orders, error,
-    async place(order: { side: "subscribe" | "redeem"; usdMicros?: string; sharesMicros?: string; clientOrderId: string }) { const body = await send("/api/demo/orders", order); apply(body); return body.order!; },
+    async place(order: { side: "subscribe" | "redeem"; usdMicros?: string; sharesMicros?: string; clientOrderId: string }) { const body = await send("/api/demo/orders", order); apply(body); window.dispatchEvent(new Event(DEMO_ORDER_EVENT)); return body.order!; },
     async reset() { apply(await send("/api/demo/reset")); },
   };
 }
@@ -70,6 +58,7 @@ function useRecordedNav() {
 export function InvestPanel() {
   const demo = useDemoAccount();
   const nav = useRecordedNav();
+  const { composition, holdingsHash } = useRecordComposition();
   const [side, setSide] = useState<Side>("buy");
   const [amount, setAmount] = useState("1,000");
   const [review, setReview] = useState<string | null>(null);
@@ -85,7 +74,7 @@ export function InvestPanel() {
   const problem = !account ? null
     : side === "buy" ? (usd === null ? "Enter an amount in dollars, such as 1,000." : usd < MIN_ORDER ? "The minimum order is $10." : usd > cash ? "That is more than your demo cash." : null)
     : (held === 0n ? "You hold no USTX yet." : shares === null || shares === 0n ? "Enter a number of shares, up to six decimals." : shares > held ? "That is more than the shares you hold." : null);
-  const estimate = nav && !problem ? side === "buy" && usd ? `${formatShares(usd * SHARE / nav.navMicros)} USTX` : side === "sell" && shares ? formatUsdMicros(shares * nav.navMicros / SHARE, 2) : "—" : "—";
+  const estimate = nav && !problem ? side === "buy" && usd ? `${formatShares(usd * SHARE / nav.navMicros)} USTX` : side === "sell" && shares ? formatUsdRounded(shares * nav.navMicros / SHARE) : "—" : "—";
   const choose = (next: Side) => { setSide(next); setAmount(next === "buy" ? "1,000" : ""); setReview(null); setFailure(null); setFilled(null); };
 
   async function submit() {
@@ -113,6 +102,11 @@ export function InvestPanel() {
           <div><dt>Recorded on X Layer</dt><dd>{shortTime(filled.navEffectiveAt)}</dd></div>
           <div><dt>Demo cash left</dt><dd>{formatUsdMicros(account.cashMicros, 2)}</dd></div>
         </dl>
+        {composition && <div className="gmd-order-basket">
+          <h3>{filled.side === "subscribe" ? "Added to your basket" : "Taken out of your basket"}</h3>
+          <BasketList composition={composition} sharesMicros={BigInt(filled.sharesMicros)} label={filled.side === "subscribe" ? "Tokens this order added" : "Tokens this redemption removed"} />
+          <p className="gmd-caption">{holdingsHash === filled.navHoldingsHash.toLowerCase() ? "Token amounts and values at the prices in the record your order filled at." : "Token amounts per share are fixed until the next rebalance; values use the latest record."}</p>
+        </div>}
         <Link prefetch={false} className="gmd-button" href="/portfolio">View portfolio <Icon name="arrow" size={16} /></Link>
         <Link prefetch={false} className="gmd-text-button gmd-inline-link" href={VERIFY}>Verify this price</Link>
         <button type="button" className="gmd-text-button" onClick={() => setFilled(null)}>Place another order</button>
@@ -162,6 +156,7 @@ export function InvestPanel() {
 export function DemoPortfolio() {
   const demo = useDemoAccount();
   const nav = useRecordedNav();
+  const { composition } = useRecordComposition();
   const [resetting, setResetting] = useState(false);
   const account = demo.account;
   const shares = account ? BigInt(account.sharesMicros) : 0n;
@@ -183,7 +178,7 @@ export function DemoPortfolio() {
     <header className="gmd-section-heading"><div><h2 id="demo-title">Demo account</h2><p>USTX bought with demo dollars in this browser. No real money.</p></div><Link prefetch={false} className="gmd-button" href="/products/ustx#investment">Invest <Icon name="arrow" size={16} /></Link></header>
     {demo.error ? <p className="gmd-inline-error" role="alert">{demo.error}</p> : !account ? <p className="gmd-caption" role="status">Opening your demo account…</p> : <>
       <div className="gmd-portfolio-summary">
-        <div><span className="gmd-label">Total value</span><strong className="gmd-value">{value === null ? "—" : formatUsdMicros(cash + value, 2)}</strong><p>{nav ? `USTX valued at ${formatUsdMicros(nav.navMicros, 4)}, the NAV recorded on X Layer at ${shortTime(nav.at)}` : "Waiting for the latest recorded NAV…"}</p></div>
+        <div><span className="gmd-label">Total value</span><strong className="gmd-value">{value === null ? "—" : formatUsdRounded(cash + value)}</strong><p>{nav ? `USTX valued at ${formatUsdMicros(nav.navMicros, 4)}, the NAV recorded on X Layer at ${shortTime(nav.at)}` : "Waiting for the latest recorded NAV…"}</p></div>
         <dl>
           <div><dt>Demo cash</dt><dd>{formatUsdMicros(cash, 2)}</dd></div>
           <div><dt>Invested</dt><dd>{formatUsdMicros(cost, 2)}</dd></div>
@@ -195,11 +190,16 @@ export function DemoPortfolio() {
         {shares === 0n ? <p className="gmd-empty-note">You hold no USTX yet. Start with {formatUsdMicros(cash, 2)} in demo dollars.</p> : <div className="gmd-position-row">
           <div className="gmd-position-name"><span className="gmd-mini-monogram">G</span><div><b>US Tech Basket</b><small>USTX · 6 xStocks</small></div></div>
           <div><span className="gmd-mobile-label">Shares</span><b>{formatShares(shares)}</b><small>{nav ? `${formatUsdMicros(nav.navMicros, 4)} / share` : ""}</small></div>
-          <div><span className="gmd-mobile-label">Value</span><b>{value === null ? "—" : formatUsdMicros(value, 2)}</b><small>{formatUsdMicros(cost, 2)} invested</small></div>
+          <div><span className="gmd-mobile-label">Value</span><b>{value === null ? "—" : formatUsdRounded(value)}</b><small>{formatUsdMicros(cost, 2)} invested</small></div>
           <div className={tone}><span className="gmd-mobile-label">Return</span><b>{gain === null ? "—" : signed(gain)}</b><small>{percent === null ? "" : signedPercent(percent)}</small></div>
           <div className="gmd-position-actions"><Link className="gmd-small-button" prefetch={false} href="/products/ustx#investment">Buy</Link><Link className="gmd-small-button" prefetch={false} href="/products/ustx#investment">Redeem</Link></div>
         </div>}
       </div>
+      {shares > 0n && <section className="gmd-inside" aria-labelledby="inside-title">
+        <header className="gmd-section-heading"><div><h3 id="inside-title">Inside your USTX</h3><p>Your {formatShares(shares)} shares, looked through to the six xStocks.</p></div></header>
+        {composition ? <BasketTable composition={composition} sharesMicros={shares} label="Your USTX looked through to each xStock" /> : <p className="gmd-caption">Waiting for the latest record to show what your shares hold…</p>}
+        <p className="gmd-caption">Each USTX share holds fixed token amounts of each xStock until the next quarterly rebalance. Values use the prices in the latest record on X Layer.</p>
+      </section>}
       <div className="gmd-demo-activity">
         <header className="gmd-section-heading"><h3>Recent orders</h3><span>{demo.orders.length ? `${demo.orders.length} shown` : "None yet"}</span></header>
         {demo.orders.length > 0 && <div className="gmd-activity-rows">{demo.orders.map(order => <div className="gmd-activity-row" key={order.id}>

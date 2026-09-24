@@ -3,9 +3,12 @@ import test from "node:test";
 import { DatabaseSync } from "node:sqlite";
 import { readFileSync } from "node:fs";
 import { env } from "cloudflare:workers";
-import { costRemoved, DEMO_DAILY_ORDER_CAP, DEMO_START_CASH_MICROS, DemoLedger, executableNav, sharesForUsd, usdForShares } from "../lib/demo/ledger.ts";
+import { costRemoved, DEMO_DAILY_ORDER_CAP, DEMO_START_CASH_MICROS, DemoLedger, demoSharesOutstanding, executableNav, sharesForUsd, usdForShares } from "../lib/demo/ledger.ts";
 import { orderId, parseOrder } from "../lib/demo/api.ts";
+import { runXStocksCycle } from "../lib/xstocks/cycle.ts";
+import { XSTOCKS_CONSTITUENTS } from "../lib/xstocks/basket.ts";
 import { GET as accountGET } from "../app/api/demo/account/route.ts";
+import { GET as fundGET } from "../app/api/demo/fund/route.ts";
 import { POST as ordersPOST } from "../app/api/demo/orders/route.ts";
 import { POST as resetPOST } from "../app/api/demo/reset/route.ts";
 
@@ -188,4 +191,57 @@ test("the demo routes: a read-only account view, a session cookie, orders at the
     assert.equal(down.status, 503);
     assert.doesNotMatch(await down.text(), /secret/);
   } finally { delete env.DB; delete env.NAV_REGISTRY_ADDRESS; sql.close(); }
+});
+
+test("the fund totals add up every account and name none of them", async () => {
+  const { db, sql } = database();
+  try {
+    const demo = new DemoLedger(db);
+    assert.equal(await demoSharesOutstanding(db), "0");
+    const alice = await demo.place("alice-session", { id: "order-alice", side: "subscribe", usdMicros: 1_000_000_000n }, nav, now);
+    const bob = await demo.place("bob-session", { id: "order-bob", side: "subscribe", usdMicros: 250_000_000n }, nav, now);
+    const carol = await demo.place("carol-session", { id: "order-carol", side: "subscribe", usdMicros: 50_000_000n }, nav, now);
+    await demo.place("carol-session", { id: "order-carol-out", side: "redeem", sharesMicros: BigInt(carol.account.sharesMicros) }, nav, now);
+    const total = (BigInt(alice.account.sharesMicros) + BigInt(bob.account.sharesMicros)).toString();
+    const fund = await demo.fund(now);
+    assert.equal(fund.sharesOutstandingMicros, total);
+    assert.equal(fund.investors, 2, "an account that redeemed everything is not counted");
+    assert.equal(fund.ordersToday, 4);
+    assert.equal(fund.recent.length, 4);
+    assert.deepEqual(Object.keys(fund.recent[0]).sort(), ["createdAt", "sharesMicros", "side", "usdMicros"]);
+    assert.doesNotMatch(JSON.stringify(fund), /session|order-/, "no subject or order id leaves the ledger");
+    assert.equal(await demoSharesOutstanding(db), total);
+    assert.equal(await demoSharesOutstanding(undefined), "0");
+    assert.equal(await demoSharesOutstanding({ prepare() { throw new Error("no such table: demo_accounts"); } }), null);
+    env.DB = db;
+    db.readOnly = true;
+    const response = await fundGET();
+    assert.equal(response.status, 200);
+    assert.equal(response.headers.get("cache-control"), "no-store");
+    assert.equal((await response.json()).sharesOutstandingMicros, total);
+  } finally { delete env.DB; sql.close(); }
+});
+
+test("each NAV record sent to X Layer carries the demo shares outstanding, and a retry sends the stored count", async (t) => {
+  const { db, sql } = database();
+  try {
+    const demo = new DemoLedger(db);
+    const alice = await demo.place("alice-session", { id: "order-alice", side: "subscribe", usdMicros: 1_000_000_000n }, nav, now);
+    const rows = new Map();
+    const repo = { db, async getState(key) { return rows.has(key) ? { value: rows.get(key) } : null; }, async setState(key, value) { rows.set(key, value); }, async saveSettlement() {}, async deleteStatesWithPrefix(prefix, keep) { for (const key of [...rows.keys()]) if (key.startsWith(prefix) && !keep.includes(key)) rows.delete(key); } };
+    const addresses = XSTOCKS_CONSTITUENTS.map((item, i) => ({ ...item, address: "0x" + String(i + 1).repeat(40) }));
+    const configured = { OKX_API_KEY: "test", OKX_API_SECRET: "test", OKX_API_PASSPHRASE: "test", XSTOCKS_ADDRESSES: addresses.map((item) => item.symbol + "=" + item.address).join(",") };
+    const at = new Date().toISOString();
+    t.mock.method(globalThis, "fetch", async () => Response.json({ code: "0", data: addresses.map((item) => ({ chainIndex: "196", tokenContractAddress: item.address, price: "100", time: at })) }));
+    const sent = [];
+    // No answer from the relayer: the publication stays queued and the next cycle asks again.
+    const settlement = { async settle(request) { sent.push(request); return { status: "queued", txHash: null, error: "Settlement relayer no answer in time" }; } };
+    await runXStocksCycle(configured, repo, settlement, at);
+    const bob = await demo.place("bob-session", { id: "order-bob", side: "subscribe", usdMicros: 500_000_000n }, nav, now);
+    await runXStocksCycle(configured, repo, settlement, new Date(Date.parse(at) + 60_000).toISOString());
+    const navs = sent.filter((request) => request.action === "publish_nav");
+    const both = (BigInt(alice.account.sharesMicros) + BigInt(bob.account.sharesMicros)).toString();
+    assert.deepEqual(navs.map((request) => request.sharesOutstandingMicros), [alice.account.sharesMicros, alice.account.sharesMicros, both]);
+    assert.equal(navs[1].entityId, navs[0].entityId, "the retry is the same publication");
+  } finally { sql.close(); }
 });

@@ -131,3 +131,35 @@ test("Portfolio reads real xStocks read-only and offers the basket calculator", 
   assert.match(html, /not an order or a quote/);
   assert.doesNotMatch(html, /GMDCORE|testnet share records|Invest in USTX/);
 });
+
+test("the product page shows fund figures and Markets shows the OKX and X Layer integration", async () => {
+  const product = visible(await (await render("/products/ustx")).text());
+  assert.match(product, /Fund overview/);
+  assert.match(product, /href="#overview"/);
+  assert.match(product, /Minimum investment/);
+  assert.match(product, /Recent investor activity/);
+  const markets = visible(await (await render("/")).text());
+  assert.match(markets, /Built on X Layer and OKX/);
+  assert.match(markets, /OKX OnchainOS/);
+  assert.match(markets, /href="\/issuers"/);
+  assert.match(markets, /href="\/developers"/);
+});
+
+test("issuer, developer and embed pages render for partners", async () => {
+  const issuers = visible(await (await render("/issuers")).text());
+  assert.match(issuers, /Launch a basket investors can verify/);
+  assert.match(issuers, /Planned pricing/);
+  assert.match(issuers, /Roadmap/);
+  const developers = visible(await (await render("/developers")).text());
+  assert.match(developers, /\/api\/v1\/ustx/);
+  assert.match(developers, /latestNav/);
+  assert.match(developers, /\/embed\/ustx/);
+  assert.match(developers, /verify:evidence/);
+  const embed = await render("/embed/ustx");
+  assert.equal(embed.status, 200);
+  const badge = visible(await embed.text());
+  assert.match(badge, /USTX · US Tech Basket/);
+  assert.match(badge, /Checking the record/);
+  assert.doesNotMatch(badge, /Primary navigation/);
+  assert.equal(embed.headers.get("x-frame-options"), null, "partners can frame the badge");
+});

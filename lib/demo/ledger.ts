@@ -56,6 +56,17 @@ function bindable(value: bigint): number {
   return number;
 }
 
+export type DemoFund = { sharesOutstandingMicros: string; investors: number; ordersToday: number; recent: Array<{ side: DemoSide; usdMicros: string; sharesMicros: string; createdAt: string }> };
+
+/** Demo shares held across all accounts: "0" without a database, null when the demo tables cannot be read. */
+export async function demoSharesOutstanding(db: D1Database | undefined): Promise<string | null> {
+  if (!db) return "0";
+  try {
+    const row = await db.prepare("SELECT COALESCE(SUM(shares_micros), 0) AS shares FROM demo_accounts").first<{ shares: number }>();
+    return String(row?.shares ?? 0);
+  } catch { return null; }
+}
+
 export class DemoLedger {
   private readonly db: D1Database;
   constructor(db: D1Database) { this.db = db; }
@@ -132,6 +143,21 @@ export class DemoLedger {
       throw new DemoOrderError("Your demo account changed while this order was placed. Review it and try again.", 409, "account_changed");
     }
     return { order, account: await this.account(subject), replayed: false };
+  }
+
+  /** The fund across all demo accounts, without anything that identifies an account. */
+  async fund(now: Date): Promise<DemoFund> {
+    const [totals, daily, recent] = await Promise.all([
+      this.db.prepare("SELECT COALESCE(SUM(shares_micros), 0) AS shares, COALESCE(SUM(CASE WHEN shares_micros > 0 THEN 1 ELSE 0 END), 0) AS investors FROM demo_accounts").first<{ shares: number; investors: number }>(),
+      this.db.prepare("SELECT orders FROM demo_daily WHERE day = ?").bind(now.toISOString().slice(0, 10)).first<{ orders: number }>(),
+      this.db.prepare("SELECT side, usd_micros, shares_micros, created_at FROM demo_orders ORDER BY created_at DESC LIMIT 8").all<{ side: DemoSide; usd_micros: number; shares_micros: number; created_at: string }>(),
+    ]);
+    return {
+      sharesOutstandingMicros: String(totals?.shares ?? 0),
+      investors: Number(totals?.investors ?? 0),
+      ordersToday: Number(daily?.orders ?? 0),
+      recent: recent.results.map(row => ({ side: row.side, usdMicros: String(row.usd_micros), sharesMicros: String(row.shares_micros), createdAt: row.created_at })),
+    };
   }
 
   /** Starts the account again with $10,000 demo dollars and no history. */
