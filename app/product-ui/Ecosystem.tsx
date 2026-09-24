@@ -36,7 +36,8 @@ const embedExample = `<iframe src="${SITE}/embed/ustx" title="USTX verified NAV"
   width="440" height="260" style="border:0" loading="lazy"></iframe>`;
 
 function Code({ label, children }: { label: string; children: string }) {
-  return <figure className="gmd-code"><figcaption>{label}</figcaption><pre><code>{children}</code></pre></figure>;
+  // Wide code scrolls sideways, so keyboard users can focus it to scroll.
+  return <figure className="gmd-code"><figcaption>{label}</figcaption><pre tabIndex={0} role="region" aria-label={`${label} code`}><code>{children}</code></pre></figure>;
 }
 
 export function DevelopersPage() {

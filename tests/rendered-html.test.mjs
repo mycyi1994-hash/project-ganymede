@@ -158,7 +158,7 @@ test("issuer, developer and embed pages render for partners", async () => {
   const embed = await render("/embed/ustx");
   assert.equal(embed.status, 200);
   const badge = visible(await embed.text());
-  assert.match(badge, /USTX · US Tech Basket/);
+  assert.match(badge, /<h1>USTX · US Tech Basket<\/h1>/);
   assert.match(badge, /Checking the record/);
   assert.doesNotMatch(badge, /Primary navigation/);
   assert.equal(embed.headers.get("x-frame-options"), null, "partners can frame the badge");
