@@ -27,13 +27,13 @@ test("Markets renders the actual product path without fabricated values or the v
 });
 
 test("public product routes share navigation and select the right destination before hydration", async () => {
-  const expected = [["/", "Markets"], ["/products/ustx/transparency", "Verify"]];
+  const expected = [["/", "Markets"], ["/products/ustx/transparency", "Verify"], ["/portfolio", "Portfolio"]];
   for (const [path, current, heading] of [
     ["/", "/", "US Tech Basket"],
     ["/products/ustx", "/", "Terms &amp; approach"],
     ["/products/ustx/transparency", "/products/ustx/transparency", "Transparency"],
+    ["/portfolio", "/portfolio", "Your xStocks on X Layer"],
     // The separate test share ledger stays reachable by address but is not a primary destination.
-    ["/portfolio", null, "Your testnet share records"],
     ["/activity", null, "Your testnet share records"],
   ]) {
     const response = await render(path);
@@ -73,9 +73,9 @@ test("legacy URLs route to their matching product or simulation destination", as
 test("public Portfolio and Activity do not contain the local example account or simulated balances", async () => {
   for (const path of ["/portfolio", "/activity"]) {
     const html = visible(await (await render(path)).text());
-    assert.match(html, /href="\/lab"/);
     assert.doesNotMatch(html, /12,454|125\.250000|Example account|Preview processing/);
   }
+  assert.match(visible(await (await render("/activity")).text()), /href="\/lab"/);
   const response = await render("/design-preview?screen=portfolio");
   assert.equal(response.status, 404, "design fixtures must not be served by the production build");
 });
@@ -116,4 +116,14 @@ test("legacy paper products remain reachable and distinct from the customer port
 
 test("unknown ETF slugs return not found", async () => {
   assert.equal((await render("/etfs/not-a-real-etf")).status, 404);
+});
+
+test("Portfolio reads real xStocks read-only and offers the basket calculator", async () => {
+  const html = visible(await (await render("/portfolio")).text());
+  assert.match(html, /Connect wallet/);
+  assert.match(html, /Or view any public address/);
+  assert.match(html, /nothing is signed or sent/);
+  assert.match(html, /Size a USTX-weighted basket/);
+  assert.match(html, /not an order or a quote/);
+  assert.doesNotMatch(html, /GMDCORE|testnet share records|Invest in USTX/);
 });

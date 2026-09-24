@@ -36,14 +36,14 @@ function AccountControl() {
 }
 
 export function ProductHeader({ section = "markets", preview }: { section?: ProductSection | null; preview?: DesignScreen }) {
-  const links = [{ section: "markets", label: "Markets", href: "/", icon: "market" }, { section: "verify", label: "Verify", href: "/products/ustx/transparency", icon: "check" }] as const;
-  // The address control only serves the separate test share ledger pages.
-  const ledger = section === "portfolio" || section === "activity";
-  return <header className="gmd-header"><div className="gmd-header-inner"><Link href={preview ? designLink("markets") : "/"} prefetch={false} className="gmd-brand" aria-label="Ganymede markets"><BrandMark /><span>Ganymede</span></Link><nav className="gmd-navigation" aria-label="Primary navigation">{links.map(link => <Link prefetch={false} key={link.section} href={preview && link.section === "markets" ? designLink(link.section) : link.href} aria-current={section === link.section ? "page" : undefined}><Icon name={link.icon} size={18} /><span>{link.label}</span></Link>)}</nav><div className="gmd-header-end">{preview ? <span className="gmd-example-account"><Icon name="wallet" size={17} />Example account</span> : ledger ? <><span className="gmd-environment"><i />Testnet ledger</span><AccountControl /></> : null}</div></div></header>;
+  const links = [{ section: "markets", label: "Markets", href: "/", icon: "market" }, { section: "verify", label: "Verify", href: "/products/ustx/transparency", icon: "check" }, { section: "portfolio", label: "Portfolio", href: "/portfolio", icon: "portfolio" }] as const;
+  // The header address control only serves the separate test share ledger page.
+  const ledger = section === "activity";
+  return <header className="gmd-header"><div className="gmd-header-inner"><Link href={preview ? designLink("markets") : "/"} prefetch={false} className="gmd-brand" aria-label="Ganymede markets"><BrandMark /><span>Ganymede</span></Link><nav className="gmd-navigation" aria-label="Primary navigation">{links.map(link => <Link prefetch={false} key={link.section} href={preview && link.section !== "verify" ? designLink(link.section) : link.href} aria-current={section === link.section ? "page" : undefined}><Icon name={link.icon} size={18} /><span>{link.label}</span></Link>)}</nav><div className="gmd-header-end">{preview ? <span className="gmd-example-account"><Icon name="wallet" size={17} />Example account</span> : ledger ? <><span className="gmd-environment"><i />Testnet ledger</span><AccountControl /></> : null}</div></div></header>;
 }
 
 export function ProductShell({ children, section = "markets", preview }: { children: ReactNode; section?: ProductSection; preview?: DesignScreen }) {
-  return <WalletAccountProvider><MarketProvider enabled={section === "markets" || section === "verify"}><div className="gmd-app">
+  return <WalletAccountProvider><MarketProvider enabled={section === "markets" || section === "verify" || section === "portfolio"}><div className="gmd-app">
     <a className="gmd-skip" href="#product-main">Skip to content</a>
     {preview && <div className="gmd-design-toolbar"><span><b>Design preview</b> Example account data. No transactions.</span><nav aria-label="Design screens">{(["markets", "product", "order", "portfolio", "transaction"] as const).map(screen => <Link prefetch={false} key={screen} href={designLink(screen)} aria-current={preview === screen ? "page" : undefined}>{({ markets: "Markets", product: "Product", order: "Order", portfolio: "Portfolio", transaction: "Transaction" })[screen]}</Link>)}</nav></div>}
     <ProductHeader section={section} preview={preview} />

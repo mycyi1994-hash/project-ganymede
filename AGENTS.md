@@ -2,11 +2,12 @@
 
 ## Product and scope
 
-The public UI leads with verification: Markets, USTX detail and Verify (the
+The public UI leads with verification: Markets, USTX detail, Verify (the
 transparency page with the tamper experiment and the evidence download, which
-`npm run verify:evidence` re-checks). The GMDCORE test ledger pages
-(`/portfolio`, `/activity`) and the paper Lab are earlier work and stay out of
-the primary navigation. Production is the `ganymede-xlayer` Worker; the
+`npm run verify:evidence` re-checks) and Portfolio (read-only valuation of any
+wallet's xStocks on X Layer mainnet). The GMDCORE test ledger page
+(`/activity`) and the paper Lab are earlier work and stay out of the primary
+navigation. Production is the `ganymede-xlayer` Worker; the
 settlement relayer is `ganymede-settlement-relayer`.
 `docs/PRODUCT_RELEASE.md` records the current source and Worker version.
 
