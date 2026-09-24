@@ -21,8 +21,12 @@ function memoryRepo() {
   };
 }
 
+// Quotes are stamped just before every cycle time used below, never with the wall clock:
+// a quote later than the cycle is rejected as invalid, so a real-time stamp fails once the day passes 10:00 UTC.
+const QUOTE_TIME = "2026-09-24T09:59:00.000Z";
+
 function pricesFor(addresses, price = "100") {
-  return async () => Response.json({ code: "0", data: addresses.map((item) => ({ chainIndex: "196", tokenContractAddress: item.address, price, time: new Date().toISOString() })) });
+  return async () => Response.json({ code: "0", data: addresses.map((item) => ({ chainIndex: "196", tokenContractAddress: item.address, price, time: QUOTE_TIME })) });
 }
 
 function settlementRecorder(outcome) {
