@@ -2,80 +2,64 @@
 
 비공개 개발 저장소 전용 문서다. 공개 스냅샷에는 넣지 않는다(`SUBMISSION_EXPORT.md`의 제외 목록).
 
-작성 시점: 2026-09-25 01:50 UTC (9/25 금 10:50 KST).
+작성 시점: 2026-09-25 01:50 UTC. 제출 양식 답안·영상 대본·최종 점검은 10:55 UTC(19:55 KST)에 고쳤다.
 
 ## 1. 한눈에 보기
 
 | 항목 | 상태 |
 | --- | --- |
 | 제출 마감 | **2026-09-25 23:59 UTC = 9/26(토) 08:59 KST** |
-| 권장 제출 시각 | **9/25(금) 22:00 KST까지.** 마감 직전의 양식 오류나 링크 문제에 대비한다 |
+| 권장 제출 시각 | **9/26(토) 01:00 KST까지.** 영상 업로드와 양식 오류에 대비한다 |
 | 제품 링크 | https://ganymede-xlayer.gana003.workers.dev/ (운영 중) |
-| 공개 저장소 | https://github.com/mycyi1994-hash/project-ganymede-submission (운영 소스와 동기화됨) |
-| 데모 영상 | **없음. 사용자가 만든다** (아래 4·5절) |
-| 제출 양식 | https://forms.gle/81S2gnFCzqSoeDEA7 (**사용자가 작성**, 6절 문구 사용) |
-| 개발 | 제출 가능한 상태로 완료. 9/25 12:00 KST 이후에는 버그 수정만 한다 |
+| 공개 저장소 | https://github.com/mycyi1994-hash/project-ganymede-submission (운영 소스와 동기화됨, README 있음) |
+| 데모 영상 | **사용자가 만든다** (4·5절). 2~4분, YouTube 공개 또는 일부 공개 |
+| 제출 양식 | 사용자가 받은 Google 양식. **6절 답안을 항목 순서대로 붙여 넣는다** |
+| 대표 이미지(1:1) | 선택 항목. Claude가 만든 1024×1024 PNG(`ganymede-team-1x1.png`)를 쓴다 |
+| 개발 | 제출 가능한 상태로 완료. 제출 뒤에는 새 기능을 배포하지 않는다 |
 
-### 개발 쪽에서 끝난 것
+### 개발 쪽에서 끝난 것 (9/25 10:50 UTC 기준)
 
-- **운영**: 펀드 판매 사이트처럼 동작한다.
-  - **지갑 투자(X Layer Testnet)**: OKX Wallet 연결 → 데모 달러(dUSD, 가치 없음) 받기 → 승인 → 투자·환매. USTX 계약(`0x77eaeba1366bde7818da12d3cbdbea0a2ee97596`)이 X Layer에 기록된 NAV로만 USTX를 발행해 지갑에 넣는다. 지갑이 없으면 Demo balance 탭으로 같은 흐름을 체험한다
-  - Markets(펀드 규모·투자자·출시 후 수익률) → USTX에서 데모 달러로 투자 → 체결 화면에 "Added to your basket"(6개 xStock별 토큰 수량·금액) → Portfolio(총평가액·수익률·"Inside your USTX" 들여다보기·주문 내역)
-  - USTX 펀드 개요: 펀드 규모(X Layer에 기록된 발행 좌수 × NAV), 투자자 수, 24시간 순유입, 수익률, 핵심 조건, 전체 지분의 종목별 보유
-  - Transparency: 고객용 증명 페이지(거래소 준비금 증명 형식). 검증 결과, 가격 산정 3단계, 구성 종목과 OKX 가격, 최근 기록과 OKX 탐색기 링크
-  - 개발자 페이지 "Verify it yourself": 3가지 확인, 변조 실험 3종, 증거 파일, 원문 문서
-  - 모든 숫자에 출처 표시: "Priced by OKX OnchainOS", "OKX price", "OKX Explorer", "Connect OKX Wallet"
-  - Portfolio 아래 실제 지갑 xStocks 평가(OKX Wallet 연결 또는 주소 입력)
-  - 화면 배치는 실제 서비스처럼 정리했다: 헤더에 테스트넷 안내 한 줄·네트워크·"Connect OKX Wallet", 메뉴 Markets / Portfolio / Transparency. 발표용 설명 구역은 없앴고, 개발자·발행사 자료는 푸터(Docs, For issuers)로 옮겼다
-  - 파트너용: 공개 NAV API(`/api/v1/ustx`), 다른 사이트에 붙이는 검증 배지(`/embed/ustx`), 발행사 페이지(`/issuers`, 요금제), 개발자 페이지(`/developers`)
-- **최종 확인** (9/25, Worker `f760cd9e`, 지갑 투자 배포): 데스크톱·모바일, 지갑 있음·없음으로 7개 화면 axe 위반 0건, 가로 넘침·페이지 오류 없음, 화면·API 정상. 아래는 이전 배포(9/24 18:38 UTC, `bebf23c3`) 때의 확인 내용이다.
-  - 11개 화면과 공개 API 3개가 200을 반환하고, 이전 경로 이동이 정상이다.
-  - axe 접근성 위반 0건(11개 화면).
-  - 운영 사이트에서 $250 데모 매수 → 바스켓 6종목 표시 → 포트폴리오 반영까지 확인했다.
-  - 배포 뒤 첫 기록(18:35 UTC)에 발행 좌수가 X Layer에 올라간 것을 확인했다.
-- **테스트**: 앱 146개, relayer 28개, 컨트랙트 62개가 통과했고, lint 오류는 0이다.
-- **공시 기록**: 9/23 11:15 UTC부터 5분마다 USTX NAV를 X Layer Testnet에 기록하고 있다. 9/24 18:40 UTC까지 216건이 확정됐다. 차트는 첫 공시부터 모든 기록을 보여 준다.
-- **공개 저장소**: README, 빌드 기간 작업 목록(`docs/BUILD_PERIOD.md`), 출처 기록(`docs/BUILD_EVIDENCE.md`)을 갖췄다. 비밀값 검사를 통과했다.
+- **운영 제품** (X Layer Testnet, 가치 없는 데모 달러 dUSD)
+  - **Markets**: USTX NAV(OKX OnchainOS 가격, X Layer 기록), 펀드 규모·투자자·24시간 순유입, 차트, 구성 종목, 그리고 **시장 활동 카드**(24시간 거래액·거래 수·키퍼 차익거래와 번 금액·대출 동작, 최근 거래 4줄).
+  - **USTX 화면**
+    - 투자 패널: OKX Wallet → X Layer Testnet 전환 → dUSD 받기 → 주문. 펀드(NAV)와 풀(시장가) 중 **더 좋은 가격으로 자동 선택**한다. 체결 후 "Added to your basket"에 6종목 토큰 수량이 나온다. 지갑이 없으면 Demo balance 탭으로 같은 체험을 한다.
+    - 펀드 개요: 규모, 투자자, 수익률, 핵심 조건, 풀의 시장가격과 NAV 대비 괴리율, 가격 오라클.
+    - **시장 활동**: 펀드 투자·환매, 풀 매매, 키퍼 차익거래(번 금액 포함), 대출의 각 단계가 실시간으로 나온다. 줄마다 OKX 탐색기로 연결된다.
+    - **Borrow against USTX**: USTX를 담보로 넣고 dUSD를 빌리고, 갚고, 빼고, 빌려주는 대출 시장.
+  - **Portfolio**: 지갑의 USTX와 담보(대출 포함)를 6종목으로 들여다보기, 데모 잔고, X Layer 메인넷의 실제 xStocks 평가와 명세서.
+  - **Transparency**: 고객용 증명 페이지. 방문자 브라우저가 X Layer 기록을 직접 읽어 확인한다.
+  - **파트너용**: `/developers`(검증 실험·증거 파일·API·NAV 가격 피드·풀·담보 예시), `/issuers`, `/embed/ustx` 배지, 공개 API `/api/v1/ustx`·`/api/v1/ustx/activity`.
+- **컨트랙트 8개** (X Layer Testnet): NAV 기록, USTX 펀드, dUSD, Chainlink 방식 NAV 피드, USTX/dUSD 풀, NAV 차익거래, 대출 시장, 예전 GMDCORE 장부. 모두 OKX 탐색기와 Sourcify에서 소스 검증을 마쳤다.
+- **자동으로 도는 것**: 5분마다 NAV 기록, 5분마다 키퍼(풀이 NAV에서 벗어나면 차익거래로 되돌림), 5분마다 시장 활동 수집.
+- **최종 점검** (9/25 10:30~10:50 UTC, 운영, Worker `90840b50`)
+  - 공개 경로 17개 200, 이전 경로 4개 307. 데스크톱·모바일, 지갑 있음·없음으로 7개 화면 axe 위반 0건, 가로 넘침·페이지 오류 없음.
+  - 테스트 지갑으로 실제 거래: 풀 매수·매도, 펀드 $10 투자와 환매, 대출(입금 → $5 대출 → 상환 → 인출)이 모두 성공했다. 거래마다 몇 초 안에 시장 활동 맨 위에 "You"로 나왔다.
+  - 데모 잔고 $250 매수, 지갑 Portfolio(지갑·담보·대출·공급 표시)가 정상이었다.
+  - 운영에서 내려받은 증거 파일을 `npm run verify:evidence`로 다시 확인해 5개 항목 모두 PASS였다.
+  - USTX 공시는 최근 1시간 동안 5분마다 빠짐없이 기록됐다. 지난 24시간은 233건이다. 9/24 12:30~9/25 00:45 UTC에는 OKX 요청 제한(429) 대기로 10~35분 공백이 여러 번 있었다(8절).
+- **테스트**: 앱 156개, relayer 28개, 컨트랙트 62개 통과, lint 오류 0.
+- **공개 저장소**: 운영 소스 `6e3e143`과 같은 코드. README, 빌드 기간 작업 목록(`docs/BUILD_PERIOD.md`), 출처 기록(`docs/BUILD_EVIDENCE.md`), 비밀값 검사 통과. 문서의 링크 31개 중 30개가 200이다. 남은 1개(Centrifuge 문서)는 Cloudflare 봇 확인 화면이 뜨지만, 실제 브라우저에서는 열린다.
 
 ## 2. 사용자가 해야 할 일 (순서대로)
 
-- [ ] **1. 참가 정보 확정 (필수, 10분)**
-  - 팀 이름, 멤버(최대 4명, 1인 참가 가능), 프로젝트 이름(Ganymede), 트랙(**Build a Market**), 참가 경로를 정한다.
-  - 참가 경로
-    - 합격 때 이미 정했다면 그대로 쓴다.
-    - 아직이면 둘 중 하나를 고른다.
-      - **Singapore finale**: 상금 대부분이 여기 있다. 선정되면 싱가포르에서 직접 라이브 데모를 한다. 날짜는 키트에 10/7, 약관에 10/6으로 서로 다르다.
-      - **Remote Build**: 이동 없이 Best Remote Demo 상(총 US$15,000)으로 따로 심사받는다.
-    - 싱가포르에 갈 수 있고 영어로 발표할 수 있으면 finale, 아니면 Remote Build를 고른다. **본인만 결정할 수 있다.**
-  - 멤버가 바뀌었으면 키트 안내대로 yanyi.ho@okg.com에 알린다.
-- [ ] **2. (권장, 5분) 본인 지갑으로 Portfolio 연결 한 번 해 보기**
-  - https://ganymede-xlayer.gana003.workers.dev/portfolio 에서 오른쪽 위 **Connect OKX Wallet**을 누른다(OKX Wallet 또는 MetaMask 확장 프로그램).
-  - 정상: 주소 공유 요청만 뜨고 서명·송금 요청은 없다. 승인하면 주소가 보이고 X Layer 메인넷 잔고를 읽는다. xStocks가 없으면 "This address holds none of the six xStocks on X Layer."가 나온다. 지갑이 다른 네트워크에 있어도 된다.
-  - 이상하면 화면을 캡처해서 Claude에게 보낸다. 실제 지갑 확장 프로그램 연결은 개발 쪽에서 끝까지 검증하지 못했다.
-- [ ] **2-1. (권장, 1분) 데모 투자 한 번 해 보기**
-  - https://ganymede-xlayer.gana003.workers.dev/products/ustx 에서 Invest → $250 → Review investment → Buy with demo dollars.
-  - 정상: "Order filled"와 "Added to your basket" 아래에 애플·마이크로소프트 등 6종목의 토큰 수량과 금액이 나온다. Portfolio에서 총평가액과 "Inside your USTX"가 보인다.
-  - 계정은 이 브라우저에만 있다. Portfolio의 주문 내역(Recent orders) 아래 "Reset demo balance"로 $10,000부터 다시 시작할 수 있다.
-- [ ] **3. 데모 영상 제작 (필수, 2~3시간)**: 4절 대본과 5절 녹화 방법을 따른다. 길이는 2~4분, 목표 3분. 외주를 맡겼다면 영상 지시서 문서 링크를 전달한다.
-- [ ] **4. 영상 업로드 (필수, 20분)**
-  - YouTube에 "공개" 또는 "일부 공개"로 올린다. **"비공개"는 안 된다.**
-  - 로그아웃한 시크릿 창에서 재생되는지 확인한다.
-- [ ] **5. 제출 양식 작성·제출 (필수, 30분)**
-  - https://forms.gle/81S2gnFCzqSoeDEA7 에 6절 문구를 붙여 넣는다.
-  - 마지막의 확인(Declaration)은 내용이 정확한지 본인이 확인한 뒤에 체크한다.
-- [ ] **6. 제출 후 (필수)**
+- [ ] **1. 데모 영상 녹화 (필수, 1~2시간)**: 4절 대본과 5절 방법을 따른다. 길이는 2~4분, 목표는 3분이다.
+  - 지갑 장면을 찍으려면 녹화 전에 준비한다(4절 "녹화 전 준비").
+    - 크롬에 OKX Wallet 확장 프로그램을 설치하고, 사이트에서 Connect → Switch to X Layer Testnet을 한다.
+    - 가스비로 쓸 테스트 OKB가 조금 필요하다. 필요하면 **지갑 주소를 Claude에게 알려 주면 테스트 지갑에서 보내 준다**(테스트넷, 가치 없음).
+  - 지갑 준비가 어려우면 Demo balance 탭으로 찍어도 된다. 지갑 거래는 시장 활동 목록과 OKX 탐색기로 보여 준다.
+- [ ] **2. 영상 업로드 (필수, 20분)**: YouTube에 "공개" 또는 "일부 공개"로 올린다. **"비공개"는 안 된다.** 로그아웃한 시크릿 창에서 재생되는지 확인한다.
+- [ ] **3. 제출 양식 작성 (필수, 20분)**: 6절 답안을 양식 항목 순서대로 붙여 넣는다. 팀 이름·인원·멤버 실명·참가 경로는 본인이 정한다.
+- [ ] **4. 제출 후 (필수)**
   - 접수 확인 이메일(submission receipt)이 오는지 본다.
-  - 누락이나 링크 문제 연락(이메일 또는 텔레그램)이 오면 **24시간 안에** 답한다. 9/30까지 검증 기간이다.
-- [ ] **7. 결선 날짜 문의 (finale 경로일 때)**: 비공개 텔레그램 그룹에서 10/6과 10/7 중 어느 날인지 확인한다.
-- [ ] **8. 자격 확인**
+  - 누락이나 링크 문제로 연락(이메일 또는 텔레그램)이 오면 **24시간 안에** 답한다.
+  - 현장 결선 진출팀은 9/30까지 서면 확인을 받는다. 원격 제출은 Best Remote Demo 상으로 따로 심사한다.
+- [ ] **5. 자격 확인**
   - 만 18세 이상이고 제한 대상자가 아니어야 한다.
-  - 주최 측이 신원 확인을 요청할 수 있다.
-  - 상금 수령 지갑은 수상 후 주최 측 안내에 따라 본인이 준비한다. 제재 명단 검사 대상이다.
-- [ ] **9. 발표 준비 (권장)**: 7절 질의응답을 소리 내어 한 번 연습한다.
-- [ ] **10. (선택, 1분) 공개 저장소 Website 칸**
-  - GitHub의 `project-ganymede-submission` 페이지에서 오른쪽 About 옆 톱니바퀴를 누른다.
-  - Website에 제품 링크를 넣는다.
-- [ ] **11. 심사가 끝날 때까지(10/7) 운영 유지**: 8절 참고.
+  - 주최 측이 신원 확인을 요청할 수 있다. 멤버 이름은 신분증과 똑같이 적는다.
+  - 상금 수령 지갑은 수상 후 주최 측 안내에 따라 본인이 준비한다.
+- [ ] **6. (권장) 발표 준비**: 7절 질의응답을 소리 내어 한 번 연습한다.
+- [ ] **7. (선택, 1분) 공개 저장소 Website 칸**: GitHub `project-ganymede-submission` 페이지 오른쪽 About 옆 톱니바퀴 → Website에 제품 링크를 넣는다.
+- [ ] **8. 심사가 끝날 때까지(10/7) 운영 유지**: 8절 참고.
 
 ## 3. 부족한 점 (솔직한 평가)
 
@@ -95,86 +79,88 @@
 | 실자금 투자는 아님(데모 달러) | "진짜 돈은 못 넣는다"는 지적 가능 | 지갑으로 X Layer Testnet에서 실제 거래(승인·투자·환매)가 되고 USTX가 지갑에 들어온다. 돈은 가치 없는 데모 달러(dUSD)다. 실자금은 발행사·수탁·라이선스가 필요하며 `/issuers` 요금제 아래에 "실자금 서비스는 라이선스 파트너와만 제공한다"고 적었다 |
 | 투자자 수는 데모 계정 수 + USTX를 가진 지갑 수 | "실사용자"로 오해될 수 있음 | 화면에 테스트넷·데모 표시가 있다. 발표·영상에서 "투자자가 N명 있다"고 말하지 않는다 |
 
-## 4. 데모 영상 대본 (약 3분)
+## 4. 데모 영상 대본 (약 3분 15초)
 
 ### 핵심 메시지
 
-"토큰화된 미국 기술주 6종을 한 번에 담는 펀드를 사고(데모 달러), 내 돈이 바스켓에 무엇으로 담겼는지 보고, 그 가격이 맞는지 내 브라우저에서 X Layer 기록과 직접 대조한다."
+"토큰화된 미국 기술주 6종을 한 좌에 담은 USTX를 OKX Wallet으로 X Layer에서 사고, 시장에서 거래하고, 담보로 빌리며, 그 가격이 맞는지 내 브라우저에서 X Layer 기록과 직접 대조한다."
 
-가장 중요한 장면은 두 개다.
-1. **투자 직후 "Added to your basket"**: 내 돈이 6개 xStock 토큰으로 담긴 모습.
-2. **변조 실험의 세 번째("Keep the same NAV")**: 숫자와 NAV가 모두 같아도 **X Layer에 기록된 지문만** 변조를 잡아낸다.
+꼭 보여 줄 장면은 셋이다.
+1. **지갑 주문이 최적 가격으로 체결되고**, 몇 초 뒤 시장 활동 맨 위에 "You"로 뜨는 장면.
+2. **키퍼 차익거래 줄**("Closed the gap to the NAV … earned $…"): 시장이 스스로 NAV를 따라간다.
+3. **변조 실험의 세 번째**: 숫자와 NAV가 모두 같아도 X Layer에 기록된 지문만 변조를 잡는다.
 
 ### 녹화 전 준비
 
-- **브라우저**: 크롬 새 창(확장 프로그램이 없는 게스트 또는 시크릿 창)을 1920×1080 전체 화면으로 쓴다. 확대 110%, 북마크 바는 숨긴다(Ctrl+Shift+B). 알림은 끈다. 시크릿 창이면 데모 계정이 $10,000로 새로 시작한다.
+- **브라우저**: 크롬, 1920×1080 전체 화면, 확대 110%, 북마크 바 숨김(Ctrl+Shift+B), 알림 끄기.
+- **지갑 장면을 찍을 때 (권장)**
+  1. 크롬 웹 스토어에서 **OKX Wallet** 확장 프로그램을 설치하고 새 지갑을 만든다(시드 문구는 종이에 적어 둔다).
+  2. https://ganymede-xlayer.gana003.workers.dev/products/ustx 에서 오른쪽 위 **Connect OKX Wallet** → 승인 → **Switch to X Layer Testnet** → 승인.
+  3. 가스비로 쓸 테스트 OKB가 필요하다. 투자 패널의 "Get test OKB" 링크(OKX 수도꼭지)를 쓰거나, **지갑 주소를 Claude에게 보내면 테스트 OKB를 보내 준다**.
+  4. 투자 패널의 **Get demo dollars**로 dUSD 10,000을 받는다(24시간에 한 번).
+  5. 리허설로 $10 한 번 사 본다. 승인 창이 한 번 더 뜨는 것(처음 한 번만)을 미리 겪어 두면 녹화가 매끄럽다.
+- **지갑 없이 찍을 때**: 투자 패널의 **Demo balance** 탭으로 장면 2를 찍고, 장면 4는 대출 절의 시장 숫자와 설명만 보여 준다.
 - **미리 열어 둘 탭 5개**
   1. https://ganymede-xlayer.gana003.workers.dev/
   2. https://ganymede-xlayer.gana003.workers.dev/products/ustx
   3. https://ganymede-xlayer.gana003.workers.dev/portfolio
   4. https://ganymede-xlayer.gana003.workers.dev/products/ustx/transparency
   5. https://ganymede-xlayer.gana003.workers.dev/developers#verify
-- **시각**: 기록은 5분마다(:00, :05 …) 생긴다. 정각 5분 단위에서 약 1분 뒤에 새로고침하고 녹화를 시작하면 최신 기록이 보인다. 주문은 1시간 이내 기록으로만 체결되므로 "Published record delayed"가 오래 떠 있으면 몇 분 뒤에 찍는다.
-- **확인**: 초록색 "Verified in your browser" 표시가 보이는지 확인한다. "Checking the record…"면 몇 초 기다린다.
-- **Portfolio 예시 주소(선택)**: `0x41dee1855293e4450cd67459047f372d4d818143`. xStocks 6종을 모두 소량 보유한 공개 컨트랙트 주소다.
+- **시각**: NAV는 5분마다(:00, :05 …) 기록된다. 5분 단위 정각에서 1분쯤 뒤에 새로고침하고 시작하면 최신 기록이 보인다.
+- **확인**: 초록색 "Verified in your browser"가 보이는지 본다. "Checking the record…"면 몇 초 기다린다.
 - 장면별로 따로 녹화한 뒤 이어 붙여도 된다(5절).
 
 ### 장면별 대본
 
-영어 문장을 천천히 읽는다. 영어 녹음이 어려우면 5절의 "목소리 대안"을 쓴다. 전체가 3분 안팎이면 된다.
+영어 문장을 천천히 읽는다. 영어 녹음이 어려우면 5절의 "목소리 대안"을 쓴다.
 
-**장면 1 — Markets (0:00~0:20)**
-화면: 첫 화면. 제목, NAV, Fund size·Investors·Since launch, 차트, 오른쪽 여섯 종목을 천천히 보여 준다.
-> This is Ganymede, built on X Layer for OKX Dev Day. USTX, the US Tech Basket, puts Apple, Microsoft, NVIDIA, Amazon, Meta and Tesla in one share, through their xStocks on X Layer. It is priced by OKX OnchainOS every five minutes, and every price is recorded on X Layer. Everything you see was built during the Dev Day build period.
+**장면 1 — Markets (0:00~0:25)**
+화면: 첫 화면. NAV와 초록 "Verified in your browser", 차트, 오른쪽 여섯 종목. 아래로 내려 **Market activity** 카드(24시간 거래액·거래 수·차익거래·대출)를 보여 준다.
+> This is Ganymede, built on X Layer for OKX Dev Day. USTX, the US Tech Basket, holds Apple, Microsoft, NVIDIA, Amazon, Meta and Tesla in one share, through their xStocks on X Layer. OKX OnchainOS prices it every five minutes, and every price is recorded on X Layer. Below is the market's last 24 hours, read straight from the chain.
 
-뜻: USTX는 미국 기술주 6종을 한 좌에 담은 바스켓이다. 5분마다 OKX OnchainOS로 가격을 매기고 모든 가격을 X Layer에 기록한다. 화면의 모든 것은 빌드 기간에 만들었다.
+뜻: USTX는 미국 기술주 6종을 한 좌에 담았다. 5분마다 OKX OnchainOS로 가격을 매기고 X Layer에 기록한다. 아래는 체인에서 바로 읽은 최근 24시간 시장 활동이다.
 
-**장면 2 — 투자하고 바스켓 보기 (0:20~0:55)** ← 핵심 장면 1
-화면: USTX 탭. 오른쪽 "Invest in USTX" 패널에서 $1,000 → Review investment → Buy with demo dollars. "Added to your basket" 목록을 3초 이상 보여 준다.
-> Let's invest a thousand demo dollars. I review the order, and it fills instantly at the NAV recorded on X Layer. And here is what my money bought: this much Apple, Microsoft, NVIDIA, Amazon, Meta and Tesla, token by token. This is a demo with demo dollars, so no real money moves.
+**장면 2 — OKX Wallet으로 투자 (0:25~1:05)** ← 핵심 장면 1
+화면: USTX 탭. 투자 패널(Wallet 탭)에 $100 입력 → 두 거래처(펀드·풀) 비교와 "Best price" → Review order → Confirm in wallet → OKX Wallet 창에서 확인 → "Order filled"와 "Added to your basket" → 아래 **Market activity** 맨 위에 "You"로 뜬 줄.
+> I invest a hundred demo dollars from OKX Wallet on X Layer Testnet. The order panel compares the fund, at the NAV recorded on X Layer, with the USTX market pool, and picks the better price. I confirm in my wallet, and it fills in seconds. Here is what my money bought, token by token, and my trade is already at the top of the market activity, linked to the OKX explorer. These are demo dollars, so no real money moves.
 
-뜻: 데모 달러 $1,000를 투자하면 X Layer에 기록된 NAV로 즉시 체결되고, 내 돈이 6종목 토큰으로 얼마씩 담겼는지 바로 보인다. 데모 달러라 실제 돈은 움직이지 않는다.
+뜻: OKX Wallet으로 데모 달러 $100를 투자한다. 주문 패널이 X Layer에 기록된 NAV의 펀드와 USTX 시장 풀을 비교해 더 좋은 가격을 고른다. 지갑에서 확인하면 몇 초 안에 체결되고, 내 돈이 무엇에 담겼는지와 시장 활동 맨 위의 내 거래가 보인다.
 
-**장면 3 — 펀드 개요 (0:55~1:15)**
-화면: 같은 페이지 "Fund overview". Fund size 설명 문구("shares outstanding, recorded on X Layer")에 마우스를 올린다. "Net flows, 24h"와 아래 "Holdings" 표를 스크롤한다.
-> Like any fund page, you get the fund size, the return since launch and the key terms. The shares outstanding are recorded on X Layer with every NAV, so even the fund size is checkable. Below, you see the last day's flows and what all shares hold in each xStock.
+**장면 3 — 시장과 키퍼 (1:05~1:30)** ← 핵심 장면 2
+화면: 펀드 개요의 "Market price · … NAV · USTX/dUSD pool" → 시장 활동에서 "Closed the gap to the NAV … earned $… · Arbitrage keeper" 줄(Show all을 눌러 찾는다) → 눌러서 OKX 탐색기 2~3초.
+> USTX also trades in a pool with its own market price. When that price drifts from the NAV, our keeper buys or sells through the fund in one transaction, the way ETF creation and redemption keep a fund's price in line. Here it closed a gap and earned a few demo dollars.
 
-뜻: 펀드 규모·수익률·핵심 조건이 있고, 발행 좌수도 NAV와 함께 X Layer에 기록되므로 펀드 규모까지 확인할 수 있다. 최근 24시간 유입과 전체 지분이 종목별로 무엇을 보유하는지가 보인다.
+뜻: USTX는 자체 시장가격이 있는 풀에서도 거래된다. 가격이 NAV에서 벗어나면 키퍼가 펀드를 통해 한 번의 거래로 되돌린다. ETF의 설정·환매와 같은 원리다.
 
-**장면 4 — Portfolio (1:15~1:35)**
-화면: Portfolio 탭. 총평가액과 수익률, "Inside your USTX" 표, 주문 내역을 보여 준다. (선택) 아래 "Or view any public address"에 예시 주소를 넣고 View.
-> My portfolio shows the total value, my return, and inside my USTX: the tokens my shares hold, valued at the recorded prices. Below, I can connect OKX Wallet or paste any address to value real xStocks on X Layer mainnet, read-only.
+**장면 4 — 담보 대출 (1:30~1:55)**
+화면: "Borrow against USTX". 지갑이 있으면 Deposit USTX 소량 → Borrow $20. 포지션(대출 한도, LTV, 청산 NAV)을 보여 준다.
+> USTX is also collateral. I deposit USTX and borrow demo dollars against it, up to half its value at the NAV recorded on X Layer. If a loan passes sixty-five percent, anyone can liquidate it, and the fund redeems the collateral at the NAV.
 
-뜻: 포트폴리오에 총평가액·수익률과 내 지분이 담은 토큰이 보인다. 아래에서 OKX Wallet 연결이나 주소 입력으로 X Layer 메인넷의 실제 xStocks를 읽기 전용으로 평가한다.
+뜻: USTX를 담보로 넣고 X Layer에 기록된 NAV 기준 가치의 절반까지 빌린다. 65%를 넘으면 누구나 청산할 수 있다.
 
-**장면 5 — Transparency 증명 페이지 (1:35~1:55)**
-화면: 메뉴 Transparency(탭 4). 위의 초록 "NAV verified on X Layer"와 "Priced by OKX OnchainOS" 표시 → 1·2·3 단계 카드 → "View on OKX Explorer"를 눌러 탐색기에서 2~3초.
-> But why trust the price? Every price is set by OKX OnchainOS and recorded on X Layer, and my browser checks that record automatically. Here it is on the OKX explorer.
+**장면 5 — Portfolio (1:55~2:15)**
+화면: Portfolio 탭. 지갑의 USTX와 담보 USTX 행, 종목별 들여다보기 표.
+> My portfolio shows the USTX in my wallet and the USTX I posted as collateral, looked through to the six xStocks at the recorded prices.
 
-뜻: 가격을 왜 믿어야 하나? 모든 가격은 OKX OnchainOS가 매기고 X Layer에 기록되며, 내 브라우저가 그 기록을 자동으로 확인한다. OKX 탐색기에서 보면 이렇다.
+**장면 6 — Transparency (2:15~2:35)**
+화면: Transparency 탭. 초록 "NAV verified on X Layer", 1·2·3 단계 카드 → "View on OKX Explorer"로 기록 거래 2~3초.
+> But why trust the price? My browser reads the record on X Layer directly and recalculates the NAV row by row. Here is that record on the OKX explorer.
 
-**장면 6 — Try to break it (1:55~2:30)** ← 핵심 장면 2
-화면: 개발자 페이지(탭 5)의 "Verify it yourself" → 아래 "Try to break it". 버튼을 차례로 누르고, 누를 때마다 세 줄 결과(Matches/Fails)를 1~2초 보여 준다.
-> For developers, here is the check behind it, on a copy in the browser. Change one price: the arithmetic and the fingerprint fail. Fix the arithmetic: the NAV no longer matches the chain. Now offset two prices so every number and even the NAV stay the same. Only the fingerprint recorded on X Layer catches it. The whole check downloads as an evidence file anyone can re-check with one command.
+**장면 7 — Verify it yourself (2:35~3:05)** ← 핵심 장면 3
+화면: 개발자 페이지(탭 5) "Try to break it". 버튼 세 개를 차례로 누르고 결과(Matches/Fails)를 1~2초씩 보여 준다.
+> For developers, here is the check behind it. Change one price, and the arithmetic fails. Fix the arithmetic, and the NAV no longer matches the chain. Offset two prices so every number and the NAV stay the same, and only the fingerprint recorded on X Layer catches it. Other apps can read this NAV through our API, an embeddable badge, or a Chainlink-style price feed.
 
-뜻: 개발자용으로 그 뒤의 확인을 브라우저 속 사본으로 보여 준다. 가격 하나를 바꾸면 계산과 지문이 실패하고, 계산까지 맞추면 NAV가 체인과 달라지고, NAV까지 같게 맞추면 오직 X Layer의 지문만 잡아낸다. 전체 검증은 증거 파일로 내려받아 명령 하나로 다시 확인할 수 있다.
-
-**장면 7 — 생태계 (2:30~2:50)**
-화면: Developers 탭(푸터의 Docs). "Embed the verified NAV badge"의 Live preview(초록 Verified 배지)와 API 예시를 보여 준다. 이어서 푸터의 "For issuers"를 눌러 Plans를 2~3초 보여 준다.
-> Other apps on X Layer can show this verified NAV: a public API, and a badge that verifies itself in the visitor's browser. And issuers can launch their own baskets on the same rails.
-
-뜻: X Layer의 다른 앱도 공개 API와 방문자 브라우저에서 스스로 검증하는 배지로 이 NAV를 쓸 수 있고, 발행사는 같은 구조로 자기 바스켓을 낼 수 있다.
-
-**장면 8 — 마무리 (2:50~3:05)**
-화면: Markets로 돌아가 초록 "Verified in your browser"를 보여 준다.
-> Priced by OKX OnchainOS, recorded on X Layer, verified by you. Ganymede: a fund you can check.
+**장면 8 — 마무리 (3:05~3:15)**
+화면: Markets로 돌아가 초록 "Verified in your browser"와 시장 활동 카드.
+> Priced by OKX OnchainOS, recorded and traded on X Layer, verified by you. Ganymede.
 
 ### 영상에서 하면 안 되는 말
 
 - "실제 돈으로 투자할 수 있다" → 항상 "demo dollars"라고 말한다.
-- "투자자가 N명 있다", "사용자가 있다" → Investors 숫자는 데모 계정 수다.
-- "메인넷에 기록한다" → 기록은 X Layer **Testnet**, 가격과 xStocks는 메인넷이다.
+- "투자자가 N명 있다", "사용자가 있다" → 투자자 수와 거래는 대부분 우리 테스트 지갑과 데모 계정이다.
+- "메인넷에 기록한다" → 기록과 거래는 X Layer **Testnet**, 가격과 xStocks는 메인넷이다.
 - "가격이 정확함을 증명한다", "감사받았다", "요금을 받고 있다"(요금제는 문의만 받는다).
+- "키퍼가 돈을 번다" → 번 것은 가치 없는 데모 달러다.
 - 모두 사실이 아니다. 약관상 허위 주장은 실격 사유다.
 
 ## 5. 녹화·편집·업로드 방법 (초보자용)
@@ -209,99 +195,62 @@
 
 1. youtube.com에 로그인하고 오른쪽 위 "만들기(+)" → "동영상 업로드"를 누른다.
 2. 파일을 선택한다.
-3. 제목: `Ganymede — Verifiable NAV for tokenized stocks on X Layer (OKX Dev Day 2026)`
+3. 제목: `Ganymede — a tokenized US tech stock fund on X Layer (OKX Dev Day 2026)`
 4. 설명: 제품 링크와 공개 저장소 링크를 붙여 넣는다.
 5. 시청자층: "아니요, 아동용이 아닙니다".
 6. 공개 상태: **공개** 또는 **일부 공개**. 비공개는 심사자가 볼 수 없다.
 7. 게시한 뒤 링크를 복사하고, **로그아웃한 시크릿 창에서 재생되는지** 확인한다.
 
-## 6. 제출 양식에 넣을 문구 (영어, 복사해서 사용)
+## 6. 제출 양식 답안 (양식 순서대로, 영어는 그대로 복사)
 
-양식의 실제 항목 이름은 열어 봐야 안다. 키트에 적힌 항목 기준으로 준비했다. 대괄호 부분은 사용자가 채운다.
+사용자가 받은 Google 양식(OKX Dev Day 2026 Project Submission)의 항목 순서다. `[ ]`는 본인이 정한다.
 
-**Team name / Members**: [팀 이름] / [이름(들)]
-
-**Project name**: Ganymede
-
-**Primary track**: Build a Market
-
-**Participation route**: [Singapore finale 또는 Remote Build]
-
-**One-line summary**
+1. **Team Name\***: `[팀 이름]`. 따로 없으면 `Ganymede`.
+2. **Team Size\***: `[1~4]`. 혼자면 1.
+3. **Team Members' Names\***: `[멤버 전원의 실명]`. 신분증과 똑같은 철자로 적는다(상금 확인용).
+4. **Which track\***: **Build a Market – build with X Layer**
+5. **Participation Route\***: `[In-Person (7 Oct 2026) 또는 Remote]`
+   - 10/7 싱가포르 결선에 갈 수 있으면 In-Person을 고른다. 결선에 뽑히지 않아도 자동으로 Best Remote Build 심사를 받으니 손해가 없다.
+   - 갈 수 없으면 Remote를 고른다.
+6. **Would the team be able to attend our in-person finale?\***: 갈 수 있는 인원 수를 고른다. Remote면 **0: Unable to**.
+7. **Team Display Picture [1:1 Image]** (선택): Claude가 만든 `ganymede-team-1x1.png`(1024×1024, 315KB)를 올린다.
+8. **Project Name\***: `Ganymede`
+9. **Project Summary\***:
 ```text
-A tokenized US tech stock fund on X Layer: invest with demo dollars, see the xStocks behind every share, and verify every NAV in your own browser against its X Layer record.
+1. Product: Ganymede sells USTX, the US Tech Basket: one token holding six tokenized US tech stocks (AAPLx, MSFTx, NVDAx, AMZNx, METAx, TSLAx). Every five minutes OKX OnchainOS prices the basket, and its NAV, shares outstanding and a fingerprint of the full composition are recorded on X Layer, where any visitor's browser re-checks them. From OKX Wallet you invest at that NAV or trade USTX in its own market pool, whichever prices the order better; a keeper closes the pool's gap to the NAV by arbitrage through the fund, and USTX can be posted as collateral to borrow against. It runs on X Layer Testnet with demo dollars that have no value.
+
+2. Intended users: investors who want tokenized-stock exposure whose price they can verify; issuers of tokenized-stock baskets who must publish a NAV others can check; wallets and apps on X Layer that want to show or build on it.
+
+3. Core integration: the OKX OnchainOS Market API prices the xStocks on X Layer mainnet; our X Layer Testnet contracts record each NAV and run the fund, the USTX/dUSD pool, the arbitrage, the lending market and a Chainlink-style NAV feed; OKX Wallet signs every on-chain order, and every record and trade links to the OKX explorer. Partners get a public API and a self-verifying badge.
+```
+10. **Repository Link\***: `https://github.com/mycyi1994-hash/project-ganymede-submission`
+    - 공개 저장소이고 README가 있다. 운영 소스 `6e3e143`과 같은 코드다.
+11. **Demo Video\***: `[YouTube 링크]`. 2~4분, 공개 또는 일부 공개(4·5절).
+12. **Product Link\***: `https://ganymede-xlayer.gana003.workers.dev/`
+13. **Is this a new project, or are you adding features to an existing one?\***: **No, project is built on a pre-existing codebase or product**
+    - 사실대로 고른다. 저장소는 2026년 7월의 원화 암호화폐 전략 엔진에서 시작했다.
+    - 제출하는 USTX 제품, X Layer 계약·연동, 모든 화면은 빌드 기간에 만들었다. `docs/BUILD_PERIOD.md`가 커밋별로 구분한다.
+    - 설명 칸이 따로 있으면 아래 문장을 쓴다.
+```text
+The repository started in July 2026 as a Korean-won crypto strategy engine with settlement on another testnet (last pre-event commit 7a33392, 30 July 2026). Everything in the submission was built during the build period: settlement on X Layer, the six-xStock USTX basket priced by OKX OnchainOS, the NAV registry records, wallet investing through the USTX contract, the USTX/dUSD pool and NAV arbitrage keeper, the lending market, the NAV price feed, market activity, browser verification and evidence files, Portfolio, and the public API and badge. docs/BUILD_PERIOD.md lists every build-period commit.
 ```
 
-**Project description**
+### 양식에는 없지만 물어보면 쓸 문구
+
+**Contract addresses (X Layer Testnet, 1952)**
 ```text
-Tokenized-stock baskets publish a NAV that investors have to take on trust. Ganymede sells a basket whose every price is checkable.
-
-USTX, the US Tech Basket, holds six xStocks in one share (AAPLx, MSFTx, NVDAx, AMZNx, METAx, TSLAx). Every five minutes it is priced through the OKX OnchainOS Market API on X Layer mainnet, and the NAV, the shares outstanding and a SHA-256 fingerprint of the full composition document are recorded by our GanymedeNavRegistry contract on X Layer Testnet.
-
-- Invest: connect OKX Wallet, get demo dollars (dUSD, no value) on X Layer Testnet, and invest or redeem through the USTX contract, which issues shares only at the NAV recorded in the registry and puts them in the wallet. Without a wallet, a private demo balance of $10,000 fills orders the same way, off chain. The confirmation shows exactly which tokens the money put in the basket, and Portfolio looks each holding through to the six xStocks.
-- Fund overview: fund size (shares outstanding x NAV, both recorded on X Layer), investors, return since launch, key terms, 24-hour flows and look-through holdings of all shares. Single orders are never published.
-- Transparency: a customer proof page, like an exchange proof of reserves. The visitor's browser reads the registry directly over public RPC, hashes the original document and recalculates every row with integer arithmetic; every price is labelled as coming from OKX OnchainOS. The page also states what a match does not prove (price accuracy, custody).
-- Verify it yourself (developer page): the individual checks, and three edits to a local copy that show which check catches which change. When two prices are offset so that every number and the NAV stay the same, only the fingerprint recorded on X Layer detects the edit.
-- Evidence: the check downloads as a file. `npm run verify:evidence` re-checks it and matches it to the NavPublished event in the publishing transaction's receipt.
-- Wallets: Portfolio shows the wallet's USTX on X Layer Testnet and values its real xStock balances on X Layer mainnet at the verified prices, with a downloadable statement.
-- Partners: a public NAV API with open CORS (/api/v1/ustx) and an embeddable badge that verifies the NAV in the visitor's browser (/embed/ustx). An issuer page sets out the plans, with a free sandbox on X Layer Testnet today, and a developer page documents the API, the badge and the checks.
-
-Investing uses demo dollars with no value: no real money moves and nothing is held in custody, and USTX on X Layer Testnet carries no rights.
-```
-
-**Intended users**
-```text
-Investors who want diversified exposure to tokenized US stocks with prices they can check; issuers of tokenized-stock baskets who need to publish a value others can verify; wallets and apps on X Layer that want to show a verified NAV.
-```
-
-**X Layer / OKX integration**
-```text
-- OKX OnchainOS Market API: signed price requests for the six xStock tokens on X Layer mainnet (chain 196). These prices are the inputs of every NAV.
-- X Layer mainnet: the browser reads the six pinned xStock contracts (code, symbol, decimals) and any wallet's balances.
-- X Layer Testnet (chain 1952): GanymedeNavRegistry stores each NAV, the shares outstanding, the effective time and the composition fingerprint and emits NavPublished. A USTX record has been published about every five minutes since 23 Sep 2026 11:15 UTC (216 confirmed by 24 Sep 18:40 UTC).
-- X Layer Testnet: GanymedeBasketFund (USTX) issues and redeems shares only at the registry's latest NAV, paid in no-value demo dollars (GanymedeDemoDollar); wallets invest through it from the USTX page.
-- X Layer Testnet: GanymedeNavFeed serves the USTX NAV through the Chainlink AggregatorV3Interface (8 decimals), so other X Layer contracts can read it without custom code.
-- X Layer Testnet: USTX trades on a USTX/dUSD pool (GanymedeUstxPool), and GanymedeNavArbitrage closes the pool's gap to the NAV through the fund in one transaction, like ETF creation and redemption; a keeper checks every five minutes and runs it when closing the gap earns at least a cent (keeper wallet `0xccf372068496d9bef0f7cf83d697183d358dec1b`; one run closed a 6.02% gap to 0.29%), and the USTX page shows the market price and its premium or discount.
-- OKX Wallet: signs the claim, approve, invest and redeem transactions on X Layer Testnet from the USTX page; Portfolio reads its balances.
-- Public NAV API and embeddable badge: other X Layer apps can read or show the verified NAV. The market activity API and the USTX page list the latest investments, pool trades, keeper arbitrage and loans read from the contracts' events, each linked to the OKX explorer.
-```
-
-**Contract addresses and technical links**
-```text
-GanymedeNavRegistry (X Layer Testnet, 1952): 0xf320d2a7f280b7ab61e24374986869d7be34289c
-GanymedeBasketFund, the USTX share token (X Layer Testnet): 0x77eaeba1366bde7818da12d3cbdbea0a2ee97596
-GanymedeDemoDollar, dUSD demo dollars with no value (X Layer Testnet): 0xf07535080f74e8b0f571e58dfa600f47e72ea9bf
-GanymedeNavFeed, the USTX / USD NAV in the Chainlink AggregatorV3Interface (X Layer Testnet): 0x292c56c5290cc7b73e3ee33c2c2688eb3e04c3c8
-GanymedeUstxPool, the USTX/dUSD market (X Layer Testnet): 0x286f5e7ffdbc30db12665d7a3854217d7cd05cc1
-GanymedeNavArbitrage, one-transaction NAV arbitrage (X Layer Testnet): 0xaeba15aa92d6f3109e2b992f18933e1abe2fa3d9
-GanymedeLendingMarket, dUSD loans against USTX, live (X Layer Testnet): 0xae2f54ae3d0370295de18510d56de92afb8843c7
-https://web3.okx.com/explorer/x-layer-testnet/address/0xf320d2a7f280b7ab61e24374986869d7be34289c
-
-xStock tokens read on X Layer mainnet (196), issued by xStocks, not by us:
-AAPLx 0x9d275685dc284c8eb1c79f6aba7a63dc75ec890a
-MSFTx 0x5621737f42dae558b81269fcb9e9e70c19aa6b35
-NVDAx 0xc845b2894dbddd03858fd2d643b4ef725fe0849d
-AMZNx 0x3557ba345b01efa20a1bddc61f573bfd87195081
-METAx 0x96702be57cd9777f835117a809c7124fe4ec989a
-TSLAx 0x8ad3c73f833d3f9a523ab01476625f269aeb7cf0
-
-Legacy GMDCORE test share ledger (X Layer Testnet, supply 0, not part of USTX): 0x68c4e8c904b3eddb1146ef52a76a0a2755a55b59
-
-Public NAV API: https://ganymede-xlayer.gana003.workers.dev/api/v1/ustx
+GanymedeNavRegistry (NAV records): 0xf320d2a7f280b7ab61e24374986869d7be34289c
+GanymedeBasketFund (USTX share token): 0x77eaeba1366bde7818da12d3cbdbea0a2ee97596
+GanymedeDemoDollar (dUSD, no value): 0xf07535080f74e8b0f571e58dfa600f47e72ea9bf
+GanymedeNavFeed (USTX / USD, Chainlink AggregatorV3Interface): 0x292c56c5290cc7b73e3ee33c2c2688eb3e04c3c8
+GanymedeUstxPool (USTX/dUSD market): 0x286f5e7ffdbc30db12665d7a3854217d7cd05cc1
+GanymedeNavArbitrage (one-transaction NAV arbitrage): 0xaeba15aa92d6f3109e2b992f18933e1abe2fa3d9
+GanymedeLendingMarket (dUSD loans against USTX): 0xae2f54ae3d0370295de18510d56de92afb8843c7
+All sources verified on the OKX explorer and on Sourcify.
+Public API: https://ganymede-xlayer.gana003.workers.dev/api/v1/ustx
+Market activity API: https://ganymede-xlayer.gana003.workers.dev/api/v1/ustx/activity
 Embeddable badge: https://ganymede-xlayer.gana003.workers.dev/embed/ustx
-Market snapshot: https://ganymede-xlayer.gana003.workers.dev/api/xstocks
 ```
-
-**Existing project and new work** (기존 프로젝트 여부를 묻는 칸)
-```text
-Ganymede existed before the event as a Korean-won crypto strategy engine with Upbit market data and settlement on the GIWA Sepolia testnet (last pre-event commit 7a33392, 30 July 2026). During the build period (from 23 September) we moved settlement to X Layer and built the tokenized-stock product: the xStocks basket with OnchainOS pricing, wallet investing through a USTX share contract on X Layer Testnet, NAV and shares-outstanding publication to the X Layer registry, demo investing with look-through holdings, the fund overview, browser verification, the tamper experiment, evidence files, the X Layer mainnet Portfolio, the NAV chart, the public NAV API, the embeddable badge and the issuer and developer pages. Every build-period commit with times and line counts: docs/BUILD_PERIOD.md. Summary: docs/OKX_DEV_DAY.md.
-```
-
-**Repository**: https://github.com/mycyi1994-hash/project-ganymede-submission
-
-**Product link**: https://ganymede-xlayer.gana003.workers.dev/
-
-**Demo video**: [YouTube 링크]
 
 **AI 도구 사용을 묻는 칸이 있으면**
 ```text
@@ -333,7 +282,7 @@ AI-assisted development tools were used. The team reviewed the work and is respo
 10. **주식 분할이나 종목 변경은?**
     > The methodology page explains constituent and token changes. Corporate actions such as splits and dividends are not modelled yet. That is a stated limitation.
 11. **AI를 썼나?**
-    > Yes, AI-assisted development tools. We reviewed the work, it has more than 170 automated tests, and we can explain each part.
+    > Yes, AI-assisted development tools. We reviewed the work, it has about 250 automated tests (app, contracts and relayer), and we can explain each part.
 
 ## 8. 심사 기간 운영 유지 (10/7까지)
 
@@ -352,7 +301,7 @@ AI-assisted development tools were used. The team reviewed the work and is respo
   - 하루(00:00 UTC 기준) 쓰기 한도는 10만 행이다. 9/24 기준 최근 24시간에 약 3.4만 행을 써서 여유가 약 3배다.
   - 9/23 12:26~24:00 UTC의 11시간 반 기록 공백은 이 한도를 넘었기 때문이었다. 요청마다 쓰던 코드를 그날 고쳤다.
 - **relayer 서명 지갑**
-  - 테스트넷 OKB 잔액은 약 0.0989로, 지금 속도면 약 250일 쓸 수 있다.
+  - 테스트넷 OKB 잔액은 9/25 10:50 UTC에 0.0979였다. 하루 약 0.001씩 줄어 10/7을 넉넉히 넘긴다. 키퍼 지갑은 0.00998로, 차익거래 한 번에 0.000003이 든다.
   - 실자금이 아니고 채울 필요가 없다.
 - **문제가 생기면**: 사이트가 안 열리거나 초록 표시가 오래 안 뜨면, 화면 캡처와 시각을 Claude에게 보낸다. 되돌릴 이전 버전 ID는 `docs/PRODUCT_RELEASE.md`에 있다.
 - **바꾸지 않을 것**: 제출 뒤에는 새 기능을 배포하지 않는다. 심사자는 제출 시점의 제품을 본다.
