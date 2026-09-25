@@ -277,7 +277,7 @@ AI-assisted development tools were used. The team reviewed the work and is respo
 4. **GMDCORE 소스에 "for GIWA settlement"라고 적혀 있다.**
    > GMDCORE is a share-ledger contract from our earlier settlement work, redeployed to X Layer Testnet. Its supply is zero and it is not part of USTX.
 5. **USTX를 살 수 있나?**
-   > Yes, from OKX Wallet on X Layer Testnet, with demo dollars that have no value: the USTX contract issues shares at the NAV recorded on X Layer and shows the tokens behind them. Real money would need an issuer, custody and licensing; the issuer page shows that path. We have not started it.
+   > Yes, from OKX Wallet on X Layer Testnet, with demo dollars that have no value: the USTX contract issues shares at the NAV recorded on X Layer and shows the tokens behind them. Real money would need an issuer, custody and licensing; the issuer page shows that path. The in-kind vault a mainnet fund needs is built and ran with the real xStocks on a fork of X Layer mainnet, creating and redeeming shares against the tokens themselves; it is not deployed.
 6. **Chainlink Proof of Reserve, DTCC Smart NAV, Centrifuge와 무엇이 다른가?**
    > Proof of Reserve covers asset backing, which we do not. DTCC and Centrifuge put NAV data on chain. What we add is that any visitor can reproduce a basket NAV row by row in their own browser against the X Layer record, see which check catches which edit, and pass the result on as a file anyone can verify.
 7. **가격이 틀리면? (발행자가 틀린 가격을 앞뒤가 맞게 올리면?)**

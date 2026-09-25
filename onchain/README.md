@@ -161,6 +161,25 @@ which runs `unpause()` as a simulation first, sends it from the administrator
 key, reads `paused = false` back at the receipt's block and records the
 transaction.
 
+## In-kind vault (fork of X Layer mainnet)
+
+`GanymedeBasketVault` creates and redeems a basket token in kind: one share is a fixed quantity
+of each constituent, and the vault holds exactly that quantity for every share outstanding (rules in
+`../contracts/README.md`; 5 tests in `test/GanymedeBasketVault.test.ts`). It is not deployed.
+Run it against the real xStocks:
+
+```bash
+npm run fork:vault
+```
+
+This forks X Layer mainnet into memory and, with local test accounts, buys AAPLx, MSFTx and NVDAx
+on their Uniswap V3 pools with USDG (taken on the fork from a pool outside the basket) and unwraps
+each pool's ERC-4626 wrapper into the xStock; deploys the vault with MAG3's units per share
+(`../public/baskets/mag3/basket.json`); creates 10 shares by delivering those units; moves 4 shares
+to a second account, which redeems them; and redeems the rest, checking after every step that the
+vault holds units × supply. It uses no key and broadcasts nothing. The run on 25 September 2026 is
+recorded in `../docs/IN_KIND_VAULT.md`.
+
 ## Verify the sources
 
 Source verification makes the contract readable on the explorer. All eight

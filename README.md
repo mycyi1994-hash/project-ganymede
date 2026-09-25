@@ -140,7 +140,7 @@ The first thing to sell is the NAV record and its verification to basket issuers
 1. Publish the registry on X Layer mainnet and keep every document in a public archive, so any past record can be verified in the interface.
 2. Add a reference from outside X Layer, the underlying shares' exchange price, beside the X Layer pools that already check OnchainOS, and a written policy for corporate actions and constituent changes.
 3. An issuer console so other basket operators can launch their own baskets without the command line. A basket is already defined by one configuration file and recorded by its issuer's own wallet and registry, and the browser check and badge work for it (MAG3 above); a public API per basket and scheduled records are not built.
-4. With an issuer, custody and legal structure in place, take the USTX token to mainnet behind a vault that holds the xStocks, with rebalancing through OKX DEX. The testnet token already mints and redeems at the verified NAV; the mainnet vault has not started.
+4. With an issuer, custody and legal structure in place, take the USTX token to mainnet behind a vault that holds the xStocks, with rebalancing through OKX DEX. The testnet token already mints and redeems at the verified NAV. The in-kind vault, `GanymedeBasketVault`, is built: on a fork of X Layer mainnet it took real AAPLx, MSFTx and NVDAx bought on their pools, created shares against exactly MAG3's units and returned them on redemption, fully backed at every step ([run](docs/IN_KIND_VAULT.md), `npm run fork:vault`). It is not deployed, and a cash path and rebalancing are not built.
 5. Lending against USTX. `GanymedeLendingMarket` lends demo dollars against USTX valued at the recorded NAV, and liquidators who repay an unhealthy loan redeem the seized USTX at the fund. It is live on X Layer Testnet at [`0xae2f54ae3d0370295de18510d56de92afb8843c7`](https://web3.okx.com/explorer/x-layer-testnet/address/0xae2f54ae3d0370295de18510d56de92afb8843c7): the USTX page's Borrow section deposits USTX from OKX Wallet, borrows against it, repays and withdraws, or lends demo dollars, and a test wallet supplied the first $5,000. `npm run fork:lending` runs a full cycle, liquidation included, against the live testnet contracts in memory.
 
 ## Reproduce locally
@@ -186,5 +186,6 @@ Cloudflare deployment messages identify the exact source commit of each release.
 - Public NAV API and badge: `app/api/v1/ustx/route.ts`, `app/embed/ustx/`
 - Second price source: `lib/xstocks/pool-prices.ts`, the publisher's check in `lib/xstocks/cycle.ts`, `app/product-ui/PoolCheck.tsx`
 - Baskets from a configuration file: `lib/xstocks/basket-config.ts`, `scripts/basket-publish.mjs`, `public/baskets/mag3/`, `app/product-ui/BasketCheck.tsx`, `app/embed/basket/`
+- In-kind vault: `contracts/GanymedeBasketVault.sol`, `onchain/scripts/fork-vault.ts`, `onchain/test/GanymedeBasketVault.test.ts`, `docs/IN_KIND_VAULT.md`
 
 AI-assisted development was used. The submitting team remains responsible for explaining, reviewing and maintaining the work. No customer adoption or independent audit is claimed.
