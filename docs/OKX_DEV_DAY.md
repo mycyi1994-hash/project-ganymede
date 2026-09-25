@@ -61,6 +61,7 @@ Ganymede began in July 2026 as a Korean-won crypto strategy engine with Upbit ma
 | Demo investing in USTX with demo dollars: accounts, orders at the recorded NAV, idempotent retries, daily cap | [1327a6a](https://github.com/mycyi1994-hash/project-ganymede/commit/1327a6a) |
 | Look-through basket, fund overview, shares outstanding on X Layer, public NAV API, embeddable badge, issuer and developer pages | [0c38037](https://github.com/mycyi1994-hash/project-ganymede/commit/0c38037), [23d35d2](https://github.com/mycyi1994-hash/project-ganymede/commit/23d35d2) |
 | Wallet investing on X Layer Testnet: demo dollars and the USTX share contract priced by the registry, wallet order panel, wallet shares in each NAV record | [2fed796](https://github.com/mycyi1994-hash/project-ganymede/commit/2fed796), [7b334e4](https://github.com/mycyi1994-hash/project-ganymede/commit/7b334e4), [bc3bf08](https://github.com/mycyi1994-hash/project-ganymede/commit/bc3bf08) |
+| USTX-collateral lending market, written and tested and run against the live contracts on a local fork (not deployed); all four contracts source-verified on the OKX explorer and Sourcify | [8706a43](https://github.com/mycyi1994-hash/project-ganymede/commit/8706a43) |
 
 ## Evidence aligned with judging
 
