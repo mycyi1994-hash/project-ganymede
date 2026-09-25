@@ -260,6 +260,7 @@ Investors who want diversified exposure to tokenized US stocks with prices they 
 - X Layer mainnet: the browser reads the six pinned xStock contracts (code, symbol, decimals) and any wallet's balances.
 - X Layer Testnet (chain 1952): GanymedeNavRegistry stores each NAV, the shares outstanding, the effective time and the composition fingerprint and emits NavPublished. A USTX record has been published about every five minutes since 23 Sep 2026 11:15 UTC (216 confirmed by 24 Sep 18:40 UTC).
 - X Layer Testnet: GanymedeBasketFund (USTX) issues and redeems shares only at the registry's latest NAV, paid in no-value demo dollars (GanymedeDemoDollar); wallets invest through it from the USTX page.
+- X Layer Testnet: GanymedeNavFeed serves the USTX NAV through the Chainlink AggregatorV3Interface (8 decimals), so other X Layer contracts can read it without custom code.
 - OKX Wallet: signs the claim, approve, invest and redeem transactions on X Layer Testnet from the USTX page; Portfolio reads its balances.
 - Public NAV API and embeddable badge: other X Layer apps can read or show the verified NAV.
 ```
@@ -269,6 +270,7 @@ Investors who want diversified exposure to tokenized US stocks with prices they 
 GanymedeNavRegistry (X Layer Testnet, 1952): 0xf320d2a7f280b7ab61e24374986869d7be34289c
 GanymedeBasketFund, the USTX share token (X Layer Testnet): 0x77eaeba1366bde7818da12d3cbdbea0a2ee97596
 GanymedeDemoDollar, dUSD demo dollars with no value (X Layer Testnet): 0xf07535080f74e8b0f571e58dfa600f47e72ea9bf
+GanymedeNavFeed, the USTX / USD NAV in the Chainlink AggregatorV3Interface (X Layer Testnet): 0x292c56c5290cc7b73e3ee33c2c2688eb3e04c3c8
 https://web3.okx.com/explorer/x-layer-testnet/address/0xf320d2a7f280b7ab61e24374986869d7be34289c
 
 xStock tokens read on X Layer mainnet (196), issued by xStocks, not by us:

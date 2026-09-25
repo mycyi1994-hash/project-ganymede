@@ -71,6 +71,8 @@ app's hard-coded selectors against the compiled contracts.
 
 ## USTX NAV feed
 
+Deployed at [`0x292c56c5290cc7b73e3ee33c2c2688eb3e04c3c8`](https://web3.okx.com/explorer/x-layer-testnet/address/0x292c56c5290cc7b73e3ee33c2c2688eb3e04c3c8) for `us-tech-x` ("USTX / USD").
+
 ```bash
 npm run deploy:feed
 ```
@@ -118,9 +120,8 @@ unpauses it; activating the market is a separate decision.
 
 ## Verify the sources
 
-Source verification makes the contract readable on the explorer. All four
-deployed contracts are verified on the OKX explorer and match exactly (creation
-and runtime bytecode) on Sourcify:
+Source verification makes the contract readable on the explorer. Every deployed
+contract matches exactly (creation and runtime bytecode) on Sourcify:
 
 | Contract | OKX explorer | Sourcify |
 | --- | --- | --- |
@@ -128,6 +129,7 @@ and runtime bytecode) on Sourcify:
 | `GanymedeFundShare` | [verified](https://web3.okx.com/explorer/x-layer-testnet/address/0x68c4e8c904b3eddb1146ef52a76a0a2755a55b59) | [exact match](https://repo.sourcify.dev/1952/0x68c4e8c904b3eddb1146ef52a76a0a2755a55b59) |
 | `GanymedeDemoDollar` (dUSD) | [verified](https://web3.okx.com/explorer/x-layer-testnet/address/0xf07535080f74e8b0f571e58dfa600f47e72ea9bf) | [exact match](https://repo.sourcify.dev/1952/0xf07535080f74e8b0f571e58dfa600f47e72ea9bf) |
 | `GanymedeBasketFund` (USTX) | [verified](https://web3.okx.com/explorer/x-layer-testnet/address/0x77eaeba1366bde7818da12d3cbdbea0a2ee97596) | [exact match](https://repo.sourcify.dev/1952/0x77eaeba1366bde7818da12d3cbdbea0a2ee97596) |
+| `GanymedeNavFeed` (USTX / USD) | [upload pending](https://web3.okx.com/explorer/x-layer-testnet/address/0x292c56c5290cc7b73e3ee33c2c2688eb3e04c3c8) | [exact match](https://repo.sourcify.dev/1952/0x292c56c5290cc7b73e3ee33c2c2688eb3e04c3c8) |
 
 To verify a new deployment, pick one of the options below.
 

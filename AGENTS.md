@@ -24,10 +24,11 @@ Testnet only: anyone can claim `GanymedeDemoDollar` (dUSD), and
 the registry and redeems at that NAV, holding no assets. Demo-balance investing
 (`lib/demo/`, `app/api/demo/`) keeps a D1 ledger per browser and issues nothing
 on chain. Each NAV record carries the shares outstanding in wallets plus demo
-balances. `GanymedeLendingMarket` (dUSD loans against USTX) is written and
-tested but not deployed and not in the app; it starts paused, and deploying or
-unpausing it needs the user's approval. Real money stays out of scope: no
-mainnet deployment of these contracts, no real deposits, withdrawals, custody or payment destinations, and
+balances. `GanymedeNavFeed` serves the registry's USTX NAV to other contracts in
+the Chainlink `AggregatorV3Interface`; it has no owner. `GanymedeLendingMarket`
+(dUSD loans against USTX) is written and tested but not deployed and not in the
+app; it starts paused, and deploying or unpausing it needs the user's approval.
+Real money stays out of scope: no mainnet deployment of these contracts, no real deposits, withdrawals, custody or payment destinations, and
 no value for dUSD or USTX. Never create or name an address that would receive
 real funds, and keep the demo, testnet and simulation labels.
 `lib/product-contract.ts` keeps `canSubscribe`, `canRedeem`, `settlementAsset`
