@@ -4,7 +4,7 @@
 
 The public UI presents USTX as a live fund service, laid out like a production
 DeFi app: one testnet notice and the network and "Connect OKX Wallet" in the
-header; Markets; the USTX page (order panel with wallet and demo-balance investing, wallet orders routed to the fund or the pool at the better price, fund
+header; Markets; the USTX page (order panel with wallet and demo-balance investing, wallet orders routed to the fund or the pool at the better price, borrowing against USTX, fund
 overview with the price oracle and the pool's market price, factsheet holdings, About); Portfolio (the demo
 balance and the wallet's USTX looked through to each xStock, and valuation of
 any wallet's xStocks on X Layer mainnet); and Transparency (the customer proof page). Keep pitch and developer
@@ -30,9 +30,11 @@ the Chainlink `AggregatorV3Interface`; it has no owner. USTX also trades on
 `GanymedeUstxPool` (USTX/dUSD, constant product), and `GanymedeNavArbitrage`
 closes the pool's gap to the NAV through the fund in one transaction; the keeper
 checks every five minutes and sends that trade when it earns at least a cent.
-`GanymedeLendingMarket` (dUSD loans against USTX) is deployed on X Layer Testnet
-(`0xae2f54ae3d0370295de18510d56de92afb8843c7`) but paused and not in the app; unpausing it needs the
-user's approval.
+`GanymedeLendingMarket` (dUSD loans against USTX) is live on X Layer Testnet
+(`0xae2f54ae3d0370295de18510d56de92afb8843c7`), activated with the user's approval; the USTX page's
+Borrow section (`app/product-ui/Lending.tsx`, `lib/xstocks/lending.ts`) deposits
+USTX, borrows, repays, withdraws and lends through it. Pausing it again or any
+other administrator action needs the user's approval.
 Real money stays out of scope: no mainnet deployment of these contracts, no real deposits, withdrawals, custody or payment destinations, and
 no value for dUSD or USTX. Never create or name an address that would receive
 real funds, and keep the demo, testnet and simulation labels.
