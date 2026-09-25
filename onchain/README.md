@@ -10,7 +10,7 @@ sources stay in `contracts/`.
 cd onchain
 npm install
 npm run build   # compile
-npm test        # 42 tests, no network needed
+npm test        # 50 tests, no network needed
 ```
 
 ## Keys
@@ -68,6 +68,24 @@ registry, makes the fund the demo dollar's minter, reads the wiring back and add
 both to `deployments/xlayer-testnet.json`. The app pins the two addresses in
 `lib/xstocks/fund.ts`; `test/AppFundClient.test.ts` checks the pin and the
 app's hard-coded selectors against the compiled contracts.
+
+## USTX NAV feed
+
+```bash
+npm run deploy:feed
+```
+
+Deploys `GanymedeNavFeed` for `us-tech-x` ("USTX / USD", 8 decimals) next to the
+recorded NAV registry, reads the wiring and the first answer back at the
+deployment block, and records the address and creation transaction in
+`deployments/xlayer-testnet.json`. Any app that reads a Chainlink price feed can
+point at it:
+
+```solidity
+(, int256 answer, , uint256 updatedAt, ) = AggregatorV3Interface(feed).latestRoundData();
+require(block.timestamp - updatedAt <= 1 hours, "stale NAV"); // records land every five minutes
+uint256 ustxInUsd8 = uint256(answer);                        // 8 decimals
+```
 
 ## Lending market (written and tested, not deployed)
 

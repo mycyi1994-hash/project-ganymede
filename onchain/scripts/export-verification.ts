@@ -21,6 +21,7 @@ const CONTRACTS = {
   GanymedeNavRegistry: "contracts/GanymedeNavRegistry.sol:GanymedeNavRegistry",
   GanymedeDemoDollar: "contracts/GanymedeDemoDollar.sol:GanymedeDemoDollar",
   GanymedeBasketFund: "contracts/GanymedeBasketFund.sol:GanymedeBasketFund",
+  GanymedeNavFeed: "contracts/GanymedeNavFeed.sol:GanymedeNavFeed",
   GanymedeLendingMarket: "contracts/GanymedeLendingMarket.sol:GanymedeLendingMarket",
 } as const;
 
