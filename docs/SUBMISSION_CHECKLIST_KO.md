@@ -2,7 +2,7 @@
 
 비공개 개발 저장소 전용 문서다. 공개 스냅샷에는 넣지 않는다(`SUBMISSION_EXPORT.md`의 제외 목록).
 
-작성 시점: 2026-09-24 18:45 UTC (9/25 금 03:45 KST).
+작성 시점: 2026-09-25 01:10 UTC (9/25 금 10:10 KST).
 
 ## 1. 한눈에 보기
 
@@ -20,15 +20,18 @@
 
 - **운영**: 펀드 판매 사이트처럼 동작한다.
   - Markets(펀드 규모·투자자·출시 후 수익률) → USTX에서 데모 달러로 투자 → 체결 화면에 "Added to your basket"(6개 xStock별 토큰 수량·금액) → Portfolio(총평가액·수익률·"Inside your USTX" 들여다보기·주문 내역)
-  - USTX 펀드 개요: 펀드 규모(X Layer에 기록된 발행 좌수 × NAV), 투자자 수, 수익률, 핵심 조건, 전체 지분의 종목별 보유, 최근 익명 거래
-  - Verify(브라우저 자동 검증, 변조 실험 3종, 증거 파일), Portfolio 아래 실제 지갑 xStocks 평가·계산기
+  - USTX 펀드 개요: 펀드 규모(X Layer에 기록된 발행 좌수 × NAV), 투자자 수, 24시간 순유입, 수익률, 핵심 조건, 전체 지분의 종목별 보유
+  - Verify: 고객용 증명 페이지(거래소 준비금 증명 형식). 검증 결과, 가격 산정 3단계, 구성 종목과 OKX 가격, 최근 기록과 OKX 탐색기 링크
+  - 개발자 페이지 "Verify it yourself": 3가지 확인, 변조 실험 3종, 증거 파일, 원문 문서
+  - 모든 숫자에 출처 표시: "Priced by OKX OnchainOS", "OKX price", "OKX Explorer", "Connect OKX Wallet"
+  - Portfolio 아래 실제 지갑 xStocks 평가·계산기
   - 파트너용: 공개 NAV API(`/api/v1/ustx`), 다른 사이트에 붙이는 검증 배지(`/embed/ustx`), 발행사 페이지(`/issuers`, 요금제·로드맵), 개발자 페이지(`/developers`)
-- **최종 확인** (9/24 18:38 UTC, Worker `bebf23c3`):
+- **최종 확인** (9/25 01:05 UTC, Worker `26694863`): 아래는 그 직전 배포(9/24 18:38 UTC, `bebf23c3`) 때 확인한 내용이고, 새 배포에서도 화면·API 정상, axe 0건을 다시 확인했다.
   - 11개 화면과 공개 API 3개가 200을 반환하고, 이전 경로 이동이 정상이다.
   - axe 접근성 위반 0건(11개 화면).
   - 운영 사이트에서 $250 데모 매수 → 바스켓 6종목 표시 → 포트폴리오 반영까지 확인했다.
   - 배포 뒤 첫 기록(18:35 UTC)에 발행 좌수가 X Layer에 올라간 것을 확인했다.
-- **테스트**: 앱 125개와 relayer 16개가 통과했고, lint 오류는 0이다.
+- **테스트**: 앱 126개와 relayer 16개가 통과했고, lint 오류는 0이다.
 - **공시 기록**: 9/23 11:15 UTC부터 5분마다 USTX NAV를 X Layer Testnet에 기록하고 있다. 9/24 18:40 UTC까지 216건이 확정됐다. 차트는 첫 공시부터 모든 기록을 보여 준다.
 - **공개 저장소**: README, 빌드 기간 작업 목록(`docs/BUILD_PERIOD.md`), 출처 기록(`docs/BUILD_EVIDENCE.md`)을 갖췄다. 비밀값 검사를 통과했다.
 
@@ -108,7 +111,7 @@
   2. https://ganymede-xlayer.gana003.workers.dev/products/ustx
   3. https://ganymede-xlayer.gana003.workers.dev/portfolio
   4. https://ganymede-xlayer.gana003.workers.dev/products/ustx/transparency
-  5. https://ganymede-xlayer.gana003.workers.dev/developers
+  5. https://ganymede-xlayer.gana003.workers.dev/developers#verify
 - **시각**: 기록은 5분마다(:00, :05 …) 생긴다. 정각 5분 단위에서 약 1분 뒤에 새로고침하고 녹화를 시작하면 최신 기록이 보인다. 주문은 1시간 이내 기록으로만 체결되므로 "Published record delayed"가 오래 떠 있으면 몇 분 뒤에 찍는다.
 - **확인**: 초록색 "Verified in your browser" 표시가 보이는지 확인한다. "Checking the record…"면 몇 초 기다린다.
 - **Portfolio 예시 주소(선택)**: `0x41dee1855293e4450cd67459047f372d4d818143`. xStocks 6종을 모두 소량 보유한 공개 컨트랙트 주소다.
@@ -131,10 +134,10 @@
 뜻: 데모 달러 $1,000를 투자하면 X Layer에 기록된 NAV로 즉시 체결되고, 내 돈이 6종목 토큰으로 얼마씩 담겼는지 바로 보인다. 데모 달러라 실제 돈은 움직이지 않는다.
 
 **장면 3 — 펀드 개요 (0:55~1:15)**
-화면: 같은 페이지 "Fund overview". Fund size 설명 문구("shares outstanding, recorded on X Layer")에 마우스를 올린다. "What the fund holds" 표와 "Recent investor activity"를 스크롤한다.
-> Like any fund page, you get the fund size, the return since launch and the key terms. The shares outstanding are recorded on X Layer with every NAV, so even the fund size is checkable. Below, you see what all shares hold in each xStock, and recent orders.
+화면: 같은 페이지 "Fund overview". Fund size 설명 문구("shares outstanding, recorded on X Layer")에 마우스를 올린다. "Net flows, 24h"와 "What the fund holds" 표를 스크롤한다.
+> Like any fund page, you get the fund size, the return since launch and the key terms. The shares outstanding are recorded on X Layer with every NAV, so even the fund size is checkable. Below, you see the last day's flows and what all shares hold in each xStock.
 
-뜻: 펀드 규모·수익률·핵심 조건이 있고, 발행 좌수도 NAV와 함께 X Layer에 기록되므로 펀드 규모까지 확인할 수 있다. 전체 지분이 종목별로 무엇을 보유하는지와 최근 주문이 보인다.
+뜻: 펀드 규모·수익률·핵심 조건이 있고, 발행 좌수도 NAV와 함께 X Layer에 기록되므로 펀드 규모까지 확인할 수 있다. 최근 24시간 유입과 전체 지분이 종목별로 무엇을 보유하는지가 보인다.
 
 **장면 4 — Portfolio (1:15~1:35)**
 화면: Portfolio 탭. 총평가액과 수익률, "Inside your USTX" 표, 주문 내역을 보여 준다. (선택) 아래 "Or view any public address"에 예시 주소를 넣고 View.
@@ -142,17 +145,17 @@
 
 뜻: 포트폴리오에 총평가액·수익률과 내 지분이 담은 토큰이 보인다. 아래에서 OKX Wallet 연결이나 주소 입력으로 X Layer 메인넷의 실제 xStocks를 읽기 전용으로 평가한다.
 
-**장면 5 — Verify 자동 검증 (1:35~1:55)**
-화면: Verify 탭. 위의 "The record and calculation match."와 "What a match confirms / What it does not confirm"를 보여 준다.
-> But why trust the price? Verify runs automatically. My browser reads the record on X Layer directly, hashes the original composition document and recalculates every row. It also says what this does not prove, like whether the prices are right.
+**장면 5 — Verify 증명 페이지 (1:35~1:55)**
+화면: Verify 탭. 위의 초록 "NAV verified on X Layer"와 "Priced by OKX OnchainOS" 표시 → 1·2·3 단계 카드 → "View on OKX Explorer"를 눌러 탐색기에서 2~3초.
+> But why trust the price? Every price is set by OKX OnchainOS and recorded on X Layer, and my browser checks that record automatically. Here it is on the OKX explorer.
 
-뜻: 가격을 왜 믿어야 하나? 내 브라우저가 X Layer 기록을 직접 읽고 원문 문서의 지문과 모든 줄의 계산을 확인한다. 증명하지 않는 것도 밝힌다.
+뜻: 가격을 왜 믿어야 하나? 모든 가격은 OKX OnchainOS가 매기고 X Layer에 기록되며, 내 브라우저가 그 기록을 자동으로 확인한다. OKX 탐색기에서 보면 이렇다.
 
 **장면 6 — Try to break it (1:55~2:30)** ← 핵심 장면 2
-화면: 같은 페이지 아래 "Try to break it". 버튼을 차례로 누르고, 누를 때마다 세 줄 결과(Matches/Fails)를 1~2초 보여 준다.
-> Let's try to break it, on a copy in the browser. Change one price: the arithmetic and the fingerprint fail. Fix the arithmetic: the NAV no longer matches the chain. Now offset two prices so every number and even the NAV stay the same. Only the fingerprint recorded on X Layer catches it. And the whole check downloads as an evidence file anyone can re-check with one command.
+화면: 개발자 페이지(탭 5)의 "Verify it yourself" → 아래 "Try to break it". 버튼을 차례로 누르고, 누를 때마다 세 줄 결과(Matches/Fails)를 1~2초 보여 준다.
+> For developers, here is the check behind it, on a copy in the browser. Change one price: the arithmetic and the fingerprint fail. Fix the arithmetic: the NAV no longer matches the chain. Now offset two prices so every number and even the NAV stay the same. Only the fingerprint recorded on X Layer catches it. The whole check downloads as an evidence file anyone can re-check with one command.
 
-뜻: 가격 하나를 바꾸면 계산과 지문이 실패한다. 계산까지 맞추면 NAV가 체인과 달라진다. NAV까지 같게 맞추면 오직 X Layer의 지문만 잡아낸다. 전체 검증은 증거 파일로 내려받아 명령 하나로 다시 확인할 수 있다.
+뜻: 개발자용으로 그 뒤의 확인을 브라우저 속 사본으로 보여 준다. 가격 하나를 바꾸면 계산과 지문이 실패하고, 계산까지 맞추면 NAV가 체인과 달라지고, NAV까지 같게 맞추면 오직 X Layer의 지문만 잡아낸다. 전체 검증은 증거 파일로 내려받아 명령 하나로 다시 확인할 수 있다.
 
 **장면 7 — 생태계 (2:30~2:50)**
 화면: Developers 탭. "Embed the verified NAV badge"의 Live preview(초록 Verified 배지)와 API 예시를 보여 준다. 이어서 첫 화면 아래 "For issuers" 카드를 눌러 Pricing·Roadmap을 2~3초 보여 준다.
@@ -234,9 +237,9 @@ Tokenized-stock baskets publish a NAV that investors have to take on trust. Gany
 USTX, the US Tech Basket, holds six xStocks in one share (AAPLx, MSFTx, NVDAx, AMZNx, METAx, TSLAx). Every five minutes it is priced through the OKX OnchainOS Market API on X Layer mainnet, and the NAV, the shares outstanding and a SHA-256 fingerprint of the full composition document are recorded by our GanymedeNavRegistry contract on X Layer Testnet.
 
 - Invest: every visitor gets a private demo account with $10,000 in demo dollars. Orders fill instantly at the NAV recorded on X Layer, and the confirmation shows exactly which tokens the money put in the basket. Portfolio looks each holding through to the six xStocks.
-- Fund overview: fund size (shares outstanding x NAV, both recorded on X Layer), investors, return since launch, key terms, look-through holdings of all shares and recent anonymous orders.
-- Verify: the visitor's browser reads the registry directly over public RPC, hashes the original document and recalculates every row with integer arithmetic. The page also states what a match does not prove (price accuracy, custody, redemption).
-- Try to break it: three edits to a local copy show which check catches which change. When two prices are offset so that every number and the NAV stay the same, only the fingerprint recorded on X Layer detects the edit.
+- Fund overview: fund size (shares outstanding x NAV, both recorded on X Layer), investors, return since launch, key terms, 24-hour flows and look-through holdings of all shares. Single orders are never published.
+- Verify: a customer proof page, like an exchange proof of reserves. The visitor's browser reads the registry directly over public RPC, hashes the original document and recalculates every row with integer arithmetic; every price is labelled as coming from OKX OnchainOS. The page also states what a match does not prove (price accuracy, custody).
+- Verify it yourself (developer page): the individual checks, and three edits to a local copy that show which check catches which change. When two prices are offset so that every number and the NAV stay the same, only the fingerprint recorded on X Layer detects the edit.
 - Evidence: the check downloads as a file. `npm run verify:evidence` re-checks it and matches it to the NavPublished event in the publishing transaction's receipt.
 - Wallets: Portfolio connects OKX Wallet (or any address) and values real xStock balances on X Layer mainnet at the verified prices, with a downloadable statement. Read-only.
 - Partners: a public NAV API with open CORS (/api/v1/ustx) and an embeddable badge that verifies the NAV in the visitor's browser (/embed/ustx). Issuer and developer pages set out planned pricing and the roadmap.
