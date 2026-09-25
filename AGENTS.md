@@ -4,10 +4,10 @@
 
 The public UI presents USTX as a live fund service, laid out like a production
 DeFi app: one testnet notice and the network and "Connect OKX Wallet" in the
-header; Markets; the USTX page (order panel, fund overview with the price
-oracle, factsheet holdings, About); Portfolio (the demo balance looked through
-to each xStock, and read-only valuation of any wallet's xStocks on X Layer
-mainnet); and Transparency (the customer proof page). Keep pitch and developer
+header; Markets; the USTX page (order panel with wallet and demo-balance investing, fund
+overview with the price oracle, factsheet holdings, About); Portfolio (the demo
+balance and the wallet's USTX looked through to each xStock, and valuation of
+any wallet's xStocks on X Layer mainnet); and Transparency (the customer proof page). Keep pitch and developer
 material out of those screens: the technical checks, the tamper experiment and
 the evidence download (re-checked by `npm run verify:evidence`) live on
 `/developers`, which with `/issuers`, the `/embed/ustx` badge and the public
@@ -17,14 +17,20 @@ stay out of the navigation. Production is the `ganymede-xlayer` Worker; the
 settlement relayer is `ganymede-settlement-relayer`.
 `docs/PRODUCT_RELEASE.md` records the current source and Worker version.
 
-Demo investing (`lib/demo/`, `app/api/demo/`) uses demo dollars in the D1 demo
-ledger. It never moves real money and never issues shares on chain; each NAV
-record carries the demo shares outstanding. Real deposits, withdrawals, custody,
-settlement tokens and payment destinations are out of scope. Never create or
-name an address that would receive real funds, and keep the demo, testnet and
-simulation labels. `lib/product-contract.ts` keeps `canSubscribe`, `canRedeem`,
-`settlementAsset` and `custodyAddress` closed: demo orders are not real
-subscriptions.
+Investing uses demo dollars with no value, in two ways. Wallet investing
+(`lib/xstocks/fund.ts`, `app/product-ui/WalletInvest.tsx`) runs on X Layer
+Testnet only: anyone can claim `GanymedeDemoDollar` (dUSD), and
+`GanymedeBasketFund` issues USTX only when a wallet invests at the latest NAV in
+the registry and redeems at that NAV, holding no assets. Demo-balance investing
+(`lib/demo/`, `app/api/demo/`) keeps a D1 ledger per browser and issues nothing
+on chain. Each NAV record carries the shares outstanding in wallets plus demo
+balances. Real money stays out of scope: no mainnet deployment of these
+contracts, no real deposits, withdrawals, custody or payment destinations, and
+no value for dUSD or USTX. Never create or name an address that would receive
+real funds, and keep the demo, testnet and simulation labels.
+`lib/product-contract.ts` keeps `canSubscribe`, `canRedeem`, `settlementAsset`
+and `custodyAddress` closed for real-money subscriptions; testnet demo orders are
+not real subscriptions.
 
 ## Branches
 
