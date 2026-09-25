@@ -4,10 +4,11 @@
  *
  *   1. buys AAPLx, MSFTx and NVDAx on their Uniswap V3 pools with USDG, unwrapping each pool's
  *      ERC-4626 wrapper into the xStock itself (the USDG comes from a pool outside the basket);
- *   2. deploys GanymedeBasketVault with MAG3's units per share (public/baskets/mag3/basket.json);
- *   3. creates 10 shares by delivering exactly those units, and checks the vault holds units × supply;
- *   4. moves 4 shares to a second account, which redeems them for the xStocks;
- *   5. redeems the other 6 and checks nothing but rounding dust is left.
+ *   2. deploys GanymedeBasketVault with MAG3's units per share for the first creation
+ *      (public/baskets/mag3/basket.json);
+ *   3. creates 10 shares by delivering those units, rounded up plus the allowance;
+ *   4. moves 4 shares to a second account, which redeems them for 4/10 of the holdings;
+ *   5. redeems the other 6 and checks nothing but rounding allowances is left.
  *
  * No key is used and nothing is broadcast. Run: npm run fork:vault
  */
@@ -59,30 +60,31 @@ async function main() {
     console.log(`   ${row.symbol.padEnd(6)} ${tokens(bought)} for $${formatUnits(SPEND, 6)} USDG in pool ${pool}`);
   }
 
-  // 2. The vault, with MAG3's units per share.
+  // 2. The vault, with MAG3's units per share for the first creation.
   const addresses = basket.constituents.map((row) => row.address);
   const units = basket.constituents.map((row) => BigInt(row.unitsWad));
   const vault = await hre.viem.deployContract("GanymedeBasketVault", ["Ganymede MAG3 in kind (fork)", "MAG3", addresses, units]);
-  console.log(`\n2. vault deployed on the fork at ${vault.address} with MAG3's units per share`);
+  console.log("\n2. vault deployed on the local fork with MAG3's units per share for the first creation");
 
   const report = async (label: string) => {
     const supply = await vault.read.totalSupply();
-    console.log(`   ${label}: ${formatUnits(supply, 6)} shares outstanding, fully backed: ${await vault.read.isFullyBacked()}`);
+    const perShare = await vault.read.holdingsPerShare();
+    console.log(`   ${label}: ${formatUnits(supply, 6)} shares outstanding`);
     for (const [index, row] of basket.constituents.entries()) {
       const held = await balance(row.address, vault.address);
-      const required = (units[index] * supply) / 1_000_000n;
-      console.log(`     ${row.symbol.padEnd(6)} held ${tokens(held)}, units × supply ${tokens(required)}`);
-      if (held * 1_000_000n < units[index] * supply) throw new Error(`${row.symbol} is not fully backed.`);
+      console.log(`     ${row.symbol.padEnd(6)} held ${tokens(held)}, per share ${tokens(perShare[index])} (MAG3 units ${tokens(units[index])})`);
+      // Every outstanding share is backed by at least MAG3's units: nothing has left the vault but redemptions.
+      if (supply > 0n && held * 1_000_000n < units[index] * supply) throw new Error(`${row.symbol} holds less than MAG3's units for every share.`);
     }
   };
 
-  // 3. Create 10 shares by delivering exactly the units.
+  // 3. Create 10 shares by delivering MAG3's units, rounded up, plus the allowance.
   for (const token of addresses) await creator.writeContract({ address: token, abi: erc20, functionName: "approve", args: [vault.address, maxUint256] });
-  const [createIn] = await vault.read.amountsFor([SHARES]);
+  const [, createIn] = await vault.read.amountsFor([SHARES]);
   const before = await Promise.all(addresses.map((token) => balance(token, creator.account.address)));
   await vault.write.create([SHARES]);
   const after = await Promise.all(addresses.map((token) => balance(token, creator.account.address)));
-  console.log(`\n3. created ${formatUnits(SHARES, 6)} shares by delivering units × shares, rounded up, plus ${await vault.read.ROUNDING_ALLOWANCE()} base units:`);
+  console.log(`\n3. created ${formatUnits(SHARES, 6)} shares by delivering MAG3's units × shares, rounded up, plus ${await vault.read.ROUNDING_ALLOWANCE()} base units:`);
   for (const [index, row] of basket.constituents.entries()) {
     const paid = before[index] - after[index];
     // A multiplier token can debit the sender a base unit more or less than the amount sent.
@@ -91,16 +93,17 @@ async function main() {
   }
   await report("after creation");
 
-  // 4. A second account receives 4 shares and redeems them.
+  // 4. A second account receives 4 shares and redeems them for its share of the holdings.
   const moved = 4_000_000n;
   await vault.write.transfer([holder.account.address, moved]);
-  const [, redeemOut] = await vault.read.amountsFor([moved]);
+  const [, , redeemOut] = await vault.read.amountsFor([moved]);
   await vault.write.redeem([moved], { account: holder.account });
-  console.log(`\n4. a second account received ${formatUnits(moved, 6)} shares and redeemed them for:`);
+  console.log(`\n4. a second account received ${formatUnits(moved, 6)} shares and redeemed them for 4/10 of the holdings:`);
   for (const [index, row] of basket.constituents.entries()) {
     const received = await balance(row.address, holder.account.address);
     // The token's own rounding can deliver a base unit or two less than the vault sent.
     if (received > redeemOut[index] || redeemOut[index] - received > 2n) throw new Error(`Redemption paid ${received} ${row.symbol}, not ${redeemOut[index]}.`);
+    if (received * 1_000_000n + 10n * 1_000_000n < units[index] * moved) throw new Error(`Redemption paid less than MAG3's units for ${row.symbol}.`);
     console.log(`     ${row.symbol.padEnd(6)} ${tokens(received)} (${received} base units; the vault sent ${redeemOut[index]})`);
   }
   await report("after that redemption");
@@ -114,7 +117,7 @@ async function main() {
     if (dust > 30n) throw new Error(`${row.symbol}: ${dust} base units left, more than the rounding allowances.`);
     console.log(`     ${row.symbol.padEnd(6)} ${dust} base units of rounding allowance stay in the vault`);
   }
-  console.log("\nevery step matched: the vault took exactly the xStocks each share stands for and returned them on redemption.");
+  console.log("\nevery step matched: shares were created only against the xStocks and redeemed for their share of them.");
 }
 
 main().catch((error) => {

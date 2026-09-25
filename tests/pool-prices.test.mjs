@@ -74,15 +74,19 @@ function composition(priceOf) {
 }
 const pools = { prices: XSTOCK_POOLS.map((pool) => ({ symbol: pool.symbol, token: pool.token, pool: pool.pool, stable: pool.stable.symbol, priceMicros: SNAPSHOT[pool.symbol].micros })) };
 
-test("recorded prices agree with the pools within 1% on the NAV and 5% on each xStock", () => {
+test("recorded prices agree with the pools when the NAV at pool prices is within 1%", () => {
   const same = comparePrices(composition((symbol) => SNAPSHOT[symbol].micros), pools);
   assert.equal(same.agrees, true);
   assert.equal(same.navDifferenceBps, 0);
   assert.equal(same.poolNavMicros, same.recordedNavMicros);
-  // One xStock 6% above its pool moves the NAV by 1% and fails on its own.
-  const high = comparePrices(composition((symbol) => symbol === "AAPLx" ? (BigInt(SNAPSHOT.AAPLx.micros) * 106n / 100n).toString() : SNAPSHOT[symbol].micros), pools);
-  assert.equal(high.agrees, false);
-  assert.equal(formatDifference(high.rows[0].differenceBps), "−5.66%");
+  // One thin pool moved 6% by a trade moves this NAV by under 1%, so the record still agrees...
+  const moved = comparePrices(composition((symbol) => symbol === "AAPLx" ? (BigInt(SNAPSHOT.AAPLx.micros) * 106n / 100n).toString() : SNAPSHOT[symbol].micros), pools);
+  assert.equal(formatDifference(moved.rows[0].differenceBps), "−5.66%");
+  assert.equal(moved.agrees, true);
+  // ...while a wrong price of 10% on the largest holding moves it by more.
+  const wrong = comparePrices(composition((symbol) => symbol === "METAx" ? (BigInt(SNAPSHOT.METAx.micros) * 110n / 100n).toString() : SNAPSHOT[symbol].micros), pools);
+  assert.equal(wrong.agrees, false);
+  assert.ok(wrong.navDifferenceBps < -100);
   // A document of other tokens is never compared with these pools.
   const other = composition((symbol) => SNAPSHOT[symbol].micros);
   other.holdings[0].address = "0x" + "1".repeat(40);
@@ -117,9 +121,10 @@ test("the publisher records a NAV only when OnchainOS agrees with the pools, and
 
   const wrong = await run((symbol) => symbol === "NVDAx" ? (BigInt(SNAPSHOT.NVDAx.micros) * 10n).toString() : SNAPSHOT[symbol].micros, read);
   assert.equal(wrong.requests.filter((request) => request.action === "publish_nav").length, 0);
-  assert.match(wrong.latest.blockers.join(" "), /disagree with the X Layer pools \(NVDAx −90\.00%, NAV .* at block 71588383\)/);
+  assert.match(wrong.latest.blockers.join(" "), /The NAV at OnchainOS prices is \+\d+\.\d+% from its value at the X Layer pools at block 71588383, beyond 1% \(widest: NVDAx −90\.00%\)/);
 
   const unreadable = await run((symbol) => SNAPSHOT[symbol].micros, async () => { throw new Error("X Layer RPC 503"); });
+  assert.deepEqual(unreadable.latest.blockers, []);
   assert.equal(unreadable.requests.filter((request) => request.action === "publish_nav").length, 1);
   assert.match(unreadable.result.warnings.join(" "), /not compared with the X Layer pools: X Layer RPC 503/);
 });

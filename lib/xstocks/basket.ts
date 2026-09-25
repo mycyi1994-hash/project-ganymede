@@ -220,6 +220,12 @@ export async function evaluateBasket(input: EvaluateInput): Promise<Evaluation> 
       blockers.push(`${constituent.symbol} price is ${Math.round(quoteAgeMinutes(quote, input.now))} minutes old`);
     }
   }
+  // The record carries its oldest price's time and the verifier accepts prices up to a minute newer
+  // than that, so prices quoted further apart would publish a document the browser rejects.
+  if (blockers.length === 0) {
+    const times = constituents.map((constituent) => Date.parse(input.quotes.get(constituent.symbol)!.time));
+    if (Math.max(...times) - Math.min(...times) > 60_000) blockers.push("Prices were quoted more than a minute apart");
+  }
   if (blockers.length > 0) {
     return { status: "awaiting_prices", basket: input.previous, rebalanced: false, composition: null, canonical: null, holdingsHash: null, publishable: false, blockers };
   }

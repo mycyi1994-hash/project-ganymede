@@ -71,7 +71,7 @@ export async function GET(request: Request) {
         // The second source every record is compared with, so a partner can repeat the comparison from the chain.
         crossCheck: {
           source: "Uniswap V3 pools on X Layer mainnet", factory: POOL_FACTORY, fee: POOL_FEE,
-          toleranceBps: { nav: POOL_TOLERANCE.navBps, asset: POOL_TOLERANCE.assetBps },
+          toleranceBps: { nav: POOL_TOLERANCE.navBps },
           pools: XSTOCK_POOLS.map((entry) => ({ symbol: entry.symbol, pool: entry.pool, wrapper: entry.wrapper, quote: entry.stable.symbol })),
         },
       },

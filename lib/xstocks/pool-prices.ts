@@ -27,10 +27,11 @@ export const XSTOCK_POOLS = [
 ] as const;
 
 /**
- * The pools and OnchainOS normally agree within a few tenths of a percent. A constituent more than
- * 5% apart, or a NAV more than 1% apart, means one of the two prices is wrong or the pool was moved.
+ * The pools and OnchainOS normally agree within a few tenths of a percent. A NAV more than 1% apart
+ * means a price is wrong or a pool was moved. With six equal weights, one xStock more than about 6%
+ * off moves the NAV that far; a single thin pool moved by one trade usually does not.
  */
-export const POOL_TOLERANCE = { assetBps: 500, navBps: 100 } as const;
+export const POOL_TOLERANCE = { navBps: 100 } as const;
 
 const GET_POOL = "0x1698ee82";
 const ASSET = "0x38d52e0f";
@@ -123,7 +124,7 @@ export function comparePrices(composition: Pick<Composition, "holdings" | "navPe
   const recordedNav = BigInt(composition.navPerShareMicros);
   if (recordedNav <= 0n) return null;
   const navDifferenceBps = bps(poolNav, recordedNav);
-  const agrees = Math.abs(navDifferenceBps) <= POOL_TOLERANCE.navBps && rows.every(row => Math.abs(row.differenceBps) <= POOL_TOLERANCE.assetBps);
+  const agrees = Math.abs(navDifferenceBps) <= POOL_TOLERANCE.navBps;
   return { rows, recordedNavMicros: recordedNav.toString(), poolNavMicros: poolNav.toString(), navDifferenceBps, agrees };
 }
 

@@ -64,8 +64,11 @@ export function parseBasketConfig(value: unknown): BasketConfig {
     weight += Number(row.weightBps);
   }
   if (weight !== 10_000) fail("weights do not total 100%");
+  // A path on this site or an https URL, in plain characters only: no "//", "..", backslash or control
+  // character that a browser would resolve to another host.
   const documents = value.documents;
-  if (typeof documents !== "string" || documents.length > 200 || documents.split("{hash}").length !== 2 || !((documents.startsWith("/") && !documents.startsWith("//")) || documents.startsWith("https://"))) fail("document location");
+  if (typeof documents !== "string" || documents.length > 200 || documents.split("{hash}").length !== 2 || documents.includes("..") || documents.includes("//", documents.startsWith("https://") ? 8 : 0)
+    || !/^(\/|https:\/\/[a-z0-9.-]+(:\d{1,5})?\/)[A-Za-z0-9_./{}-]*$/.test(documents)) fail("document location");
   return value as BasketConfig;
 }
 
@@ -139,7 +142,10 @@ export async function verifyBasket(config: BasketConfig, options: { base: string
   try {
     const response = await fetcher(result.documentUrl, { signal: AbortSignal.timeout(10_000) });
     if (!response.ok) throw new Error(response.status === 404 ? "The document for this record is not served." : `Document request ${response.status}`);
-    canonical = await response.text();
+    const bytes = await response.arrayBuffer();
+    if (bytes.byteLength > 100_000) throw new Error("The document exceeds the supported size.");
+    // Decoded without dropping a byte-order mark or replacing invalid bytes, so the hash covers the bytes served.
+    canonical = new TextDecoder("utf-8", { fatal: true, ignoreBOM: true }).decode(bytes);
   } catch (error) {
     result.hash = pending(error instanceof Error ? error.message : "The document could not be fetched.");
     return result;
@@ -148,6 +154,10 @@ export async function verifyBasket(config: BasketConfig, options: { base: string
   result.hash = verified.hash;
   result.nav = verified.nav;
   result.composition = verified.composition;
+  // One reading only: sorted keys, no spaces and no repeated key another parser could read differently.
+  if (verified.composition && stableJson(JSON.parse(canonical)) !== canonical) {
+    result.nav = { state: "fail", detail: "The document is not in canonical form: sorted keys, no spaces, no repeated keys." };
+  }
   const document = verified.composition;
   if (!document) {
     result.definition = { state: "fail", detail: "The document does not describe this basket." };

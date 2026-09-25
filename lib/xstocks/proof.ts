@@ -72,6 +72,9 @@ export async function verifyReport(canonical: string, record: OnchainNav, profil
     // The record's time stands for its prices: none may be older than it, beyond a minute of clock difference.
     const oldest = Math.min(...composition.holdings.map((holding) => Date.parse(holding.priceTime)));
     if (oldest < Date.parse(composition.asOf) - PRICE_CLOCK_TOLERANCE_MS) throw new Error("A price in the document is older than the record's time.");
+    // The registry only requires each record's time to be later than the last, so a record could claim
+    // a future time that the fund and lending market would then treat as fresh; its block time bounds it.
+    if (source === "chain" && record.publishedAt && Date.parse(record.effectiveAt) > Date.parse(record.publishedAt) + PRICE_CLOCK_TOLERANCE_MS) throw new Error("The record claims a time later than the block it was written in.");
     return { hash, nav: { state: "pass", detail: `All ${composition.holdings.length} units × price calculations, truncated to micro-dollars per holding, sum exactly to the document and ${source === "chain" ? "on-chain" : "example"} NAV. The effective timestamp also matches, and no price is older than it.` }, composition };
   } catch (error) {
     return { hash, nav: { state: "fail", detail: error instanceof Error ? error.message : "The NAV could not be recalculated." }, composition };

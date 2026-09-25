@@ -84,6 +84,17 @@ test("the browser check reads the basket's own registry and key, then hashes and
   const missing = await verifyBasket(config, { base: "https://ganymede.test", fetcher: site(canonical, { hash, serve: false }).fetcher });
   assert.equal(missing.hash.state, "pending");
   assert.match(missing.hash.detail, /not served/);
+
+  // The fingerprint covers the bytes served: a byte-order mark in front changes them.
+  const marked = site(canonical, { hash });
+  const bom = await verifyBasket(config, { base: "https://ganymede.test", fetcher: async (url, init) => url.includes("/documents/") ? new Response(new Uint8Array([0xef, 0xbb, 0xbf, ...new TextEncoder().encode(canonical)])) : marked.fetcher(url, init) });
+  assert.equal(bom.hash.state, "fail");
+  // A repeated key that another parser could read differently is not one document, whatever its hash.
+  const repeated = canonical.replace('{"asOf"', '{"productId":"another-basket","asOf"');
+  const repeatedCheck = await verifyBasket(config, { base: "https://ganymede.test", fetcher: site(repeated, { hash: await sha256Hex(repeated) }).fetcher });
+  assert.equal(repeatedCheck.hash.state, "pass");
+  assert.equal(repeatedCheck.nav.state, "fail");
+  assert.match(repeatedCheck.nav.detail, /canonical form/);
 });
 
 test("a configuration must be complete, and the badge loads only this site's basket files", () => {
@@ -95,6 +106,10 @@ test("a configuration must be complete, and the badge loads only this site's bas
     (c) => { c.documents = "/baskets/mag3/documents/latest.json"; },
     (c) => { c.documents = "//other.example/{hash}.json"; },
     (c) => { c.documents = "http://other.example/{hash}.json"; },
+    (c) => { c.documents = "/\\other.example/{hash}.json"; },
+    (c) => { c.documents = "/\tother.example/{hash}.json"; },
+    (c) => { c.documents = "/baskets/../{hash}.json"; },
+    (c) => { c.documents = "https://other.example//{hash}.json"; },
     (c) => { c.registry.rpcUrl = "http://rpc.example"; },
     (c) => { c.productKey = "0x1234"; },
   ];

@@ -1,16 +1,19 @@
 /**
- * Publishes a NAV record for a basket defined by a configuration file, the way a second issuer
- * would: with its own wallet, to its own GanymedeNavRegistry on X Layer Testnet, priced from the X
- * Layer mainnet pools, which need no API key. Nothing here uses USTX's code path, keys or schedule.
+ * Publishes a NAV record for a basket defined by a configuration file, as a second issuer: with its
+ * own wallet, to its own GanymedeNavRegistry on X Layer Testnet, priced from the X Layer mainnet
+ * pools, which need no API key. Nothing here uses USTX's code path, keys or schedule. Put the
+ * issuer's key in .env as ISSUER_PRIVATE_KEY (never commit it), then:
  *
- *   ISSUER_PRIVATE_KEY=0x… npm run basket:publish -- public/baskets/mag3/basket.json --init
- *   ISSUER_PRIVATE_KEY=0x… npm run basket:publish -- public/baskets/mag3/basket.json
+ *   npm run basket:publish -- public/baskets/mag3/basket.json --init
+ *   npm run basket:publish -- public/baskets/mag3/basket.json
  *
  * --init deploys the registry with the issuer wallet as its administrator and publisher, fixes the
  * units so one share is worth $100 at the current pool prices, and writes both into the
- * configuration. Every run writes the record's document where the configuration serves documents,
- * sends the record and then checks it exactly as a visitor's browser does. Testnet only; viem comes
- * from onchain/ (run npm ci there first). The key is read from the environment and never printed.
+ * configuration. Every run writes the record's document under public/, where this site serves it
+ * once deployed, sends the record and checks it as a visitor's browser does, reading the document
+ * from disk. Visitors see it after the next site deploy; until then the live check reports that the
+ * document is not served. Testnet only; viem comes from onchain/ (run npm ci there first). The key is
+ * read from the environment and never printed.
  */
 import { createRequire } from "node:module";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
@@ -28,12 +31,12 @@ const args = process.argv.slice(2);
 const file = args.find((arg) => !arg.startsWith("--"));
 const init = args.includes("--init");
 if (!file) {
-  console.error("Usage: ISSUER_PRIVATE_KEY=0x… npm run basket:publish -- <basket.json> [--init]");
+  console.error("Usage: npm run basket:publish -- <basket.json> [--init]   (ISSUER_PRIVATE_KEY in .env)");
   process.exit(1);
 }
 const key = process.env.ISSUER_PRIVATE_KEY ?? "";
 if (!/^0x[0-9a-fA-F]{64}$/.test(key)) {
-  console.error("Set ISSUER_PRIVATE_KEY to the issuer wallet's key. Never commit it.");
+  console.error("Set ISSUER_PRIVATE_KEY in .env to the issuer wallet's key. Never commit it.");
   process.exit(1);
 }
 const raw = JSON.parse(readFileSync(file, "utf8"));
@@ -90,7 +93,8 @@ const effectiveAt = BigInt(Math.floor(Date.parse(composition.asOf) / 1000));
 const [, , , lastEffectiveAt] = await retry(() => client.readContract({ ...registry, functionName: "latestNav", args: [config.productKey] }));
 if (effectiveAt <= lastEffectiveAt) throw new Error("The pools have no block newer than the last record. Try again in a few seconds.");
 
-// The document is written before the record is sent, so the record never points at nothing.
+// The document is written before the record is sent, so a record never exists without its document;
+// it reaches visitors with the next deploy of the site.
 const documentPath = path.join("public", config.documents.replace("{hash}", holdingsHash));
 mkdirSync(path.dirname(documentPath), { recursive: true });
 writeFileSync(documentPath, canonical);
@@ -115,6 +119,7 @@ for (let attempt = 0; ; attempt += 1) {
   if (check.record?.holdingsHash.toLowerCase() === holdingsHash.toLowerCase()) {
     for (const name of ["chain", "hash", "nav", "definition"]) console.log(`check      ${name.padEnd(10)} ${check[name].state}  ${check[name].detail}`);
     if (!["chain", "hash", "nav", "definition"].every((name) => check[name].state === "pass")) process.exitCode = 1;
+    console.log(`next       deploy the site so it serves ${documentPath.slice("public".length)}`);
     break;
   }
   if (attempt >= 10) throw new Error("The RPC has not returned the new record yet; check it on the explorer.");

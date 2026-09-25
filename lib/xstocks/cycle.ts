@@ -19,7 +19,7 @@ import {
   type Evaluation,
 } from "./basket";
 import { fetchXStockQuotes, MAX_COOLDOWN_MS, onchainOsCredentials } from "./prices";
-import { comparePrices, formatDifference, readPoolPrices, XSTOCK_POOLS, type PoolPrices } from "./pool-prices";
+import { comparePrices, formatDifference, POOL_TOLERANCE, readPoolPrices, XSTOCK_POOLS, type PoolPrices } from "./pool-prices";
 import { parseComposition } from "./proof";
 import { updateNavSeries } from "./series";
 import { demoSharesOutstanding } from "../demo/ledger";
@@ -175,12 +175,15 @@ async function readWalletShares(repo: EngineRepository, now: string, warnings: s
 const readPoolsBounded = () => readPoolPrices((input, init) => fetch(input, { ...init, signal: AbortSignal.timeout(8_000) }));
 
 /**
- * The second price source. A NAV of the pinned xStocks is recorded only if the OnchainOS prices
- * agree with the X Layer pools read now; a document of other tokens has no pools to compare, and an
- * unreadable RPC leaves a warning rather than stopping the record.
+ * The second price source. A NAV of the pinned xStocks is recorded only if, valued at the X Layer
+ * pools read now, it is within the tolerance; a document of other tokens has no pools to compare,
+ * and an unreadable RPC leaves a warning rather than stopping the record.
  */
 async function poolDisagreement(composition: Composition, warnings: string[], read: () => Promise<PoolPrices>): Promise<string | null> {
-  if (!composition.holdings.every((holding) => XSTOCK_POOLS.some((pool) => pool.symbol === holding.symbol && pool.token === holding.address.toLowerCase()))) return null;
+  if (!composition.holdings.every((holding) => XSTOCK_POOLS.some((pool) => pool.symbol === holding.symbol && pool.token === holding.address.toLowerCase()))) {
+    warnings.push(`${XSTOCKS_PRODUCT.ticker} prices were not compared with the X Layer pools: a holding has no pinned pool.`);
+    return null;
+  }
   let pools: PoolPrices;
   try {
     pools = await read();
@@ -189,9 +192,13 @@ async function poolDisagreement(composition: Composition, warnings: string[], re
     return null;
   }
   const comparison = comparePrices(composition, pools);
-  if (!comparison || comparison.agrees) return null;
+  if (!comparison) {
+    warnings.push(`${XSTOCKS_PRODUCT.ticker} prices were not compared with the X Layer pools: the pools returned no price for a holding.`);
+    return null;
+  }
+  if (comparison.agrees) return null;
   const widest = comparison.rows.reduce((a, b) => (Math.abs(b.differenceBps) > Math.abs(a.differenceBps) ? b : a));
-  return `OnchainOS prices disagree with the X Layer pools (${widest.symbol} ${formatDifference(widest.differenceBps)}, NAV ${formatDifference(comparison.navDifferenceBps)} at block ${pools.blockNumber})`;
+  return `The NAV at OnchainOS prices is ${formatDifference(-comparison.navDifferenceBps)} from its value at the X Layer pools at block ${pools.blockNumber}, beyond ${POOL_TOLERANCE.navBps / 100}% (widest: ${widest.symbol} ${formatDifference(widest.differenceBps)})`;
 }
 
 export async function runXStocksCycle(env: EngineEnv, repo: EngineRepository, settlementClient: SettlementClient, now = new Date().toISOString(), sources: { poolPrices?: () => Promise<PoolPrices>; wait?: (ms: number) => Promise<void> } = {}): Promise<XStocksCycleResult> {
@@ -206,9 +213,13 @@ export async function runXStocksCycle(env: EngineEnv, repo: EngineRepository, se
     return { navsPublished: 0, settlementsQueued, warnings: [`GMD USTX price provider cooldown until ${previousLatest!.retryAt}`] };
   }
   const constituents = constituentsWithAddresses(env.XSTOCKS_ADDRESSES);
+  const fetchStarted = Date.now();
   const { quotes, warnings, retryAt } = await fetchXStockQuotes(onchainOsCredentials(env), constituents, undefined, sources.wait);
+  // A rate-limited request can be answered a minute or two into the cycle, with quotes stamped then.
+  // The calculation happens after they arrive, so its time moves on by the whole seconds spent waiting.
+  const calculatedAt = new Date(Date.parse(now) + Math.floor((Date.now() - fetchStarted) / 1000) * 1000).toISOString();
   const previous = deserializeBasket((await repo.getState(STATE_BASKET))?.value);
-  const evaluation = await evaluateBasket({ constituents, quotes, previous, now, maxQuoteAgeMinutes: maxQuoteAgeMinutes(env) });
+  const evaluation = await evaluateBasket({ constituents, quotes, previous, now: calculatedAt, maxQuoteAgeMinutes: maxQuoteAgeMinutes(env) });
 
   // Publish only what the browser verifier will accept: the same parser runs here first.
   if (evaluation.publishable && evaluation.canonical) {
@@ -255,7 +266,7 @@ export async function runXStocksCycle(env: EngineEnv, repo: EngineRepository, se
       settlementsQueued += 1;
     }
 
-    const [demoShares, walletShares] = await Promise.all([demoSharesOutstanding((repo as Partial<EngineRepository>).db), readWalletShares(repo, now, warnings)]);
+    const [demoShares, walletShares] = await Promise.all([demoSharesOutstanding((repo as Partial<EngineRepository>).db), readWalletShares(repo, calculatedAt, warnings)]);
     if (demoShares === null) warnings.push(`${XSTOCKS_PRODUCT.ticker} demo-balance shares could not be read; this record carries wallet shares only.`);
     const sharesOutstandingMicros = (BigInt(demoShares ?? "0") + BigInt(walletShares ?? "0")).toString();
     const asOf = evaluation.composition.asOf;
@@ -265,7 +276,7 @@ export async function runXStocksCycle(env: EngineEnv, repo: EngineRepository, se
     const history = JSON.parse((await repo.getState(STATE_HISTORY))?.value ?? "[]") as Publication[];
     const confirmed = history.find((entry) => entry.status === "confirmed");
     if (confirmed && !(await repo.getState(STATE_CONFIRMED))) await repo.setState(STATE_CONFIRMED, JSON.stringify(confirmed));
-    const pending: Publication = { asOf, calculatedAt: now, navPerShareMicros: evaluation.composition.navPerShareMicros, sharesOutstandingMicros, holdingsHash: evaluation.holdingsHash, canonical: evaluation.canonical, status: "queued", txHash: null, error: null };
+    const pending: Publication = { asOf, calculatedAt, navPerShareMicros: evaluation.composition.navPerShareMicros, sharesOutstandingMicros, holdingsHash: evaluation.holdingsHash, canonical: evaluation.canonical, status: "queued", txHash: null, error: null };
     // Content-addressed evidence survives a lost receipt. Documents are pruned with the
     // rolling history below, except for the latest confirmed one.
     await repo.setState(`${STATE_DOCUMENT_PREFIX}${pending.holdingsHash}`, JSON.stringify(pending));

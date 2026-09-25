@@ -172,3 +172,35 @@ test("prices no newer than the last record are not sent, and each publication ke
   assert.equal(settlement.requests.filter((request) => request.action === "publish_nav").length, navsBefore);
   assert.ok(result.warnings.some((warning) => /No price is newer than the last NAV record/.test(warning)));
 });
+
+test("a price answered after rate-limit retries is valued at the time it arrived", async (t) => {
+  // The request is limited twice and answered two minutes into the cycle, stamped then.
+  t.mock.timers.enable({ apis: ["Date"], now: Date.parse("2026-09-24T10:00:00.000Z") });
+  const repo = memoryRepo();
+  const addresses = addressesOf();
+  let asks = 0;
+  t.mock.method(globalThis, "fetch", async (...args) => {
+    if (String(args[0]).includes("testrpc.xlayer.tech")) return pricesFor(addresses)(...args);
+    asks += 1;
+    if (asks < 3) return new Response("error code: 1015", { status: 429 });
+    return pricesFor(addresses, "100", new Date().toISOString())(...args);
+  });
+  const settlement = settlementRecorder(() => ({ status: "confirmed", txHash: "0x1", error: null }));
+  await runXStocksCycle(configured(addresses), repo, settlement, "2026-09-24T10:00:00.000Z", { wait: async (ms) => { t.mock.timers.tick(ms); } });
+  const [first] = JSON.parse(repo.rows.get(STATE_HISTORY));
+  assert.equal(asks, 3);
+  assert.equal(first.status, "confirmed");
+  assert.equal(first.calculatedAt, "2026-09-24T10:02:00.000Z");
+  assert.equal(first.asOf, "2026-09-24T10:02:00.000Z");
+});
+
+test("prices quoted more than a minute apart are not recorded, with the reason", async (t) => {
+  const addresses = addressesOf();
+  const spread = (index) => index === 0 ? "2026-09-24T09:57:00.000Z" : "2026-09-24T09:59:30.000Z";
+  t.mock.method(globalThis, "fetch", async () => Response.json({ code: "0", data: addresses.map((item, index) => ({ chainIndex: "196", tokenContractAddress: item.address, price: "100", time: spread(index) })) }));
+  const repo = memoryRepo();
+  const settlement = settlementRecorder(() => ({ status: "confirmed", txHash: "0x1", error: null }));
+  const result = await runXStocksCycle(configured(addresses), repo, settlement, "2026-09-24T10:00:00.000Z");
+  assert.equal(result.navsPublished, 0);
+  assert.match(JSON.parse(repo.rows.get(STATE_LATEST)).blockers.join(" "), /Prices were quoted more than a minute apart/);
+});

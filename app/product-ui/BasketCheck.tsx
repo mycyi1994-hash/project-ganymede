@@ -33,7 +33,8 @@ export function useBasketCheck(path: string | null) {
           verifyBasket(config, { base: window.location.origin }),
           fetch(safe.replace(/basket\.json$/, "records.json"), { cache: "no-store" }).then(reply => reply.ok ? reply.json() : []).catch(() => []),
         ]);
-        if (!cancelled) setLoaded({ path: safe, config, check, records: Array.isArray(records) ? records : [], error: null });
+        const links = Array.isArray(records) ? records.filter((entry): entry is RecordLink => typeof entry?.holdingsHash === "string" && typeof entry?.transactionHash === "string" && /^0x[0-9a-f]{64}$/i.test(entry.transactionHash)) : [];
+        if (!cancelled) setLoaded({ path: safe, config, check, records: links, error: null });
       } catch (reason) {
         if (!cancelled) setLoaded({ path: safe, config: null, check: null, records: [], error: reason instanceof Error ? reason.message : "The basket could not be checked." });
       }
@@ -42,7 +43,8 @@ export function useBasketCheck(path: string | null) {
   }, [path, attempt]);
   const current = loaded?.path === basketConfigPath(path) ? loaded : null;
   const checks = current?.check ? [current.check.chain, current.check.hash, current.check.nav, current.check.definition] : [];
-  const state: BasketState = !basketConfigPath(path) ? "unavailable" : !current ? "loading" : current.error || !current.check ? "unavailable" : checks.some(check => check.state === "fail") ? "failed" : checks.every(check => check.state === "pass") ? "matched" : "waiting";
+  // The check has finished once it returns, so a step still pending means it could not be completed.
+  const state: BasketState = !basketConfigPath(path) ? "unavailable" : !current ? "loading" : current.error || !current.check ? "unavailable" : checks.some(check => check.state === "fail") ? "failed" : checks.every(check => check.state === "pass") ? "matched" : "unavailable";
   return { ...current, state, retry: () => { setLoaded(null); setAttempt(value => value + 1); } };
 }
 
@@ -64,7 +66,7 @@ export default function BasketCheckPanel({ path }: { path: string }) {
       <div><dt>Transaction</dt><dd>{transaction && explorer ? <a className="gmd-inline-tx" href={`${explorer}/tx/${transaction}`} target="_blank" rel="noreferrer">{short(transaction)}<Icon name="external" size={12} /><span className="gmd-sr-only"> on OKX Explorer (opens in a new tab)</span></a> : "—"}</dd></div>
     </dl>}
     <div className="gmd-check-list">{[{ title: "Direct chain read", check: check?.chain }, { title: "Document fingerprint", check: check?.hash }, { title: "Recalculated NAV", check: check?.nav }, { title: "Basket definition", check: check?.definition }].map(row => <article key={row.title}><div><b>{row.title}</b><span className={`gmd-status ${row.check?.state === "pass" ? "is-positive" : "is-waiting"}`}>{row.check?.state === "pass" ? "Matched" : row.check?.state === "fail" ? "Mismatch" : "Not yet verified"}</span></div><p>{row.check?.detail ?? "Waiting for evidence."}</p></article>)}</div>
-    {check?.composition && <div className="gmd-data-table-scroll"><table className="gmd-table"><thead><tr><th>xStock</th><th>Units per share</th><th>Pool price</th><th>Value</th></tr></thead><tbody>{check.composition.holdings.map(row => <tr key={row.symbol}><th scope="row">{row.symbol}</th><td>{formatUnits(row.unitsWad, 6)}</td><td>{formatUsdMicros(row.priceMicros, 2)}</td><td>{formatUsdMicros(row.valueMicros, 4)}</td></tr>)}</tbody></table></div>}
+    {check?.composition && <div className="gmd-data-table-scroll"><table className="gmd-table"><thead><tr><th>xStock</th><th>Units per share</th><th>Price</th><th>Value</th></tr></thead><tbody>{check.composition.holdings.map(row => <tr key={row.symbol}><th scope="row">{row.symbol}</th><td>{formatUnits(row.unitsWad, 6)}</td><td>{formatUsdMicros(row.priceMicros, 2)}</td><td>{formatUsdMicros(row.valueMicros, 4)}</td></tr>)}</tbody></table></div>}
   </div>;
 }
 
@@ -74,8 +76,8 @@ export function BasketBadge({ path, site }: { path: string | null; site: string 
   const record = check?.record?.effectiveAt ? check.record : null;
   return <div className="gmd-embed-card">
     <header><span className="gmd-embed-brand"><BrandMark />Ganymede</span><span className="gmd-embed-network">{config?.registry.network ?? "X Layer"}</span></header>
-    <div className="gmd-embed-product"><div className="gmd-product-monogram" aria-hidden="true"><i /><i /><i /><i /><i /><i /></div><div><h1>{config ? `${config.ticker} · ${config.name}` : basketConfigPath(path) ? "Loading the basket…" : "No basket configured"}</h1><small>{config ? config.constituents.map(row => row.symbol).join(", ") : " "}</small></div></div>
-    <div className="gmd-embed-nav"><span>NAV per share</span><strong>{record ? formatUsdMicros(record.navPerShareMicros, 4) : "—"}</strong><small>{record && config ? `Recorded in ${short(config.registry.address)} · ${shortTime(record.effectiveAt)}` : "Reading the record on X Layer…"}</small></div>
+    <div className="gmd-embed-product"><div className="gmd-product-monogram" aria-hidden="true"><i /><i /><i /><i /><i /><i /></div><div><h1>{config ? `${config.ticker} · ${config.name}` : !basketConfigPath(path) ? "No basket configured" : state === "loading" ? "Loading the basket…" : "Basket unavailable"}</h1><small>{config ? config.constituents.map(row => row.symbol).join(", ") : " "}</small></div></div>
+    <div className="gmd-embed-nav"><span>NAV per share</span><strong>{record ? formatUsdMicros(record.navPerShareMicros, 4) : "—"}</strong><small>{record && config ? `Recorded in ${short(config.registry.address)} · ${shortTime(record.effectiveAt)}` : state === "loading" ? "Reading the record on X Layer…" : "The record could not be checked just now."}</small></div>
     <footer>
       <a className={`gmd-check-chip is-${state}`} href={`${site}/developers#baskets`} target="_blank" rel="noreferrer" aria-live="polite">{state === "matched" ? <Icon name="check" size={15} /> : <i aria-hidden="true" />}<span>{LABEL[state]}</span></a>
     </footer>
