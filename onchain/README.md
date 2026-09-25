@@ -10,7 +10,7 @@ sources stay in `contracts/`.
 cd onchain
 npm install
 npm run build   # compile
-npm test        # 50 tests, no network needed
+npm test        # 60 tests, no network needed
 ```
 
 ## Keys
@@ -88,6 +88,20 @@ point at it:
 require(block.timestamp - updatedAt <= 1 hours, "stale NAV"); // records land every five minutes
 uint256 ustxInUsd8 = uint256(answer);                        // 8 decimals
 ```
+
+## USTX pool and NAV arbitrage
+
+```bash
+npm run deploy:pool
+```
+
+Deploys `GanymedeUstxPool` and `GanymedeNavArbitrage` next to the recorded
+fund, then seeds the pool from the administrator wallet: claim 10,000 demo
+dollars, invest $5,000 at the fund and add the USTX received with the same
+value in demo dollars, so the pool opens at the NAV. Each transaction carries
+its own nonce and gas limit, because a node behind the load-balanced RPC can lag
+the last receipt. The script records both addresses, their creation
+transactions and the seeding transaction.
 
 ## Lending market (written and tested, not deployed)
 
