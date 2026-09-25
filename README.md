@@ -34,7 +34,7 @@ Nothing needs a sign-up. Wallet orders are transactions on X Layer Testnet; ever
 ## For partners
 
 - **Public NAV API.** `GET /api/v1/ustx` returns the latest record read from X Layer at request time: NAV, shares outstanding, fingerprint, transaction and verification links. No key, CORS open to every origin.
-- **Market activity API.** `GET /api/v1/ustx/activity` returns the latest 40 market events (orders at the fund, pool trades, the keeper's arbitrage, loans) read from the contracts' logs on X Layer Testnet, with the block range they cover and the last 24 hours' figures.
+- **Market activity API.** `GET /api/v1/ustx/activity` returns the latest 40 market events (orders at the fund, pool trades, the keeper's arbitrage, loans) read from the contracts' logs on X Layer Testnet, with the block range they cover, the last 24 hours' figures, and highlights (every arbitrage and order of $1,000 or more) that the NAV chart marks.
 - **Embeddable badge.** `/embed/ustx` is an iframe any site or wallet can show. It verifies the NAV in the visitor's own browser before it says "Verified".
 - **Issuers.** [/issuers](https://ganymede-xlayer.gana003.workers.dev/issuers) explains how another tokenized-stock basket can launch on the same rails, with plans and a contact route. [/developers](https://ganymede-xlayer.gana003.workers.dev/developers) has the API, a viem example that reads the registry directly and the embed code.
 
