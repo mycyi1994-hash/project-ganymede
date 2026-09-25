@@ -33,7 +33,10 @@ instead:
   10^-18 of a token) and refuses the call if any token arrives short of the proportional amount, so a
   fee-on-transfer token cannot dilute the holders;
 - redemption pays the proportional amount rounded down less the same allowance, so rounding always
-  favours the shares that stay.
+  favours the shares that stay;
+- the first creation must be at least one whole share, and every creation names the most of each
+  token it will deliver, so no one can make shares expensive by creating a dust share and donating
+  to the vault.
 
 `onchain/test/GanymedeBasketVault.test.ts` covers these with a multiplier token like the xStocks
 (a 10% dividend reaches the redeemers; a 1% fee does not stop the last redemption), a
@@ -42,19 +45,19 @@ fee-on-transfer token and a donation.
 ## The run on 25 September 2026
 
 ```text
-forked X Layer mainnet at block 71591895 (2026-09-25T18:28:51.000Z), in memory only
+forked X Layer mainnet at block 71593193 (2026-09-25T18:50:29.000Z), in memory only
 
 1. bought on the X Layer pools and unwrapped
-   AAPLx  1.176753 for $400 USDG in pool 0xc44bd9c8589026d28d1632d7b86b2efb6cdc8fd2
-   MSFTx  0.771051 for $400 USDG in pool 0x66187278490a70a8ac26a6e159eb045f82dbfb57
-   NVDAx  1.781038 for $400 USDG in pool 0x2a2b11730c2b6d99a58034a869dd810d7300a7b2
+   AAPLx  1.176525 for $400 USDG in pool 0xc44bd9c8589026d28d1632d7b86b2efb6cdc8fd2
+   MSFTx  0.772065 for $400 USDG in pool 0x66187278490a70a8ac26a6e159eb045f82dbfb57
+   NVDAx  1.783307 for $400 USDG in pool 0x2a2b11730c2b6d99a58034a869dd810d7300a7b2
 
 2. vault deployed on the local fork with MAG3's units per share for the first creation
 
 3. created 10 shares by delivering MAG3's units × shares, rounded up, plus 4 base units:
-     AAPLx  0.981335 (981334569096697124 base units)
-     MSFTx  0.645733 (645732529530595283 base units)
-     NVDAx  1.483168 (1483168328965507174 base units)
+     AAPLx  0.981335 (981334569096697123 base units)
+     MSFTx  0.645733 (645732529530595284 base units)
+     NVDAx  1.483168 (1483168328965507173 base units)
    after creation: 10 shares outstanding
      AAPLx  held 0.981335, per share 0.098133 (MAG3 units 0.098133)
      MSFTx  held 0.645733, per share 0.064573 (MAG3 units 0.064573)

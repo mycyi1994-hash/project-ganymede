@@ -121,7 +121,7 @@ test("the publisher records a NAV only when OnchainOS agrees with the pools, and
 
   const wrong = await run((symbol) => symbol === "NVDAx" ? (BigInt(SNAPSHOT.NVDAx.micros) * 10n).toString() : SNAPSHOT[symbol].micros, read);
   assert.equal(wrong.requests.filter((request) => request.action === "publish_nav").length, 0);
-  assert.match(wrong.latest.blockers.join(" "), /The NAV at OnchainOS prices is \+\d+\.\d+% from its value at the X Layer pools at block 71588383, beyond 1% \(widest: NVDAx −90\.00%\)/);
+  assert.match(wrong.latest.blockers.join(" "), /The NAV at the X Layer pools \(block 71588383\) is −\d+\.\d+% from the NAV at OnchainOS prices, beyond 1% \(widest: NVDAx pool −90\.00%\)/);
 
   const unreadable = await run((symbol) => SNAPSHOT[symbol].micros, async () => { throw new Error("X Layer RPC 503"); });
   assert.deepEqual(unreadable.latest.blockers, []);

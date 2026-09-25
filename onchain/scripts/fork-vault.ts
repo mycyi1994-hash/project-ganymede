@@ -82,7 +82,7 @@ async function main() {
   for (const token of addresses) await creator.writeContract({ address: token, abi: erc20, functionName: "approve", args: [vault.address, maxUint256] });
   const [, createIn] = await vault.read.amountsFor([SHARES]);
   const before = await Promise.all(addresses.map((token) => balance(token, creator.account.address)));
-  await vault.write.create([SHARES]);
+  await vault.write.create([SHARES, createIn]);
   const after = await Promise.all(addresses.map((token) => balance(token, creator.account.address)));
   console.log(`\n3. created ${formatUnits(SHARES, 6)} shares by delivering MAG3's units × shares, rounded up, plus ${await vault.read.ROUNDING_ALLOWANCE()} base units:`);
   for (const [index, row] of basket.constituents.entries()) {

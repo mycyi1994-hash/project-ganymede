@@ -10,7 +10,7 @@ sources stay in `contracts/`.
 cd onchain
 npm install
 npm run build   # compile
-npm test        # 62 tests, no network needed
+npm test        # 69 tests, no network needed
 ```
 
 ## Keys
@@ -166,7 +166,7 @@ transaction.
 `GanymedeBasketVault` creates and redeems a basket token in kind: shares are created only by
 delivering the constituents, the first creation at a fixed quantity per share and later ones in
 proportion to the holdings, and redeemed for a proportional share of them (rules in
-`../contracts/README.md`; 6 tests in `test/GanymedeBasketVault.test.ts`, including a multiplier
+`../contracts/README.md`; 7 tests in `test/GanymedeBasketVault.test.ts`, including a multiplier
 token like the xStocks). It is not deployed. Run it against the real xStocks:
 
 ```bash
@@ -197,6 +197,10 @@ and runtime bytecode) on Sourcify:
 | `GanymedeNavArbitrage` | [verified](https://web3.okx.com/explorer/x-layer-testnet/address/0xaeba15aa92d6f3109e2b992f18933e1abe2fa3d9) | [exact match](https://repo.sourcify.dev/1952/0xaeba15aa92d6f3109e2b992f18933e1abe2fa3d9) |
 | `GanymedeNavFeed` (USTX / USD) | [verified](https://web3.okx.com/explorer/x-layer-testnet/address/0x292c56c5290cc7b73e3ee33c2c2688eb3e04c3c8) | [exact match](https://repo.sourcify.dev/1952/0x292c56c5290cc7b73e3ee33c2c2688eb3e04c3c8) |
 | `GanymedeLendingMarket` | [verified](https://web3.okx.com/explorer/x-layer-testnet/address/0xae2f54ae3d0370295de18510d56de92afb8843c7) | [exact match](https://repo.sourcify.dev/1952/0xae2f54ae3d0370295de18510d56de92afb8843c7) |
+
+MAG3's registry, a second `GanymedeNavRegistry` deployed by the demo issuer wallet at
+[`0xf412ba3857f63f513b93c4a8e3cacc1f162daa60`](https://web3.okx.com/explorer/x-layer-testnet/address/0xf412ba3857f63f513b93c4a8e3cacc1f162daa60),
+also matches exactly on [Sourcify](https://repo.sourcify.dev/1952/0xf412ba3857f63f513b93c4a8e3cacc1f162daa60).
 
 To verify a new deployment, pick one of the options below.
 

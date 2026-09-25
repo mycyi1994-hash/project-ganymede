@@ -20,8 +20,10 @@ interface IVaultToken {
 ///      them or leaving the vault short. Creation takes the proportional amount rounded up plus
 ///      ROUNDING_ALLOWANCE and refuses a call in which any token arrives short of the proportional
 ///      amount, so a fee-on-transfer token cannot dilute holders; redemption pays the proportional
-///      amount rounded down less ROUNDING_ALLOWANCE. Not deployed: it runs against the real xStocks
-///      on a fork of X Layer mainnet (npm run fork:vault).
+///      amount rounded down less ROUNDING_ALLOWANCE. The first creation must be at least one whole
+///      share, and every creation names the most of each token it will deliver, so no one can make
+///      shares expensive by creating a dust share and donating to the vault. Not deployed: it runs
+///      against the real xStocks on a fork of X Layer mainnet (npm run fork:vault).
 contract GanymedeBasketVault {
     uint8 public constant decimals = 6;
     uint256 public constant SHARE = 1e6;
@@ -50,6 +52,7 @@ contract GanymedeBasketVault {
     error InsufficientBalance();
     error InsufficientAllowance();
     error TransferFailed();
+    error ExceedsMaximum();
     error Reentrancy();
 
     modifier nonReentrant() {
@@ -108,11 +111,14 @@ contract GanymedeBasketVault {
     }
 
     /// @notice Delivers each constituent's share of the holdings for `shares` (approve each token
-    ///         first) and mints the shares.
-    function create(uint256 shares) external nonReentrant returns (uint256[] memory amounts) {
-        if (shares == 0) revert InvalidAmount();
+    ///         first) and mints the shares. `maxAmounts` is the most of each token the caller will
+    ///         deliver, in token order, as `amountsFor` quotes it.
+    function create(uint256 shares, uint256[] calldata maxAmounts) external nonReentrant returns (uint256[] memory amounts) {
+        if (shares == 0 || (totalSupply == 0 && shares < SHARE)) revert InvalidAmount();
+        if (maxAmounts.length != _tokens.length) revert InvalidAmount();
         uint256[] memory owed;
         (owed, amounts, ) = amountsFor(shares);
+        for (uint256 i = 0; i < amounts.length; i++) if (amounts[i] > maxAmounts[i]) revert ExceedsMaximum();
         for (uint256 i = 0; i < amounts.length; i++) {
             address token = _tokens[i];
             uint256 before = IVaultToken(token).balanceOf(address(this));

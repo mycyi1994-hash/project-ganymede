@@ -198,10 +198,11 @@ async function poolDisagreement(composition: Composition, warnings: string[], re
   }
   if (comparison.agrees) return null;
   const widest = comparison.rows.reduce((a, b) => (Math.abs(b.differenceBps) > Math.abs(a.differenceBps) ? b : a));
-  return `The NAV at OnchainOS prices is ${formatDifference(-comparison.navDifferenceBps)} from its value at the X Layer pools at block ${pools.blockNumber}, beyond ${POOL_TOLERANCE.navBps / 100}% (widest: ${widest.symbol} ${formatDifference(widest.differenceBps)})`;
+  return `The NAV at the X Layer pools (block ${pools.blockNumber}) is ${formatDifference(comparison.navDifferenceBps)} from the NAV at OnchainOS prices, beyond ${POOL_TOLERANCE.navBps / 100}% (widest: ${widest.symbol} pool ${formatDifference(widest.differenceBps)})`;
 }
 
-export async function runXStocksCycle(env: EngineEnv, repo: EngineRepository, settlementClient: SettlementClient, now = new Date().toISOString(), sources: { poolPrices?: () => Promise<PoolPrices>; wait?: (ms: number) => Promise<void> } = {}): Promise<XStocksCycleResult> {
+export async function runXStocksCycle(env: EngineEnv, repo: EngineRepository, settlementClient: SettlementClient, now = new Date().toISOString(), sources: { poolPrices?: () => Promise<PoolPrices>; wait?: (ms: number) => Promise<void>; renewLease?: () => Promise<boolean> } = {}): Promise<XStocksCycleResult> {
+  const cycleStarted = Date.now();
   // Reconciling earlier attempts needs no prices, so it runs even during a provider cooldown.
   let settlementsQueued = await reconcileUnresolved(repo, settlementClient);
   const previousLatest = JSON.parse((await repo.getState(STATE_LATEST))?.value ?? "null") as LatestState | null;
@@ -213,11 +214,15 @@ export async function runXStocksCycle(env: EngineEnv, repo: EngineRepository, se
     return { navsPublished: 0, settlementsQueued, warnings: [`GMD USTX price provider cooldown until ${previousLatest!.retryAt}`] };
   }
   const constituents = constituentsWithAddresses(env.XSTOCKS_ADDRESSES);
-  const fetchStarted = Date.now();
   const { quotes, warnings, retryAt } = await fetchXStockQuotes(onchainOsCredentials(env), constituents, undefined, sources.wait);
-  // A rate-limited request can be answered a minute or two into the cycle, with quotes stamped then.
-  // The calculation happens after they arrive, so its time moves on by the whole seconds spent waiting.
-  const calculatedAt = new Date(Date.parse(now) + Math.floor((Date.now() - fetchStarted) / 1000) * 1000).toISOString();
+  // Reconciling earlier attempts and a rate-limited request can take a minute or two, and quotes are
+  // stamped when they arrive. The calculation happens then, so its time moves on by the whole seconds
+  // the cycle has run.
+  const calculatedAt = new Date(Date.parse(now) + Math.floor((Date.now() - cycleStarted) / 1000) * 1000).toISOString();
+  // Waiting for prices can outlast the job lease; renew it before any write so cycles never overlap.
+  if (sources.renewLease && !(await sources.renewLease())) {
+    return { navsPublished: 0, settlementsQueued, warnings: [...warnings, `${XSTOCKS_PRODUCT.ticker} lease lost while waiting for prices; stopped before writing`] };
+  }
   const previous = deserializeBasket((await repo.getState(STATE_BASKET))?.value);
   const evaluation = await evaluateBasket({ constituents, quotes, previous, now: calculatedAt, maxQuoteAgeMinutes: maxQuoteAgeMinutes(env) });
 
@@ -257,7 +262,7 @@ export async function runXStocksCycle(env: EngineEnv, repo: EngineRepository, se
 
     if (evaluation.rebalanced) {
       const canonical = basketDocument(evaluation.basket);
-      const evidence: RebalanceEvidence = { fixedAt: evaluation.basket.fixedAt, effectiveAt: now, canonical, holdingsHash: await sha256Hex(canonical), status: "queued", txHash: null, error: null };
+      const evidence: RebalanceEvidence = { fixedAt: evaluation.basket.fixedAt, effectiveAt: calculatedAt, canonical, holdingsHash: await sha256Hex(canonical), status: "queued", txHash: null, error: null };
       await repo.setState(STATE_REBALANCE, JSON.stringify(evidence));
       const request = rebalanceRequest(evidence);
       const settlement = await settlementClient.settle(request);

@@ -129,6 +129,11 @@ export async function verifyEvidence(bundle: EvidenceBundle, options: { offline?
       return results;
     }
     const latest = await readLatestNav(options.rpcUrl ?? PROOF_DEPLOYMENT.rpcUrl, PROOF_DEPLOYMENT.registry, { chainId: PROOF_DEPLOYMENT.chainId, fetcher: options.fetcher });
+    const lateClaim = Boolean(latest.publishedAt) && Date.parse(bundle.record.effectiveAt) > Date.parse(latest.publishedAt!) + PRICE_CLOCK_TOLERANCE_MS;
+    if (lateClaim && latest.holdingsHash.toLowerCase() === bundle.record.holdingsHash.toLowerCase()) {
+      results.push({ label: "X Layer record", state: "fail", detail: "The record claims a time later than the block that wrote it." });
+      return results;
+    }
     const same = latest.holdingsHash.toLowerCase() === bundle.record.holdingsHash.toLowerCase() && latest.navPerShareMicros === bundle.record.navPerShareMicros && Boolean(latest.effectiveAt) && sameSecond(latest.effectiveAt!, bundle.record.effectiveAt);
     results.push(same
       ? { label: "X Layer record", state: "pass", detail: "The registry's latest record equals the file's record." }

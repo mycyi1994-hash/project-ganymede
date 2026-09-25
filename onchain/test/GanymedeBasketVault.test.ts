@@ -51,7 +51,7 @@ describe("GanymedeBasketVault", () => {
       expect(createIn[index]).to.equal(owed[index] + ALLOWANCE);
     });
     const before = await Promise.all(tokens.map((token) => token.read.balanceOf([creator.account.address])));
-    await vault.write.create([shares], { account: creator.account });
+    await vault.write.create([shares, (await vault.read.amountsFor([shares]))[1]], { account: creator.account });
     const after = await Promise.all(tokens.map((token) => token.read.balanceOf([creator.account.address])));
     tokens.forEach((_, index) => expect(before[index] - after[index]).to.equal(createIn[index]));
     expect(await held()).to.deep.equal(createIn);
@@ -61,7 +61,7 @@ describe("GanymedeBasketVault", () => {
     const holdings = await held();
     const [nextOwed] = await vault.read.amountsFor([shares]);
     holdings.forEach((amount, index) => expect(nextOwed[index]).to.equal((amount * shares + shares - 1n) / shares));
-    await vault.write.create([shares], { account: other.account });
+    await vault.write.create([shares, (await vault.read.amountsFor([shares]))[1]], { account: other.account });
     const perShare = await vault.read.holdingsPerShare();
     // Both holders now own the same holdings per share, the donation included.
     expect(perShare[0] >= ((holdings[0] * SHARE) / shares)).to.equal(true);
@@ -69,7 +69,7 @@ describe("GanymedeBasketVault", () => {
 
   it("redeems each holder's share of the holdings, a donation included", async () => {
     const { vault, creator, other, tokens, held } = await deploy();
-    await vault.write.create([10n * SHARE], { account: creator.account });
+    await vault.write.create([10n * SHARE, (await vault.read.amountsFor([10n * SHARE]))[1]], { account: creator.account });
     await vault.write.transfer([other.account.address, 4n * SHARE], { account: creator.account });
     // Something paid to the vault, like a dividend through a token's multiplier, belongs to the shares.
     await tokens[1].write.transfer([vault.address, 5_000_000n], { account: creator.account });
@@ -96,7 +96,7 @@ describe("GanymedeBasketVault", () => {
     const vault = await hre.viem.deployContract("GanymedeBasketVault", ["Multiplier", "MUL", [token.address], [10n ** 18n]]);
     await token.write.approve([vault.address, maxUint256], { account: creator.account });
     await token.write.setMultiplier([1_003_269_012_539_818_700n]); // AAPLx's multiplier on 25 September 2026
-    await vault.write.create([10n * SHARE], { account: creator.account });
+    await vault.write.create([10n * SHARE, (await vault.read.amountsFor([10n * SHARE]))[1]], { account: creator.account });
     await vault.write.transfer([other.account.address, 5n * SHARE], { account: creator.account });
     // A 10% dividend reaches the holders instead of staying in the vault...
     await token.write.setMultiplier([1_103_595_913_793_800_570n]);
@@ -110,17 +110,33 @@ describe("GanymedeBasketVault", () => {
     expect((await token.read.balanceOf([vault.address])) <= 3n * ALLOWANCE).to.equal(true);
   });
 
+  it("needs a whole first share and honours each creation's maximum amounts", async () => {
+    const { vault, creator, other, tokens } = await deploy();
+    const [, quote] = await vault.read.amountsFor([SHARE]);
+    // A dust first share, which a donation could then make expensive, is refused.
+    await expect(vault.write.create([SHARE - 1n, quote], { account: creator.account })).to.be.rejectedWith("InvalidAmount");
+    await expect(vault.write.create([SHARE, quote.slice(1)], { account: creator.account })).to.be.rejectedWith("InvalidAmount");
+    await vault.write.create([SHARE, quote], { account: creator.account });
+    // After a donation, a creator who quoted before it is protected by their maximums.
+    const [, stale] = await vault.read.amountsFor([SHARE]);
+    await tokens[0].write.transfer([vault.address, 5_000_000n], { account: other.account });
+    await expect(vault.write.create([SHARE, stale], { account: other.account })).to.be.rejectedWith("ExceedsMaximum");
+    const [, fresh] = await vault.read.amountsFor([SHARE]);
+    await vault.write.create([SHARE, fresh], { account: other.account });
+    expect(await vault.read.totalSupply()).to.equal(2n * SHARE);
+  });
+
   it("rejects zero amounts, overdrafts, missing approvals, transfers to the vault and from the zero address", async () => {
     const { vault, creator, other, tokens } = await deploy();
-    await expect(vault.write.create([0n], { account: creator.account })).to.be.rejectedWith("InvalidAmount");
-    await vault.write.create([SHARE], { account: creator.account });
+    await expect(vault.write.create([0n, [0n, 0n, 0n]], { account: creator.account })).to.be.rejectedWith("InvalidAmount");
+    await vault.write.create([SHARE, (await vault.read.amountsFor([SHARE]))[1]], { account: creator.account });
     await expect(vault.write.redeem([SHARE + 1n], { account: creator.account })).to.be.rejectedWith("InsufficientBalance");
     await expect(vault.write.redeem([0n], { account: creator.account })).to.be.rejectedWith("InvalidAmount");
     await expect(vault.write.transfer([vault.address, 1n], { account: creator.account })).to.be.rejectedWith("InvalidAmount");
     await expect(vault.write.transferFrom([zeroAddress, other.account.address, 0n], { account: other.account })).to.be.rejectedWith("InvalidAmount");
     await expect(vault.write.transferFrom([creator.account.address, other.account.address, 1n], { account: other.account })).to.be.rejectedWith("InsufficientAllowance");
     await tokens[1].write.approve([vault.address, 0n], { account: other.account });
-    await expect(vault.write.create([SHARE], { account: other.account })).to.be.rejectedWith("TransferFailed");
+    await expect(vault.write.create([SHARE, (await vault.read.amountsFor([SHARE]))[1]], { account: other.account })).to.be.rejectedWith("TransferFailed");
   });
 
   it("refuses a token that delivers less than owed, even when a donation leaves a surplus", async () => {
@@ -130,6 +146,6 @@ describe("GanymedeBasketVault", () => {
     await tokens[0].write.approve([vault.address, maxUint256], { account: creator.account });
     await taxed.write.approve([vault.address, maxUint256], { account: creator.account });
     await taxed.write.transfer([vault.address, 10n ** 20n], { account: creator.account });
-    await expect(vault.write.create([SHARE], { account: creator.account })).to.be.rejectedWith("TransferFailed");
+    await expect(vault.write.create([SHARE, (await vault.read.amountsFor([SHARE]))[1]], { account: creator.account })).to.be.rejectedWith("TransferFailed");
   });
 });

@@ -70,8 +70,9 @@ export async function GET(request: Request) {
         source: "OKX OnchainOS", chain: XSTOCKS_CHAIN.name, chainIndex: XSTOCKS_CHAIN.chainIndex, interval: "5 minutes",
         // The second source every record is compared with, so a partner can repeat the comparison from the chain.
         crossCheck: {
-          source: "Uniswap V3 pools on X Layer mainnet", factory: POOL_FACTORY, fee: POOL_FEE,
+          source: "Uniswap V3 pools on X Layer mainnet", factory: POOL_FACTORY, feeTier: POOL_FEE,
           toleranceBps: { nav: POOL_TOLERANCE.navBps },
+          rule: "A NAV is not recorded if its value at the pool prices differs by more than toleranceBps.nav; the limit applies to the NAV only, and when the pools cannot be read the record goes ahead with a warning. feeTier is the Uniswap V3 fee tier in hundredths of a basis point (500 = 0.05%).",
           pools: XSTOCK_POOLS.map((entry) => ({ symbol: entry.symbol, pool: entry.pool, wrapper: entry.wrapper, quote: entry.stable.symbol })),
         },
       },

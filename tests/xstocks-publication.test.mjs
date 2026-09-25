@@ -204,3 +204,15 @@ test("prices quoted more than a minute apart are not recorded, with the reason",
   assert.equal(result.navsPublished, 0);
   assert.match(JSON.parse(repo.rows.get(STATE_LATEST)).blockers.join(" "), /Prices were quoted more than a minute apart/);
 });
+
+test("a cycle that loses its lease while waiting for prices stops before writing", async (t) => {
+  const repo = memoryRepo();
+  const addresses = addressesOf();
+  t.mock.method(globalThis, "fetch", pricesFor(addresses, "100", "2026-09-24T10:00:00.000Z"));
+  const settlement = settlementRecorder(() => ({ status: "confirmed", txHash: "0x1", error: null }));
+  const result = await runXStocksCycle(configured(addresses), repo, settlement, "2026-09-24T10:00:00.000Z", { renewLease: async () => false });
+  assert.equal(result.navsPublished, 0);
+  assert.equal(settlement.requests.length, 0);
+  assert.match(result.warnings.join(" "), /lease lost while waiting for prices/);
+  assert.equal(repo.rows.get(STATE_LATEST), undefined);
+});
