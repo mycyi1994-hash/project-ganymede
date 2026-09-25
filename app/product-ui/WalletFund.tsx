@@ -62,7 +62,7 @@ export function WalletFundPosition({ address }: { address: string }) {
             <div className="gmd-position-name"><span className="gmd-mini-monogram">G</span><div><b>US Tech Basket</b><small>USTX · collateral in the lending market</small></div></div>
             <div><span className="gmd-mobile-label">Shares</span><b>{formatShares(collateral)}</b><small>{nav !== null ? `${formatUsdMicros(nav, 4)} / share` : ""}</small></div>
             <div><span className="gmd-mobile-label">Value</span><b>{position ? formatUsdRounded(position.valueMicros) : "—"}</b><small>{position ? `Borrow limit ${formatUsdMicros(position.borrowLimitMicros, 2)}` : ""}</small></div>
-            <div><span className="gmd-mobile-label">Borrowed</span><b>{formatUsdMicros(debt, 2)}</b><small>{debt > 0n && position ? `borrowed · ${formatWadPercent(position.loanToValueWad)} of its value, liquidated above 65%` : "No loan"}</small></div>
+            <div><span className="gmd-mobile-label">Loan</span><b>{formatUsdMicros(debt, 2)}</b><small>{debt > 0n && position ? `borrowed · ${formatWadPercent(position.loanToValueWad)} of its value, liquidated above 65%` : "No loan"}</small></div>
             <div className="gmd-position-actions"><Link className="gmd-small-button" prefetch={false} href="/products/ustx#borrow">Manage</Link></div>
           </div>}
         </div>
