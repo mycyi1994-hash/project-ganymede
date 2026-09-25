@@ -5,17 +5,19 @@
 The public UI presents USTX as a live fund service, laid out like a production
 DeFi app: one testnet notice and the network and "Connect OKX Wallet" in the
 header; Markets; the USTX page (order panel with wallet and demo-balance investing, wallet orders routed to the fund or the pool at the better price, borrowing against USTX, fund
-overview with the price oracle and the pool's market price, factsheet holdings, About); Portfolio (the demo
+overview with the price oracle and the pool's market price, market activity from the contracts' events, factsheet holdings, About); Portfolio (the demo
 balance and the wallet's USTX, including any posted as lending collateral with its loan, looked through to each xStock, and valuation of
 any wallet's xStocks on X Layer mainnet); and Transparency (the customer proof page). Keep pitch and developer
 material out of those screens: the technical checks, the tamper experiment and
 the evidence download (re-checked by `npm run verify:evidence`) live on
 `/developers`, which with `/issuers`, the `/embed/ustx` badge and the public
-`GET /api/v1/ustx` forms the partner surface linked from the footer. The
+`GET /api/v1/ustx` (with `GET /api/v1/ustx/activity`) forms the partner surface linked from the footer. The
 GMDCORE test ledger page (`/activity`) and the paper Lab are earlier work and
 stay out of the navigation. Production is the `ganymede-xlayer` Worker; the
 settlement relayer is `ganymede-settlement-relayer`, and the arbitrage keeper is
-`ganymede-arbitrage-keeper` (`relayer/wrangler.keeper.jsonc`).
+`ganymede-arbitrage-keeper` (`relayer/wrangler.keeper.jsonc`). The app Worker has two
+crons: the engine cycle and NAV record every five minutes, and the market activity
+index (`lib/xstocks/activity-index.ts`) four minutes past, apart so it never holds up the NAV.
 `docs/PRODUCT_RELEASE.md` records the current source and Worker version.
 
 Investing uses demo dollars with no value, in two ways. Wallet investing

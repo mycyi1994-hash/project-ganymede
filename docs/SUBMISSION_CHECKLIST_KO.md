@@ -263,7 +263,7 @@ Investors who want diversified exposure to tokenized US stocks with prices they 
 - X Layer Testnet: GanymedeNavFeed serves the USTX NAV through the Chainlink AggregatorV3Interface (8 decimals), so other X Layer contracts can read it without custom code.
 - X Layer Testnet: USTX trades on a USTX/dUSD pool (GanymedeUstxPool), and GanymedeNavArbitrage closes the pool's gap to the NAV through the fund in one transaction, like ETF creation and redemption; a keeper checks every five minutes and runs it when closing the gap earns at least a cent (keeper wallet `0xccf372068496d9bef0f7cf83d697183d358dec1b`; one run closed a 6.02% gap to 0.29%), and the USTX page shows the market price and its premium or discount.
 - OKX Wallet: signs the claim, approve, invest and redeem transactions on X Layer Testnet from the USTX page; Portfolio reads its balances.
-- Public NAV API and embeddable badge: other X Layer apps can read or show the verified NAV.
+- Public NAV API and embeddable badge: other X Layer apps can read or show the verified NAV. The market activity API and the USTX page list the latest investments, pool trades, keeper arbitrage and loans read from the contracts' events, each linked to the OKX explorer.
 ```
 
 **Contract addresses and technical links**
