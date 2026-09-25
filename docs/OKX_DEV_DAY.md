@@ -39,7 +39,7 @@ Ganymede sells USTX, the US Tech Basket: one share holds six tokenized US tech s
 - USTX share token (X Layer Testnet): https://web3.okx.com/explorer/x-layer-testnet/address/0x77eaeba1366bde7818da12d3cbdbea0a2ee97596
 - dUSD demo dollars (X Layer Testnet, no value): https://web3.okx.com/explorer/x-layer-testnet/address/0xf07535080f74e8b0f571e58dfa600f47e72ea9bf
 - USTX NAV feed in the Chainlink `AggregatorV3Interface` (X Layer Testnet): https://web3.okx.com/explorer/x-layer-testnet/address/0x292c56c5290cc7b73e3ee33c2c2688eb3e04c3c8
-- Source verification: all four X Layer Testnet contracts are verified on the OKX explorer and match exactly on Sourcify, for example USTX at https://repo.sourcify.dev/1952/0x77eaeba1366bde7818da12d3cbdbea0a2ee97596
+- Source verification: all five X Layer Testnet contracts are verified on the OKX explorer and match exactly on Sourcify, for example USTX at https://repo.sourcify.dev/1952/0x77eaeba1366bde7818da12d3cbdbea0a2ee97596
 
 The registry also carries NAV records for the earlier paper strategies under a different product key; the USTX check reads only the USTX key. The legacy GMDCORE test share ledger (`0x68c4e8c904b3eddb1146ef52a76a0a2755a55b59`, supply zero) remains readable at `/activity` but is not part of the product journey. Old links (`/proof`, `/?app=select`, `/?app=portfolio`, `/etfs/...`) redirect. A historical deployment or transaction alone is not a claim of current health.
 
@@ -63,7 +63,7 @@ Ganymede began in July 2026 as a Korean-won crypto strategy engine with Upbit ma
 | Look-through basket, fund overview, shares outstanding on X Layer, public NAV API, embeddable badge, issuer and developer pages | [0c38037](https://github.com/mycyi1994-hash/project-ganymede/commit/0c38037), [23d35d2](https://github.com/mycyi1994-hash/project-ganymede/commit/23d35d2) |
 | Wallet investing on X Layer Testnet: demo dollars and the USTX share contract priced by the registry, wallet order panel, wallet shares in each NAV record | [2fed796](https://github.com/mycyi1994-hash/project-ganymede/commit/2fed796), [7b334e4](https://github.com/mycyi1994-hash/project-ganymede/commit/7b334e4), [bc3bf08](https://github.com/mycyi1994-hash/project-ganymede/commit/bc3bf08) |
 | USTX-collateral lending market, written and tested and run against the live contracts on a local fork (not deployed); all four contracts source-verified on the OKX explorer and Sourcify | [8706a43](https://github.com/mycyi1994-hash/project-ganymede/commit/8706a43) |
-| USTX NAV feed in the Chainlink `AggregatorV3Interface`, deployed on X Layer Testnet | [beff92f](https://github.com/mycyi1994-hash/project-ganymede/commit/beff92f) |
+| USTX NAV feed in the Chainlink `AggregatorV3Interface`, deployed on X Layer Testnet and shown on the developer page and in the public API | [beff92f](https://github.com/mycyi1994-hash/project-ganymede/commit/beff92f), [e36c7a3](https://github.com/mycyi1994-hash/project-ganymede/commit/e36c7a3) |
 
 ## Evidence aligned with judging
 
