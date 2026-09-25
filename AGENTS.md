@@ -14,7 +14,8 @@ the evidence download (re-checked by `npm run verify:evidence`) live on
 `GET /api/v1/ustx` forms the partner surface linked from the footer. The
 GMDCORE test ledger page (`/activity`) and the paper Lab are earlier work and
 stay out of the navigation. Production is the `ganymede-xlayer` Worker; the
-settlement relayer is `ganymede-settlement-relayer`.
+settlement relayer is `ganymede-settlement-relayer`, and the arbitrage keeper is
+`ganymede-arbitrage-keeper` (`relayer/wrangler.keeper.jsonc`).
 `docs/PRODUCT_RELEASE.md` records the current source and Worker version.
 
 Investing uses demo dollars with no value, in two ways. Wallet investing
@@ -27,7 +28,8 @@ on chain. Each NAV record carries the shares outstanding in wallets plus demo
 balances. `GanymedeNavFeed` serves the registry's USTX NAV to other contracts in
 the Chainlink `AggregatorV3Interface`; it has no owner. USTX also trades on
 `GanymedeUstxPool` (USTX/dUSD, constant product), and `GanymedeNavArbitrage`
-closes the pool's gap to the NAV through the fund in one transaction.
+closes the pool's gap to the NAV through the fund in one transaction; the keeper
+checks every five minutes and sends that trade when it earns at least a cent.
 `GanymedeLendingMarket` (dUSD loans against USTX) is written and tested but not
 deployed and not in the app; it starts paused, and deploying or unpausing it
 needs the user's approval.
