@@ -96,7 +96,10 @@ Deployed: the pool at [`0x286f5e7ffdbc30db12665d7a3854217d7cd05cc1`](https://web
 [`0xaeba15aa92d6f3109e2b992f18933e1abe2fa3d9`](https://web3.okx.com/explorer/x-layer-testnet/address/0xaeba15aa92d6f3109e2b992f18933e1abe2fa3d9). In [an arbitrage on X Layer
 Testnet](https://web3.okx.com/explorer/x-layer-testnet/tx/0x3c604c934a1ef7576a173e0b513c419ad89376f1c6bea17464f8c5afbb9f6c2e) a seller had pushed the pool 17.3% below the NAV;
 `buyAndRedeem` put in $447.82, got back $491.80 and left the pool 0.27% below
-the NAV, inside the 0.3% fee.
+the NAV, inside the 0.3% fee. The arbitrage keeper (`relayer/src/keeper.ts`)
+sends the same trade on its own: after a sale left the pool 6.02% below the NAV,
+[its next run](https://web3.okx.com/explorer/x-layer-testnet/tx/0xbec5c89a1546e65c1f03a4131c85c1ef50e1ac9e3f4e6e09f929b33f7c33d26f)
+put in $145.92, got back $150.30 and left the pool 0.29% below the NAV.
 
 ```bash
 npm run deploy:pool

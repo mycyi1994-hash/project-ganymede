@@ -171,6 +171,12 @@ quotes again after either; a trade that is no longer profitable when it lands
 reverts in the contract. The wallet holds only testnet OKB for gas and no-value
 demo dollars, and logs never carry the RPC URL.
 
+The keeper wallet is
+[`0xccf372068496d9bef0f7cf83d697183d358dec1b`](https://web3.okx.com/explorer/x-layer-testnet/address/0xccf372068496d9bef0f7cf83d697183d358dec1b).
+After a sale left the pool 6.02% below the NAV, its next run
+[bought $145.92 of USTX in the pool and redeemed it for $150.30](https://web3.okx.com/explorer/x-layer-testnet/tx/0xbec5c89a1546e65c1f03a4131c85c1ef50e1ac9e3f4e6e09f929b33f7c33d26f),
+leaving the pool 0.29% below the NAV.
+
 ```bash
 npx wrangler deploy -c wrangler.keeper.jsonc
 npx wrangler secret put KEEPER_PRIVATE_KEY -c wrangler.keeper.jsonc  # a fresh key funded with testnet OKB
