@@ -269,10 +269,10 @@ AI-assisted development tools were used. The team reviewed the work and is respo
 
 1. **자기가 올린 문서를 자기가 기록하는 것 아닌가? (self-attestation)**
    > Yes, the publisher records its own document. The point is that it cannot change it afterwards without being caught: the fingerprint and time are fixed on X Layer, and anyone checks them directly over public RPC, not through our server. Whether the prices are right is a separate question; we say so on the page.
-2. **왜 테스트넷인가?**
-   > The NAV records are test records, so nothing of value depends on them yet. The prices and the xStock balances are real X Layer mainnet data. Moving the registry to mainnet is the first next step.
+2. **왜 테스트넷인가?** (Builder Kit은 제품 링크로 "live deployment or test environment where applicable"를 받고, 결선에는 "Working prototype"을 요구한다. 메인넷 의무는 없다.)
+   > The builder kit asks for a live deployment or a test environment, and a working prototype. xStocks trade on X Layer mainnet, and holding them for investors needs real money, custody and a licensed issuer, which a prototype should not handle. So the prices, the six token contracts and any wallet's xStock balances are real X Layer mainnet data, and the market built on them, the fund, pool, arbitrage, lending and NAV feed, runs on X Layer Testnet with demo dollars that have no value. Moving the registry and the fund to mainnet with an issuer is the next step.
 3. **대회 전과 무엇이 다른가? (기존 프로젝트)**
-   > Before the event it was a Korean-won crypto strategy engine on another testnet. Everything shown in this demo was built during the build period: X Layer settlement, the xStocks basket, verification, the experiment, evidence files and Portfolio. It reuses our earlier engine cycle, NAV registry contract and relayer, and docs/BUILD_PERIOD.md separates the two commit by commit.
+   > Before the event it was a Korean-won crypto strategy engine on another testnet. Everything shown in this demo was built during the build period: X Layer settlement, the xStocks basket, verification, the experiment, evidence files and Portfolio. It reuses our earlier engine's database and job lease, the NAV registry contract and the relayer, and docs/BUILD_PERIOD.md separates the two commit by commit.
 4. **GMDCORE 소스에 "for GIWA settlement"라고 적혀 있다.**
    > GMDCORE is a share-ledger contract from our earlier settlement work, redeployed to X Layer Testnet. Its supply is zero and it is not part of USTX.
 5. **USTX를 살 수 있나?**
