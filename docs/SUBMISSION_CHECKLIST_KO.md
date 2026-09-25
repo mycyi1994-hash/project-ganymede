@@ -225,15 +225,15 @@
 3. Core integration: the OKX OnchainOS Market API prices the xStocks on X Layer mainnet; our X Layer Testnet contracts record each NAV and run the fund, the USTX/dUSD pool, the arbitrage, the lending market and a Chainlink-style NAV feed; OKX Wallet signs every on-chain order, and every record and trade links to the OKX explorer. Partners get a public API and a self-verifying badge.
 ```
 10. **Repository Link\***: `https://github.com/mycyi1994-hash/project-ganymede-submission`
-    - 공개 저장소이고 README가 있다. 운영 소스 `6e3e143`과 같은 코드다.
+    - 공개 저장소이고 README가 있다. 운영 소스와 같은 코드다(현재 운영 소스는 `docs/PRODUCT_RELEASE.md` 맨 위).
 11. **Demo Video\***: `[YouTube 링크]`. 2~4분, 공개 또는 일부 공개(4·5절).
 12. **Product Link\***: `https://ganymede-xlayer.gana003.workers.dev/`
 13. **Is this a new project, or are you adding features to an existing one?\***: **No, project is built on a pre-existing codebase or product**
     - 사실대로 고른다. 저장소는 2026년 7월의 원화 암호화폐 전략 엔진에서 시작했다.
-    - 제출하는 USTX 제품, X Layer 계약·연동, 모든 화면은 빌드 기간에 만들었다. `docs/BUILD_PERIOD.md`가 커밋별로 구분한다.
+    - 제출하는 USTX 제품, X Layer 연동, 새 계약 6개(USTX 펀드·dUSD·가격 피드·풀·차익거래·대출), 모든 화면은 빌드 기간에 만들었다. 예전 NAV 레지스트리 계약(변경 없이 X Layer에 재배포), relayer(X Layer용으로 확장), 고정소수점 계산은 재사용했다고 밝힌다. `docs/BUILD_PERIOD.md`가 커밋별로 구분한다.
     - 설명 칸이 따로 있으면 아래 문장을 쓴다.
 ```text
-The repository started in July 2026 as a Korean-won crypto strategy engine with settlement on another testnet (last pre-event commit 7a33392, 30 July 2026). Everything in the submission was built during the build period: settlement on X Layer, the six-xStock USTX basket priced by OKX OnchainOS, the NAV registry records, wallet investing through the USTX contract, the USTX/dUSD pool and NAV arbitrage keeper, the lending market, the NAV price feed, market activity, browser verification and evidence files, Portfolio, and the public API and badge. docs/BUILD_PERIOD.md lists every build-period commit.
+The repository started in July 2026 as a Korean-won crypto strategy engine with settlement on another testnet (last pre-event commit 7a33392, 30 July 2026). Everything we ask to be judged was built during the build period: settlement on X Layer, the six-xStock USTX basket priced by OKX OnchainOS, the NAV records, wallet investing through the USTX contract, the USTX/dUSD pool and NAV arbitrage keeper, the lending market, the NAV price feed, market activity, browser verification and evidence files, Portfolio, and the public API and badge. It reuses the earlier NAV registry contract (redeployed to X Layer unchanged), the settlement relayer (extended for X Layer) and the fixed-point helpers; the earlier strategy engine runs only the separate paper Lab. docs/BUILD_PERIOD.md separates the two and lists every build-period commit.
 ```
 
 ### 양식에는 없지만 물어보면 쓸 문구
@@ -267,7 +267,7 @@ AI-assisted development tools were used. The team reviewed the work and is respo
 2. **왜 테스트넷인가?**
    > The NAV records are test records, so nothing of value depends on them yet. The prices and the xStock balances are real X Layer mainnet data. Moving the registry to mainnet is the first next step.
 3. **대회 전과 무엇이 다른가? (기존 프로젝트)**
-   > Before the event it was a Korean-won crypto strategy engine on another testnet. Everything in this demo was built during the build period: X Layer settlement, the xStocks basket, verification, the experiment, evidence files and Portfolio. docs/BUILD_PERIOD.md lists every commit.
+   > Before the event it was a Korean-won crypto strategy engine on another testnet. Everything shown in this demo was built during the build period: X Layer settlement, the xStocks basket, verification, the experiment, evidence files and Portfolio. It reuses our earlier NAV registry contract and relayer, and docs/BUILD_PERIOD.md separates the two commit by commit.
 4. **GMDCORE 소스에 "for GIWA settlement"라고 적혀 있다.**
    > GMDCORE is a share-ledger contract from our earlier settlement work, redeployed to X Layer Testnet. Its supply is zero and it is not part of USTX.
 5. **USTX를 살 수 있나?**
