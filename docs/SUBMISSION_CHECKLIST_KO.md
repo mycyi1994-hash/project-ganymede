@@ -32,7 +32,8 @@
 - **컨트랙트 8개** (X Layer Testnet): NAV 기록, USTX 펀드, dUSD, Chainlink 방식 NAV 피드, USTX/dUSD 풀, NAV 차익거래, 대출 시장, 예전 GMDCORE 장부. 모두 OKX 탐색기와 Sourcify에서 소스 검증을 마쳤다.
 - **자동으로 도는 것**: 5분마다 NAV 기록, 5분마다 키퍼(풀이 NAV에서 벗어나면 차익거래로 되돌림), 5분마다 시장 활동 수집.
 - **화면 개선 배포** (9/25 12:05 UTC, Worker `5225c560`): 위의 상세 패널·카운트다운·게이지·대출 막대·차트 툴팁과 표시·첫 로딩 자리 표시·도넛. 배포 뒤 공개 경로 17개 200, 이전 경로 4개 307, 데스크톱·모바일·지갑 있음·없음으로 7개 화면과 상세 패널을 연 상태 모두 axe 위반 0건.
-- **제출물 정리 배포** (9/25 12:50 UTC, 현재 Worker `ae1dae8a`): 쓰지 않던 7월 이미지·템플릿 파일 삭제, 재사용 부분(예전 엔진의 5분 주기·D1 저장소, NAV 레지스트리 계약, relayer, 고정소수점 계산)을 문서와 양식 답에 정확히 적음. 화면은 그대로다.
+- **제출물 정리 배포** (9/25 12:50 UTC, Worker `ae1dae8a`): 쓰지 않던 7월 이미지·템플릿 파일 삭제, 재사용 부분(예전 엔진의 D1 저장소, NAV 레지스트리 계약, relayer, 고정소수점 계산)을 문서와 양식 답에 정확히 적음. 화면은 그대로다.
+- **NAV 기록 복구 배포** (9/25 14:45 UTC, 현재 Worker `28351ac7`): 14:10부터 Cloudflare가 5분 작업을 CPU 10ms(무료 요금제 한도)에서 끊어 NAV 기록이 14:01~14:45 동안 멈췄다. 5분 작업이 USTX NAV 기록만 하도록 줄여 복구했다(14:45:56, 14:50:54 기록 확인). 줄인 작업도 10ms를 넘으므로 **Cloudflare 계정의 Workers Paid 복구가 근본 해결**이다(사용자 할 일).
 - **최종 점검** (9/25 10:30~10:50 UTC, 운영, Worker `90840b50`)
   - 공개 경로 17개 200, 이전 경로 4개 307. 데스크톱·모바일, 지갑 있음·없음으로 7개 화면 axe 위반 0건, 가로 넘침·페이지 오류 없음.
   - 테스트 지갑으로 실제 거래: 풀 매수·매도, 펀드 $10 투자와 환매, 대출(입금 → $5 대출 → 상환 → 인출)이 모두 성공했다. 거래마다 몇 초 안에 시장 활동 맨 위에 "You"로 나왔다.
@@ -44,6 +45,9 @@
 
 ## 2. 사용자가 해야 할 일 (순서대로)
 
+- [ ] **0. (긴급, 5분, $5/월) Cloudflare Workers Paid로 올리기**: Cloudflare 대시보드 → Workers & Pages → 오른쪽 또는 Plans의 요금제 → **Workers Paid** 선택 → 결제 수단 입력.
+  - 이유: 이 계정은 무료 요금제로 보인다(9/23 D1 무료 쓰기 한도 초과, 9/25 14:10부터 CPU 10ms 강제 종료). 무료 요금제는 한 번 실행에 CPU 10ms까지만 허용한다. 5분 NAV 기록은 한 번에 약 35–50ms를 쓴다. Cloudflare가 가끔 넘는 것은 봐주지만 계속 넘으면 끊는다. 끊기면 NAV가 멈추고, 1시간 뒤에는 지갑 투자·대출이 막힌다.
+  - 올리면 코드 변경 없이 한도가 1회 30초, D1 쓰기가 월 5천만 행이 된다. 심사가 끝나는 10/7 이후에 내리면 된다.
 - [ ] **1. 데모 영상 녹화 (필수, 1~2시간)**: 4절 대본과 5절 방법을 따른다. 길이는 2~4분, 목표는 3분이다.
   - 지갑 장면을 찍으려면 녹화 전에 준비한다(4절 "녹화 전 준비").
     - 크롬에 OKX Wallet 확장 프로그램을 설치하고, 사이트에서 Connect → Switch to X Layer Testnet을 한다.
@@ -231,10 +235,10 @@
 12. **Product Link\***: `https://ganymede-xlayer.gana003.workers.dev/`
 13. **Is this a new project, or are you adding features to an existing one?\***: **No, project is built on a pre-existing codebase or product**
     - 사실대로 고른다. 저장소는 2026년 7월의 원화 암호화폐 전략 엔진에서 시작했다.
-    - 제출하는 USTX 제품, X Layer 연동, 새 계약 6개(USTX 펀드·dUSD·가격 피드·풀·차익거래·대출), 모든 화면은 빌드 기간에 만들었다. 예전 엔진의 5분 주기와 D1 저장소(USTX 단계를 새로 넣음), NAV 레지스트리 계약(변경 없이 X Layer에 재배포), relayer(X Layer용으로 확장), 고정소수점 계산은 재사용했다고 밝힌다. `docs/BUILD_PERIOD.md`가 커밋별로 구분한다.
+    - 제출하는 USTX 제품, X Layer 연동, 새 계약 6개(USTX 펀드·dUSD·가격 피드·풀·차익거래·대출), 모든 화면은 빌드 기간에 만들었다. 예전 엔진의 D1 저장소와 작업 잠금(USTX 단계를 새로 넣음, 9/25까지는 엔진의 5분 주기 안에서 실행), NAV 레지스트리 계약(변경 없이 X Layer에 재배포), relayer(X Layer용으로 확장), 고정소수점 계산은 재사용했다고 밝힌다. `docs/BUILD_PERIOD.md`가 커밋별로 구분한다.
     - 설명 칸이 따로 있으면 아래 문장을 쓴다.
 ```text
-The repository started in July 2026 as a Korean-won crypto strategy engine with settlement on another testnet (last pre-event commit 7a33392, 30 July 2026). Everything we ask to be judged was built during the build period: settlement on X Layer, the six-xStock USTX basket priced by OKX OnchainOS, the NAV records, wallet investing through the USTX contract, the USTX/dUSD pool and NAV arbitrage keeper, the lending market, the NAV price feed, market activity, browser verification and evidence files, Portfolio, and the public API and badge. It reuses the earlier engine's five-minute cycle and database (its strategies run only the separate paper Lab), the NAV registry contract (redeployed to X Layer unchanged), the settlement relayer (extended for X Layer) and the fixed-point helpers. docs/BUILD_PERIOD.md separates the two and lists every build-period commit.
+The repository started in July 2026 as a Korean-won crypto strategy engine with settlement on another testnet (last pre-event commit 7a33392, 30 July 2026). Everything we ask to be judged was built during the build period: settlement on X Layer, the six-xStock USTX basket priced by OKX OnchainOS, the NAV records, wallet investing through the USTX contract, the USTX/dUSD pool and NAV arbitrage keeper, the lending market, the NAV price feed, market activity, browser verification and evidence files, Portfolio, and the public API and badge. It reuses the earlier engine's database and job lease (its strategies run only the separate paper Lab; until 25 September the USTX step ran inside the engine's five-minute cycle), the NAV registry contract (redeployed to X Layer unchanged), the settlement relayer (extended for X Layer) and the fixed-point helpers. docs/BUILD_PERIOD.md separates the two and lists every build-period commit.
 ```
 
 ### 양식에는 없지만 물어보면 쓸 문구
@@ -289,6 +293,7 @@ AI-assisted development tools were used. The team reviewed the work and is respo
 ## 8. 심사 기간 운영 유지 (10/7까지)
 
 - **Cloudflare**
+  - Workers Paid를 10/7까지 유지한다(2절 0번). 무료 요금제에서는 5분 NAV 기록이 CPU 한도로 끊길 수 있다.
   - `ganymede-xlayer`, `ganymede-settlement-relayer` Worker와 D1 데이터베이스를 지우거나 설정을 바꾸지 않는다.
   - 대시보드에서 변수나 비밀값을 건드리지 않는다.
 - **OKX OnchainOS API 키**
