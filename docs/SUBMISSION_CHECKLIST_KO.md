@@ -2,7 +2,7 @@
 
 비공개 개발 저장소 전용 문서다. 공개 스냅샷에는 넣지 않는다(`SUBMISSION_EXPORT.md`의 제외 목록).
 
-작성 시점: 2026-09-25 02:30 UTC (9/25 금 11:30 KST).
+작성 시점: 2026-09-25 01:50 UTC (9/25 금 10:50 KST).
 
 ## 1. 한눈에 보기
 
@@ -21,12 +21,12 @@
 - **운영**: 펀드 판매 사이트처럼 동작한다.
   - Markets(펀드 규모·투자자·출시 후 수익률) → USTX에서 데모 달러로 투자 → 체결 화면에 "Added to your basket"(6개 xStock별 토큰 수량·금액) → Portfolio(총평가액·수익률·"Inside your USTX" 들여다보기·주문 내역)
   - USTX 펀드 개요: 펀드 규모(X Layer에 기록된 발행 좌수 × NAV), 투자자 수, 24시간 순유입, 수익률, 핵심 조건, 전체 지분의 종목별 보유
-  - Verify: 고객용 증명 페이지(거래소 준비금 증명 형식). 검증 결과, 가격 산정 3단계, 구성 종목과 OKX 가격, 최근 기록과 OKX 탐색기 링크
+  - Transparency: 고객용 증명 페이지(거래소 준비금 증명 형식). 검증 결과, 가격 산정 3단계, 구성 종목과 OKX 가격, 최근 기록과 OKX 탐색기 링크
   - 개발자 페이지 "Verify it yourself": 3가지 확인, 변조 실험 3종, 증거 파일, 원문 문서
   - 모든 숫자에 출처 표시: "Priced by OKX OnchainOS", "OKX price", "OKX Explorer", "Connect OKX Wallet"
   - Portfolio 아래 실제 지갑 xStocks 평가(OKX Wallet 연결 또는 주소 입력)
   - 화면 배치는 실제 서비스처럼 정리했다: 헤더에 테스트넷 안내 한 줄·네트워크·"Connect OKX Wallet", 메뉴 Markets / Portfolio / Transparency. 발표용 설명 구역은 없앴고, 개발자·발행사 자료는 푸터(Docs, For issuers)로 옮겼다
-  - 파트너용: 공개 NAV API(`/api/v1/ustx`), 다른 사이트에 붙이는 검증 배지(`/embed/ustx`), 발행사 페이지(`/issuers`, 요금제·로드맵), 개발자 페이지(`/developers`)
+  - 파트너용: 공개 NAV API(`/api/v1/ustx`), 다른 사이트에 붙이는 검증 배지(`/embed/ustx`), 발행사 페이지(`/issuers`, 요금제), 개발자 페이지(`/developers`)
 - **최종 확인** (9/25, Worker `3a46801e`): 데스크톱·모바일 7개 화면 axe 위반 0건, 가로 넘침·페이지 오류 없음, 화면·API 정상. 아래는 이전 배포(9/24 18:38 UTC, `bebf23c3`) 때의 확인 내용이다.
   - 11개 화면과 공개 API 3개가 200을 반환하고, 이전 경로 이동이 정상이다.
   - axe 접근성 위반 0건(11개 화면).
@@ -48,13 +48,13 @@
     - 싱가포르에 갈 수 있고 영어로 발표할 수 있으면 finale, 아니면 Remote Build를 고른다. **본인만 결정할 수 있다.**
   - 멤버가 바뀌었으면 키트 안내대로 yanyi.ho@okg.com에 알린다.
 - [ ] **2. (권장, 5분) 본인 지갑으로 Portfolio 연결 한 번 해 보기**
-  - https://ganymede-xlayer.gana003.workers.dev/portfolio 에서 **Connect wallet**을 누른다(OKX Wallet 또는 MetaMask 확장 프로그램).
+  - https://ganymede-xlayer.gana003.workers.dev/portfolio 에서 오른쪽 위 **Connect OKX Wallet**을 누른다(OKX Wallet 또는 MetaMask 확장 프로그램).
   - 정상: 주소 공유 요청만 뜨고 서명·송금 요청은 없다. 승인하면 주소가 보이고 X Layer 메인넷 잔고를 읽는다. xStocks가 없으면 "This address holds none of the six xStocks on X Layer."가 나온다. 지갑이 다른 네트워크에 있어도 된다.
   - 이상하면 화면을 캡처해서 Claude에게 보낸다. 실제 지갑 확장 프로그램 연결은 개발 쪽에서 끝까지 검증하지 못했다.
 - [ ] **2-1. (권장, 1분) 데모 투자 한 번 해 보기**
   - https://ganymede-xlayer.gana003.workers.dev/products/ustx 에서 Invest → $250 → Review investment → Buy with demo dollars.
   - 정상: "Order filled"와 "Added to your basket" 아래에 애플·마이크로소프트 등 6종목의 토큰 수량과 금액이 나온다. Portfolio에서 총평가액과 "Inside your USTX"가 보인다.
-  - 계정은 이 브라우저에만 있다. Portfolio 맨 아래 "Reset demo account"로 $10,000부터 다시 시작할 수 있다.
+  - 계정은 이 브라우저에만 있다. Portfolio의 주문 내역(Recent orders) 아래 "Reset demo balance"로 $10,000부터 다시 시작할 수 있다.
 - [ ] **3. 데모 영상 제작 (필수, 2~3시간)**: 4절 대본과 5절 녹화 방법을 따른다. 길이는 2~4분, 목표 3분. 외주를 맡겼다면 영상 지시서 문서 링크를 전달한다.
 - [ ] **4. 영상 업로드 (필수, 20분)**
   - YouTube에 "공개" 또는 "일부 공개"로 올린다. **"비공개"는 안 된다.**
@@ -83,7 +83,7 @@
 | 부족한 점 | 영향 | 대응 |
 | --- | --- | --- |
 | 데모 영상 없음 | 필수 제출물. 없으면 제출 불완전 | 사용자가 제작(4·5절) |
-| 실제 고객·수요 근거 없음 | 성장성 점수에 약점 | 주장하지 않는다. 요금제는 "Planned"로 표시했다. 가능하면 지인 1~2명에게 데모 투자를 해 보게 하고 받은 반응을 발표에서 말한다 |
+| 실제 고객·수요 근거 없음 | 성장성 점수에 약점 | 주장하지 않는다. 요금제는 Sandbox(무료)만 열려 있고 나머지는 "Contact us"로 표시했다. 가능하면 지인 1~2명에게 데모 투자를 해 보게 하고 받은 반응을 발표에서 말한다 |
 | NAV 기록이 X Layer **Testnet** | 메인넷 실사용이 아니라는 지적 가능 | 가격·xStocks 잔고는 메인넷이다. 기록 메인넷 이전은 "다음 단계"로 명시 |
 | 가격 출처가 OKX OnchainOS 하나 | 가격 정확성은 증명하지 않음 | 화면과 문서에 "가격이 맞는지는 확인하지 않는다"고 적었다. 두 번째 출처는 다음 단계 |
 | 원문 문서는 최근 12건(약 1시간)만 보관 | 오래된 기록은 화면에서 재검증 불가 | 증거 파일을 받아 두면 언제든 재확인된다(명령어가 거래 영수증과 대조) |
@@ -91,7 +91,7 @@
 | OKX AI(에이전트) 연동 없음 | "X Layer and/or OKX AI" 중 X Layer만 사용 | 의도적 선택. Build a Market 트랙 요건은 충족 |
 | 컨트랙트 감사 없음 | 보안 신뢰도 | 테스트넷 기록용이며 실자금 경로 없음을 명시 |
 | 기존 프로젝트(7월 업비트·GIWA 코드) 기반 | 심사는 빌드 기간 작업만 봄 | `BUILD_PERIOD.md`에 커밋별로 구분. GMDCORE의 "GIWA" 문구도 공개 설명함 |
-| 실자금 투자는 아님(데모 달러) | "진짜 돈은 못 넣는다"는 지적 가능 | 투자·환매·보유·들여다보기 흐름은 데모 달러로 끝까지 동작한다. 실자금은 발행사·수탁·라이선스가 필요하며 `/issuers` 로드맵(2027 Q2, 라이선스 파트너)에 적었다 |
+| 실자금 투자는 아님(데모 달러) | "진짜 돈은 못 넣는다"는 지적 가능 | 투자·환매·보유·들여다보기 흐름은 데모 달러로 끝까지 동작한다. 실자금은 발행사·수탁·라이선스가 필요하며 `/issuers` 요금제 아래에 "실자금 서비스는 라이선스 파트너와만 제공한다"고 적었다 |
 | 투자자 수는 데모 계정 수 | "실사용자"로 오해될 수 있음 | 화면에 Demo 배지가 있다. 발표·영상에서 "투자자가 N명 있다"고 말하지 않는다 |
 
 ## 4. 데모 영상 대본 (약 3분)
@@ -135,7 +135,7 @@
 뜻: 데모 달러 $1,000를 투자하면 X Layer에 기록된 NAV로 즉시 체결되고, 내 돈이 6종목 토큰으로 얼마씩 담겼는지 바로 보인다. 데모 달러라 실제 돈은 움직이지 않는다.
 
 **장면 3 — 펀드 개요 (0:55~1:15)**
-화면: 같은 페이지 "Fund overview". Fund size 설명 문구("shares outstanding, recorded on X Layer")에 마우스를 올린다. "Net flows, 24h"와 "What the fund holds" 표를 스크롤한다.
+화면: 같은 페이지 "Fund overview". Fund size 설명 문구("shares outstanding, recorded on X Layer")에 마우스를 올린다. "Net flows, 24h"와 아래 "Holdings" 표를 스크롤한다.
 > Like any fund page, you get the fund size, the return since launch and the key terms. The shares outstanding are recorded on X Layer with every NAV, so even the fund size is checkable. Below, you see the last day's flows and what all shares hold in each xStock.
 
 뜻: 펀드 규모·수익률·핵심 조건이 있고, 발행 좌수도 NAV와 함께 X Layer에 기록되므로 펀드 규모까지 확인할 수 있다. 최근 24시간 유입과 전체 지분이 종목별로 무엇을 보유하는지가 보인다.
@@ -173,7 +173,7 @@
 - "실제 돈으로 투자할 수 있다" → 항상 "demo dollars"라고 말한다.
 - "투자자가 N명 있다", "사용자가 있다" → Investors 숫자는 데모 계정 수다.
 - "메인넷에 기록한다" → 기록은 X Layer **Testnet**, 가격과 xStocks는 메인넷이다.
-- "가격이 정확함을 증명한다", "감사받았다", "요금을 받고 있다"(요금제는 Planned).
+- "가격이 정확함을 증명한다", "감사받았다", "요금을 받고 있다"(요금제는 문의만 받는다).
 - 모두 사실이 아니다. 약관상 허위 주장은 실격 사유다.
 
 ## 5. 녹화·편집·업로드 방법 (초보자용)
@@ -239,11 +239,11 @@ USTX, the US Tech Basket, holds six xStocks in one share (AAPLx, MSFTx, NVDAx, A
 
 - Invest: every visitor gets a private demo account with $10,000 in demo dollars. Orders fill instantly at the NAV recorded on X Layer, and the confirmation shows exactly which tokens the money put in the basket. Portfolio looks each holding through to the six xStocks.
 - Fund overview: fund size (shares outstanding x NAV, both recorded on X Layer), investors, return since launch, key terms, 24-hour flows and look-through holdings of all shares. Single orders are never published.
-- Verify: a customer proof page, like an exchange proof of reserves. The visitor's browser reads the registry directly over public RPC, hashes the original document and recalculates every row with integer arithmetic; every price is labelled as coming from OKX OnchainOS. The page also states what a match does not prove (price accuracy, custody).
+- Transparency: a customer proof page, like an exchange proof of reserves. The visitor's browser reads the registry directly over public RPC, hashes the original document and recalculates every row with integer arithmetic; every price is labelled as coming from OKX OnchainOS. The page also states what a match does not prove (price accuracy, custody).
 - Verify it yourself (developer page): the individual checks, and three edits to a local copy that show which check catches which change. When two prices are offset so that every number and the NAV stay the same, only the fingerprint recorded on X Layer detects the edit.
 - Evidence: the check downloads as a file. `npm run verify:evidence` re-checks it and matches it to the NavPublished event in the publishing transaction's receipt.
 - Wallets: Portfolio connects OKX Wallet (or any address) and values real xStock balances on X Layer mainnet at the verified prices, with a downloadable statement. Read-only.
-- Partners: a public NAV API with open CORS (/api/v1/ustx) and an embeddable badge that verifies the NAV in the visitor's browser (/embed/ustx). Issuer and developer pages set out planned pricing and the roadmap.
+- Partners: a public NAV API with open CORS (/api/v1/ustx) and an embeddable badge that verifies the NAV in the visitor's browser (/embed/ustx). An issuer page sets out the plans, with a free sandbox on X Layer Testnet today, and a developer page documents the API, the badge and the checks.
 
 Investing uses demo dollars: no real money moves, no shares are issued on chain and nothing is held in custody.
 ```
@@ -323,7 +323,7 @@ AI-assisted development tools were used. The team reviewed the work and is respo
 10. **주식 분할이나 종목 변경은?**
     > The methodology page explains constituent and token changes. Corporate actions such as splits and dividends are not modelled yet. That is a stated limitation.
 11. **AI를 썼나?**
-    > Yes, AI-assisted development tools. We reviewed the work, it has 125 automated tests, and we can explain each part.
+    > Yes, AI-assisted development tools. We reviewed the work, it has more than 140 automated tests, and we can explain each part.
 
 ## 8. 심사 기간 운영 유지 (10/7까지)
 
@@ -336,7 +336,7 @@ AI-assisted development tools were used. The team reviewed the work and is respo
   - OKX 쪽 요청 제한기가 가끔 HTTP 429를 준다. 이때는 10~15분 동안 기록이 비었다가 저절로 다시 기록된다.
     - 확인된 것은 9/24 14:20과 14:35 UTC 두 번이다. 12:35와 12:45 UTC에도 기록이 하나씩 빠졌지만, 원인은 남아 있지 않다. 00:00~12:30 UTC에는 빠진 기록이 없었다.
     - 원인은 확인하지 못했다. 마감이 다가와 같은 API를 쓰는 팀이 늘었을 가능성이 있다.
-    - 그동안에도 화면은 직전 기록으로 "The record and calculation match."를 보여 준다. Methodology 화면에도 "공급자 한도 등으로 공시가 늦어질 수 있다"고 적혀 있다.
+    - 그동안에도 화면은 직전 기록을 "Last recorded on X Layer"로 보여 주고, Transparency는 그 기록으로 "NAV verified on X Layer"를 보여 준다. Methodology 화면에도 "공급자 한도 등으로 공시가 늦어질 수 있다"고 적혀 있다.
     - 재시도하지 않고 기다리는 것은 코드 검토 때 정한 설계라서 마감 전에는 바꾸지 않는다.
 - **Cloudflare D1 무료 한도**
   - 하루(00:00 UTC 기준) 쓰기 한도는 10만 행이다. 9/24 기준 최근 24시간에 약 3.4만 행을 써서 여유가 약 3배다.
