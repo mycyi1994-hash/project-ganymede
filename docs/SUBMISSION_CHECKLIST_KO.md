@@ -274,6 +274,7 @@ GanymedeDemoDollar, dUSD demo dollars with no value (X Layer Testnet): 0xf075350
 GanymedeNavFeed, the USTX / USD NAV in the Chainlink AggregatorV3Interface (X Layer Testnet): 0x292c56c5290cc7b73e3ee33c2c2688eb3e04c3c8
 GanymedeUstxPool, the USTX/dUSD market (X Layer Testnet): 0x286f5e7ffdbc30db12665d7a3854217d7cd05cc1
 GanymedeNavArbitrage, one-transaction NAV arbitrage (X Layer Testnet): 0xaeba15aa92d6f3109e2b992f18933e1abe2fa3d9
+GanymedeLendingMarket, dUSD loans against USTX, deployed paused (X Layer Testnet): 0xae2f54ae3d0370295de18510d56de92afb8843c7
 https://web3.okx.com/explorer/x-layer-testnet/address/0xf320d2a7f280b7ab61e24374986869d7be34289c
 
 xStock tokens read on X Layer mainnet (196), issued by xStocks, not by us:
