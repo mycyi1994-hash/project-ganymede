@@ -43,7 +43,7 @@ export function useBasketCheck(path: string | null) {
   const current = loaded?.path === basketConfigPath(path) ? loaded : null;
   const checks = current?.check ? [current.check.chain, current.check.hash, current.check.nav, current.check.definition] : [];
   const state: BasketState = !basketConfigPath(path) ? "unavailable" : !current ? "loading" : current.error || !current.check ? "unavailable" : checks.some(check => check.state === "fail") ? "failed" : checks.every(check => check.state === "pass") ? "matched" : "waiting";
-  return { ...current, state, retry: () => setAttempt(value => value + 1) };
+  return { ...current, state, retry: () => { setLoaded(null); setAttempt(value => value + 1); } };
 }
 
 const LABEL: Record<BasketState, string> = { loading: "Checking the record…", waiting: "Not yet verified", unavailable: "Not verified", failed: "Record needs attention", matched: "Verified in your browser" };

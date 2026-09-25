@@ -194,7 +194,7 @@ async function poolDisagreement(composition: Composition, warnings: string[], re
   return `OnchainOS prices disagree with the X Layer pools (${widest.symbol} ${formatDifference(widest.differenceBps)}, NAV ${formatDifference(comparison.navDifferenceBps)} at block ${pools.blockNumber})`;
 }
 
-export async function runXStocksCycle(env: EngineEnv, repo: EngineRepository, settlementClient: SettlementClient, now = new Date().toISOString(), sources: { poolPrices?: () => Promise<PoolPrices> } = {}): Promise<XStocksCycleResult> {
+export async function runXStocksCycle(env: EngineEnv, repo: EngineRepository, settlementClient: SettlementClient, now = new Date().toISOString(), sources: { poolPrices?: () => Promise<PoolPrices>; wait?: (ms: number) => Promise<void> } = {}): Promise<XStocksCycleResult> {
   // Reconciling earlier attempts needs no prices, so it runs even during a provider cooldown.
   let settlementsQueued = await reconcileUnresolved(repo, settlementClient);
   const previousLatest = JSON.parse((await repo.getState(STATE_LATEST))?.value ?? "null") as LatestState | null;
@@ -206,7 +206,7 @@ export async function runXStocksCycle(env: EngineEnv, repo: EngineRepository, se
     return { navsPublished: 0, settlementsQueued, warnings: [`GMD USTX price provider cooldown until ${previousLatest!.retryAt}`] };
   }
   const constituents = constituentsWithAddresses(env.XSTOCKS_ADDRESSES);
-  const { quotes, warnings, retryAt } = await fetchXStockQuotes(onchainOsCredentials(env), constituents);
+  const { quotes, warnings, retryAt } = await fetchXStockQuotes(onchainOsCredentials(env), constituents, undefined, sources.wait);
   const previous = deserializeBasket((await repo.getState(STATE_BASKET))?.value);
   const evaluation = await evaluateBasket({ constituents, quotes, previous, now, maxQuoteAgeMinutes: maxQuoteAgeMinutes(env) });
 

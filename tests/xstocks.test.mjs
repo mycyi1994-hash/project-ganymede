@@ -171,14 +171,27 @@ test("retries once when the price API answers with a transient server error", as
   assert.equal(quotes.get("AAPLx").priceMicros, parseDecimalMicros(PRICES.AAPLx));
 });
 
-test("a rate-limited price request sets a cooldown instead of retrying", async () => {
+test("a rate limit is asked again twice, spaced out, then leaves the next cycle free to try", async () => {
   let calls = 0;
+  const waits = [];
   const fetcher = async () => { calls += 1; return new Response("error code: 1015", { status: 429 }); };
   const before = Date.now();
-  const { quotes, warnings, retryAt } = await fetchXStockQuotes(CREDENTIALS, CONSTITUENTS, fetcher);
-  assert.equal(calls, 1);
+  const { quotes, warnings, retryAt } = await fetchXStockQuotes(CREDENTIALS, CONSTITUENTS, fetcher, async (ms) => { waits.push(ms); });
+  assert.equal(calls, 3);
+  assert.deepEqual(waits, [30_000, 90_000]);
   assert.equal(quotes.size, 0);
   assert.match(warnings[0], /429/);
-  assert.match(warnings[0], /rate limit/);
-  assert.ok(Date.parse(retryAt) - before >= 10 * 60_000, `cooldown until ${retryAt} is shorter than ten minutes`);
+  assert.match(warnings[0], /rate limited on 3 tries/);
+  const pause = Date.parse(retryAt) - before;
+  assert.ok(pause >= 2 * 60_000 && pause < 3 * 60_000, `pause until ${retryAt} should end before the next five-minute cycle`);
+});
+
+test("a rate limit that clears on the next try prices the basket in the same cycle", async () => {
+  const responses = [new Response("error code: 1015", { status: 429 }), priceResponse()];
+  let calls = 0;
+  const { quotes, warnings, retryAt } = await fetchXStockQuotes(CREDENTIALS, CONSTITUENTS, async () => { calls += 1; return responses.shift(); }, async () => {});
+  assert.equal(calls, 2);
+  assert.deepEqual(warnings, []);
+  assert.equal(retryAt, undefined);
+  assert.equal(quotes.size, XSTOCKS_CONSTITUENTS.length);
 });
