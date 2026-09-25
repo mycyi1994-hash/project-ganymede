@@ -5,6 +5,7 @@ import { XSTOCKS_CHAIN, XSTOCKS_PRODUCT } from "@/lib/xstocks/basket";
 import { STATE_CONFIRMED, STATE_HISTORY, type Publication } from "@/lib/xstocks/cycle";
 import { readLatestNav } from "@/lib/xstocks/onchain";
 import { FUND_DEPLOYMENT } from "@/lib/xstocks/fund";
+import { ledger, walletTotals } from "@/lib/demo/api";
 
 export const dynamic = "force-dynamic";
 
@@ -36,6 +37,9 @@ export async function GET(request: Request) {
       const match = entries.find(entry => entry.holdingsHash.toLowerCase() === record.holdingsHash.toLowerCase() && typeof entry.txHash === "string" && /^0x[0-9a-f]{64}$/i.test(entry.txHash));
       transactionHash = match?.txHash ?? null;
     } catch { /* The record stands without it. */ }
+    // The count recorded with the NAV covers two kinds of shares; each part is read now, and a part that
+    // cannot be read is null rather than a guess.
+    const [demo, wallets] = await Promise.all([ledger().fund(new Date()).catch(() => null), walletTotals().catch(() => null)]);
     return json({
       product: { id: XSTOCKS_PRODUCT.id, ticker: "USTX", name: "US Tech Basket", constituents: ["AAPLx", "MSFTx", "NVDAx", "AMZNx", "METAx", "TSLAx"] },
       nav: {
@@ -63,6 +67,12 @@ export async function GET(request: Request) {
         rule: "invest() and redeem() fill at this registry's latest NAV when it is at most an hour old; nothing else issues shares.",
         paidWith: { token: FUND_DEPLOYMENT.dollar, symbol: "dUSD", value: "none (testnet demo dollars)" },
         explorerUrl: `${FUND_DEPLOYMENT.explorerUrl}/token/${FUND_DEPLOYMENT.fund}`,
+        outstanding: {
+          recordedMicros: record.sharesOutstandingMicros,
+          inWalletsMicros: wallets?.sharesMicros ?? null,
+          inDemoBalancesMicros: demo?.sharesOutstandingMicros ?? null,
+          rule: "The NAV record counts both kinds of shares. Shares in wallets are this token: they trade in the pool and serve as loan collateral. Shares in demo balances stay in the Ganymede app and issue nothing on chain. The two parts are read now; the recorded count is as of the NAV.",
+        },
       },
       feed: {
         address: FUND_DEPLOYMENT.feed,

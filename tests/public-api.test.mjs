@@ -9,7 +9,7 @@ import { lookThrough, fundValueMicros } from "../lib/demo/basket.ts";
 import { formatUsdRounded } from "../lib/nav-display.ts";
 import { relativeTime, signedPercent, sinceFirstRecord } from "../lib/product-market.ts";
 
-const schema = readFileSync(new URL("../drizzle/0000_giant_speedball.sql", import.meta.url), "utf8");
+const schema = readFileSync(new URL("../drizzle/0000_giant_speedball.sql", import.meta.url), "utf8") + readFileSync(new URL("../drizzle/0001_demo_ledger.sql", import.meta.url), "utf8");
 function database() {
   const sql = new DatabaseSync(":memory:");
   sql.exec(schema);
@@ -61,6 +61,10 @@ test("the public NAV API serves the X Layer record to any origin and never write
     assert.equal(body.verify.page, "https://ganymede.test/products/ustx/transparency");
     assert.equal(body.shares.token, "0x77eaeba1366bde7818da12d3cbdbea0a2ee97596");
     assert.equal(body.shares.paidWith.symbol, "dUSD");
+    // The recorded count is split into its two kinds; the wallet part is null when the chain cannot be read here.
+    assert.equal(body.shares.outstanding.recordedMicros, "152083351");
+    assert.equal(body.shares.outstanding.inDemoBalancesMicros, "0");
+    assert.ok(body.shares.outstanding.inWalletsMicros === null || /^\d+$/.test(body.shares.outstanding.inWalletsMicros));
     assert.equal(body.feed.address, "0x292c56c5290cc7b73e3ee33c2c2688eb3e04c3c8");
     assert.equal(body.feed.decimals, 8);
     assert.equal(body.market.pool, "0x286f5e7ffdbc30db12665d7a3854217d7cd05cc1");
