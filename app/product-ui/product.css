@@ -846,7 +846,7 @@
 @media (max-width: 760px) { .gmd-proof-steps { grid-template-columns: 1fr; } .gmd-proof-history { padding: 18px 16px; } }
 
 /* Product header: testnet notice, network and wallet */
-.gmd-testnet-bar { background: #0f1f27; color: #cfdadd; font-size: 12px; text-align: center; padding: 6px 16px; }
+.gmd-app .gmd-testnet-bar { background: #0f1f27; color: #cfdadd; font-size: 12px; text-align: center; padding: 6px 16px; margin: 0; }
 .gmd-network { display: inline-flex; align-items: center; gap: 7px; color: #d2dde0; font-size: 13px; border: 1px solid #3b5460; border-radius: 999px; padding: 6px 12px; white-space: nowrap; }
 .gmd-network i { width: 7px; height: 7px; border-radius: 50%; background: #cfb374; }
 .gmd-app .gmd-wallet-connect { display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 8px 16px; border-radius: 8px; background: #8cd3c7; color: #0f1f27; font-size: 14px; font-weight: 600; white-space: nowrap; }
