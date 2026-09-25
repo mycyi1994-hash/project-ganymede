@@ -39,7 +39,7 @@
   - 운영에서 내려받은 증거 파일을 `npm run verify:evidence`로 다시 확인해 5개 항목 모두 PASS였다.
   - USTX 공시는 최근 1시간 동안 5분마다 빠짐없이 기록됐다. 지난 24시간은 233건이다. 9/24 12:30~9/25 00:45 UTC에는 OKX 요청 제한(429) 대기로 10~35분 공백이 여러 번 있었다(8절).
 - **테스트**: 앱 160개, relayer 28개, 컨트랙트 62개 통과, lint 오류 0.
-- **공개 저장소**: 운영 소스와 같은 코드(갱신 기록은 `docs/SUBMISSION_EXPORT.md` 절차). README, 빌드 기간 작업 목록(`docs/BUILD_PERIOD.md`), 출처 기록(`docs/BUILD_EVIDENCE.md`), 비밀값 검사 통과. 문서의 링크 31개 중 30개가 200이다. 남은 1개(Centrifuge 문서)는 Cloudflare 봇 확인 화면이 뜨지만, 실제 브라우저에서는 열린다.
+- **공개 저장소**: 운영 소스 `a20712f`와 같은 코드(공개 커밋 `4f7681e`, 9/25 12:14 UTC). README, 빌드 기간 작업 목록(`docs/BUILD_PERIOD.md`), 출처 기록(`docs/BUILD_EVIDENCE.md`), 비밀값 검사 통과. 문서의 링크 31개 중 30개가 200이다. 남은 1개(Centrifuge 문서)는 Cloudflare 봇 확인 화면이 뜨지만, 실제 브라우저에서는 열린다.
 
 ## 2. 사용자가 해야 할 일 (순서대로)
 
