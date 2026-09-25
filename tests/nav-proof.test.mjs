@@ -138,3 +138,20 @@ test("the three experiment edits isolate what each layer of the check catches", 
   for (const copy of [price, consistent, compensated]) assert.equal((await verifyComposition(copy.canonical, record)).hash.state, "fail");
   assert.deepEqual(JSON.parse(canonical), original);
 });
+
+test("a record may not claim a time later than its prices", async () => {
+  const { canonical, record } = await fixture();
+  // Same prices, stamped 12:26:11, relabelled as a record of 17:26:11: the hash and arithmetic can be made
+  // to agree, but the browser sees prices five hours older than the record's time.
+  const document = JSON.parse(canonical);
+  document.asOf = "2026-09-23T17:26:11.456Z";
+  const relabelled = JSON.stringify(document);
+  const result = await verifyComposition(relabelled, { ...record, holdingsHash: await sha256Hex(relabelled), effectiveAt: "2026-09-23T17:26:11Z" });
+  assert.equal(result.hash.state, "pass");
+  assert.equal(result.nav.state, "fail");
+  assert.match(result.nav.detail, /older than the record's time/);
+  // Within a minute of clock difference it still passes.
+  document.asOf = "2026-09-23T12:27:00.000Z";
+  const nearby = JSON.stringify(document);
+  assert.equal((await verifyComposition(nearby, { ...record, holdingsHash: await sha256Hex(nearby), effectiveAt: "2026-09-23T12:27:00Z" })).nav.state, "pass");
+});

@@ -225,6 +225,9 @@ export async function evaluateBasket(input: EvaluateInput): Promise<Evaluation> 
   }
 
   const prices = new Map(constituents.map((constituent) => [constituent.symbol, input.quotes.get(constituent.symbol)!.priceMicros]));
+  // A record carries the time of its oldest price, never later than the calculation, so the fund and
+  // the lending market count their one-hour limit from the prices rather than from the arithmetic.
+  const asOf = new Date(Math.min(Date.parse(input.now), ...constituents.map((constituent) => Date.parse(input.quotes.get(constituent.symbol)!.time)))).toISOString();
   const addressesChanged = input.previous !== null && input.previous.holdings.some((holding) => {
     const current = constituents.find((constituent) => constituent.symbol === holding.symbol);
     return !current || current.address.toLowerCase() !== holding.address.toLowerCase();
@@ -235,11 +238,11 @@ export async function evaluateBasket(input: EvaluateInput): Promise<Evaluation> 
   const sameConstituents = basket !== null && basket.holdings.length === constituents.length
     && basket.holdings.every((holding) => constituents.some((constituent) => constituent.symbol === holding.symbol));
   if (!basket || !sameConstituents) {
-    basket = fixBasket(constituents, prices, XSTOCKS_PRODUCT.inceptionNavMicros, input.now);
+    basket = fixBasket(constituents, prices, XSTOCKS_PRODUCT.inceptionNavMicros, asOf);
   } else if (addressesChanged || rebalanceDue(basket, input.now)) {
     // A corrected or migrated token address re-fixes at the prevailing value, like the
     // quarterly re-fix, so the published NAV stays continuous and the change is evidenced.
-    basket = fixBasket(constituents, prices, basketNavMicros(basket, prices), input.now);
+    basket = fixBasket(constituents, prices, basketNavMicros(basket, prices), asOf);
     rebalanced = true;
   }
 
@@ -258,7 +261,7 @@ export async function evaluateBasket(input: EvaluateInput): Promise<Evaluation> 
   });
   const composition: Composition = {
     productId: XSTOCKS_PRODUCT.id,
-    asOf: input.now,
+    asOf,
     pricingChainIndex: XSTOCKS_CHAIN.chainIndex,
     basketFixedAt: basket.fixedAt,
     navPerShareMicros: basketNavMicros(basket, prices).toString(),

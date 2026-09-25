@@ -14,6 +14,8 @@ const integer = (value: unknown): value is string => typeof value === "string" &
 const date = (value: unknown): value is string => typeof value === "string" && Number.isFinite(Date.parse(value));
 const object = (value: unknown): value is Record<string, unknown> => !!value && typeof value === "object" && !Array.isArray(value);
 
+/** Clock difference allowed between the price source and the publisher, both ways. */
+export const PRICE_CLOCK_TOLERANCE_MS = 60_000;
 export type ReportProfile = { productId: string; pricingChainIndex: string; symbols: readonly string[] };
 const USTX_PROFILE: ReportProfile = { productId: XSTOCKS_PRODUCT.id, pricingChainIndex: "196", symbols: XSTOCKS_CONSTITUENTS.map(item => item.symbol) };
 
@@ -65,7 +67,10 @@ export async function verifyReport(canonical: string, record: OnchainNav, profil
     }
     if (total !== BigInt(composition.navPerShareMicros) || total !== BigInt(record.navPerShareMicros)) throw new Error("Recalculated holdings do not sum to both the documented and reference NAV.");
     if (!record.effectiveAt || Math.floor(Date.parse(composition.asOf) / 1000) !== Math.floor(Date.parse(record.effectiveAt) / 1000)) throw new Error("The composition timestamp differs from the reference record.");
-    return { hash, nav: { state: "pass", detail: `All ${composition.holdings.length} units × price calculations, truncated to micro-dollars per holding, sum exactly to the document and ${source === "chain" ? "on-chain" : "example"} NAV. The effective timestamp also matches.` }, composition };
+    // The record's time stands for its prices: none may be older than it, beyond a minute of clock difference.
+    const oldest = Math.min(...composition.holdings.map((holding) => Date.parse(holding.priceTime)));
+    if (oldest < Date.parse(composition.asOf) - PRICE_CLOCK_TOLERANCE_MS) throw new Error("A price in the document is older than the record's time.");
+    return { hash, nav: { state: "pass", detail: `All ${composition.holdings.length} units × price calculations, truncated to micro-dollars per holding, sum exactly to the document and ${source === "chain" ? "on-chain" : "example"} NAV. The effective timestamp also matches, and no price is older than it.` }, composition };
   } catch (error) {
     return { hash, nav: { state: "fail", detail: error instanceof Error ? error.message : "The NAV could not be recalculated." }, composition };
   }

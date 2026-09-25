@@ -16,6 +16,8 @@ function json(value: unknown, status: number, cache: string): Response {
   return new Response(JSON.stringify(value, null, 2), { status, headers: { ...CORS, "Content-Type": "application/json", "Cache-Control": cache } });
 }
 
+/** GanymedeBasketFund.MAX_NAV_AGE: orders and loans use a record for one hour after its time. */
+const NAV_VALIDITY_MS = 3_600_000;
 const usd = (micros: string) => `${BigInt(micros) / 1_000_000n}.${(BigInt(micros) % 1_000_000n).toString().padStart(6, "0")}`;
 
 /** The latest USTX NAV record, read from the registry on X Layer at request time. Reads only. */
@@ -30,12 +32,15 @@ export async function GET(request: Request) {
     if (!record.effectiveAt) throw new Error("No NAV has been recorded yet.");
     // The transaction hash is a convenience from this server's log; the record itself came from the chain.
     let transactionHash: string | null = null;
+    let calculatedAt: string | null = null;
     try {
       const repo = new EngineRepository(env.DB);
       const [history, confirmed] = await Promise.all([repo.getState(STATE_HISTORY), repo.getState(STATE_CONFIRMED)]);
       const entries = [...(history ? JSON.parse(history.value) as Publication[] : []), ...(confirmed ? [JSON.parse(confirmed.value) as Publication] : [])];
       const match = entries.find(entry => entry.holdingsHash.toLowerCase() === record.holdingsHash.toLowerCase() && typeof entry.txHash === "string" && /^0x[0-9a-f]{64}$/i.test(entry.txHash));
       transactionHash = match?.txHash ?? null;
+      const entry = entries.find(item => item.holdingsHash.toLowerCase() === record.holdingsHash.toLowerCase() && typeof item.calculatedAt === "string");
+      calculatedAt = entry?.calculatedAt ?? null;
     } catch { /* The record stands without it. */ }
     // The count recorded with the NAV covers two kinds of shares; each part is read now, and a part that
     // cannot be read is null rather than a guess.
@@ -47,6 +52,9 @@ export async function GET(request: Request) {
         perShareMicros: record.navPerShareMicros,
         sharesOutstandingMicros: record.sharesOutstandingMicros,
         effectiveAt: record.effectiveAt,
+        calculatedAt,
+        validUntil: new Date(Date.parse(record.effectiveAt) + NAV_VALIDITY_MS).toISOString(),
+        timeRule: "effectiveAt is the time of the record's oldest price, never later than calculatedAt. The fund and the lending market accept the NAV until validUntil, one hour after effectiveAt.",
         recordedAt: record.publishedAt,
         holdingsHash: record.holdingsHash,
       },

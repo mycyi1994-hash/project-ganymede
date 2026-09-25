@@ -56,6 +56,9 @@ test("the public NAV API serves the X Layer record to any origin and never write
     assert.equal(body.nav.perShareUsd, "99.449929");
     assert.equal(body.nav.sharesOutstandingMicros, "152083351");
     assert.equal(body.nav.holdingsHash, HASH);
+    // Orders and loans use the record for an hour after its time; older records have no calculation time.
+    assert.equal(body.nav.validUntil, "2026-09-24T19:05:17.000Z");
+    assert.equal(body.nav.calculatedAt, null);
     assert.equal(body.record.chainId, 1952);
     assert.equal(body.record.transactionHash, TX);
     assert.equal(body.verify.page, "https://ganymede.test/products/ustx/transparency");

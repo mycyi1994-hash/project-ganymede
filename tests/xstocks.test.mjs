@@ -87,6 +87,17 @@ test("under the default policy a NAV is never published from prices more than te
   assert.equal(fresh.publishable, true);
 });
 
+test("a record carries the time of its oldest price, never later than the calculation", async () => {
+  const constituents = constituentsWithAddresses(ADDRESSES);
+  const now = "2026-09-25T16:00:00.000Z";
+  const older = await evaluateBasket({ constituents, quotes: quotes(PRICES, "2026-09-25T15:57:00.000Z"), previous: null, now, maxQuoteAgeMinutes: 10 });
+  assert.equal(older.composition.asOf, "2026-09-25T15:57:00.000Z");
+  assert.equal(older.basket.fixedAt, "2026-09-25T15:57:00.000Z");
+  // OnchainOS stamps the response a moment after the request, so a fresh record keeps the calculation time.
+  const fresh = await evaluateBasket({ constituents, quotes: quotes(PRICES, "2026-09-25T16:00:00.900Z"), previous: null, now, maxQuoteAgeMinutes: 10 });
+  assert.equal(fresh.composition.asOf, now);
+});
+
 test("unconfigured addresses block publication instead of guessing", async () => {
   const evaluation = await evaluateBasket({ constituents: constituentsWithAddresses(""), quotes: quotes(), previous: null, now: NOW, maxQuoteAgeMinutes: 60 });
   assert.equal(evaluation.status, "awaiting_configuration");

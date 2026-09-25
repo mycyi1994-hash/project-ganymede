@@ -42,7 +42,10 @@ const DEFAULT_MAX_QUOTE_AGE_MINUTES = 10;
 const COOLDOWN_TOLERANCE_MS = 60_000;
 
 export type Publication = {
+  /** The record's time on X Layer: its oldest price, never later than the calculation. */
   asOf: string;
+  /** When the NAV was calculated; absent on records from before this field existed. */
+  calculatedAt?: string;
   navPerShareMicros: string;
   /** USTX outstanding when the NAV was taken: shares in wallets, issued by the fund contract, plus
    *  shares held with demo balances. Recorded beside the NAV on X Layer. */
@@ -193,6 +196,16 @@ export async function runXStocksCycle(env: EngineEnv, repo: EngineRepository, se
     }
   }
 
+  // The registry accepts only a later time than its latest record; prices no newer than that record
+  // would be refused on chain, so they are not sent.
+  if (evaluation.publishable && evaluation.composition) {
+    const lastConfirmed = JSON.parse((await repo.getState(STATE_CONFIRMED))?.value ?? "null") as Publication | null;
+    if (lastConfirmed && Math.floor(Date.parse(evaluation.composition.asOf) / 1000) <= Math.floor(Date.parse(lastConfirmed.asOf) / 1000)) {
+      evaluation.publishable = false;
+      evaluation.blockers.push("No price is newer than the last NAV record");
+    }
+  }
+
   let navsPublished = 0;
   let publication: Publication | null = null;
 
@@ -213,13 +226,14 @@ export async function runXStocksCycle(env: EngineEnv, repo: EngineRepository, se
     const [demoShares, walletShares] = await Promise.all([demoSharesOutstanding((repo as Partial<EngineRepository>).db), readWalletShares(repo, now, warnings)]);
     if (demoShares === null) warnings.push(`${XSTOCKS_PRODUCT.ticker} demo-balance shares could not be read; this record carries wallet shares only.`);
     const sharesOutstandingMicros = (BigInt(demoShares ?? "0") + BigInt(walletShares ?? "0")).toString();
-    const request = navRequest({ asOf: now, navPerShareMicros: evaluation.composition.navPerShareMicros, holdingsHash: evaluation.holdingsHash, sharesOutstandingMicros });
+    const asOf = evaluation.composition.asOf;
+    const request = navRequest({ asOf, navPerShareMicros: evaluation.composition.navPerShareMicros, holdingsHash: evaluation.holdingsHash, sharesOutstandingMicros });
     // Save the exact document before sending the transaction. Even if storage
     // fails after broadcast, the on-chain hash still has a recoverable document.
     const history = JSON.parse((await repo.getState(STATE_HISTORY))?.value ?? "[]") as Publication[];
     const confirmed = history.find((entry) => entry.status === "confirmed");
     if (confirmed && !(await repo.getState(STATE_CONFIRMED))) await repo.setState(STATE_CONFIRMED, JSON.stringify(confirmed));
-    const pending: Publication = { asOf: now, navPerShareMicros: evaluation.composition.navPerShareMicros, sharesOutstandingMicros, holdingsHash: evaluation.holdingsHash, canonical: evaluation.canonical, status: "queued", txHash: null, error: null };
+    const pending: Publication = { asOf, calculatedAt: now, navPerShareMicros: evaluation.composition.navPerShareMicros, sharesOutstandingMicros, holdingsHash: evaluation.holdingsHash, canonical: evaluation.canonical, status: "queued", txHash: null, error: null };
     // Content-addressed evidence survives a lost receipt. Documents are pruned with the
     // rolling history below, except for the latest confirmed one.
     await repo.setState(`${STATE_DOCUMENT_PREFIX}${pending.holdingsHash}`, JSON.stringify(pending));
