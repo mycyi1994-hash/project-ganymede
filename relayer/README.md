@@ -1,9 +1,10 @@
 # Ganymede settlement relayer
 
 Signs and submits the engine's settlement intents to X Layer testnet (or GIWA
-Sepolia, via `SETTLEMENT_CHAIN`). **This is the only
-component in the system that holds an EVM private key** — the application never
-accepts one, which is why the relayer is deployed separately.
+Sepolia, via `SETTLEMENT_CHAIN`). **This package holds the only EVM private keys
+in the system** — the settlement key here and the separate arbitrage keeper's
+key (see the end of this page). The application never accepts one, which is why
+both are deployed as their own Workers.
 
 ## API
 
@@ -155,3 +156,21 @@ nonce belongs to a signer on one chain.
   - `publishRebalance` does not enforce ordering, so a late, older rebalance
     would overwrite `latestRebalanceHash`. The app publishes in order; readers
     that need history should use the `RebalancePublished` events.
+
+## Arbitrage keeper
+
+`src/keeper.ts` is a second Worker, `ganymede-arbitrage-keeper`
+(`wrangler.keeper.jsonc`), with its own key and no role on any contract. Every
+five minutes it asks `GanymedeNavArbitrage.quote()` for the trade that closes the
+USTX pool's gap to the NAV. When the best trade is at least $1 ($10 when it
+invests at the fund), it sends `buyAndRedeem` or `investAndSell` and insists on
+half the expected profit. It claims demo dollars when it runs low and approves
+the arbitrage contract once; a trade that is no longer profitable when it lands
+reverts in the contract. The wallet holds only testnet OKB for gas and no-value
+demo dollars, and logs never carry the RPC URL.
+
+```bash
+npx wrangler deploy -c wrangler.keeper.jsonc
+npx wrangler secret put KEEPER_PRIVATE_KEY -c wrangler.keeper.jsonc  # a fresh key funded with testnet OKB
+npx wrangler tail ganymede-arbitrage-keeper                         # one JSON line per run
+```
