@@ -17,7 +17,7 @@
 | 대표 이미지(1:1) | 선택 항목. Claude가 만든 1024×1024 PNG(`ganymede-team-1x1.png`)를 쓴다 |
 | 개발 | 제출 가능한 상태로 완료. 제출 뒤에는 새 기능을 배포하지 않는다 |
 
-### 개발 쪽에서 끝난 것 (9/25 12:20 UTC 기준)
+### 개발 쪽에서 끝난 것 (9/25 13:10 UTC 기준)
 
 - **운영 제품** (X Layer Testnet, 가치 없는 데모 달러 dUSD)
   - **Markets**: USTX NAV(OKX OnchainOS 가격, X Layer 기록)와 **다음 기록까지 카운트다운**(새 기록이 오면 초록·빨강으로 반짝임), 펀드 규모·투자자·24시간 순유입, 차트(마우스를 올리면 툴팁, **키퍼 차익거래와 $1,000 이상 주문 표시**), 구성 종목(가격·고정 이후 변화·목표 비중 막대, **누르면 상세 패널**), 그리고 **시장 활동 카드**(24시간 거래액·거래 수·키퍼 차익거래와 번 금액·대출 동작, 최근 거래 4줄).
@@ -32,6 +32,7 @@
 - **컨트랙트 8개** (X Layer Testnet): NAV 기록, USTX 펀드, dUSD, Chainlink 방식 NAV 피드, USTX/dUSD 풀, NAV 차익거래, 대출 시장, 예전 GMDCORE 장부. 모두 OKX 탐색기와 Sourcify에서 소스 검증을 마쳤다.
 - **자동으로 도는 것**: 5분마다 NAV 기록, 5분마다 키퍼(풀이 NAV에서 벗어나면 차익거래로 되돌림), 5분마다 시장 활동 수집.
 - **화면 개선 배포** (9/25 12:05 UTC, Worker `5225c560`): 위의 상세 패널·카운트다운·게이지·대출 막대·차트 툴팁과 표시·첫 로딩 자리 표시·도넛. 배포 뒤 공개 경로 17개 200, 이전 경로 4개 307, 데스크톱·모바일·지갑 있음·없음으로 7개 화면과 상세 패널을 연 상태 모두 axe 위반 0건.
+- **제출물 정리 배포** (9/25 12:50 UTC, 현재 Worker `ae1dae8a`): 쓰지 않던 7월 이미지·템플릿 파일 삭제, 재사용 부분(예전 엔진의 5분 주기·D1 저장소, NAV 레지스트리 계약, relayer, 고정소수점 계산)을 문서와 양식 답에 정확히 적음. 화면은 그대로다.
 - **최종 점검** (9/25 10:30~10:50 UTC, 운영, Worker `90840b50`)
   - 공개 경로 17개 200, 이전 경로 4개 307. 데스크톱·모바일, 지갑 있음·없음으로 7개 화면 axe 위반 0건, 가로 넘침·페이지 오류 없음.
   - 테스트 지갑으로 실제 거래: 풀 매수·매도, 펀드 $10 투자와 환매, 대출(입금 → $5 대출 → 상환 → 인출)이 모두 성공했다. 거래마다 몇 초 안에 시장 활동 맨 위에 "You"로 나왔다.
@@ -230,10 +231,10 @@
 12. **Product Link\***: `https://ganymede-xlayer.gana003.workers.dev/`
 13. **Is this a new project, or are you adding features to an existing one?\***: **No, project is built on a pre-existing codebase or product**
     - 사실대로 고른다. 저장소는 2026년 7월의 원화 암호화폐 전략 엔진에서 시작했다.
-    - 제출하는 USTX 제품, X Layer 연동, 새 계약 6개(USTX 펀드·dUSD·가격 피드·풀·차익거래·대출), 모든 화면은 빌드 기간에 만들었다. 예전 NAV 레지스트리 계약(변경 없이 X Layer에 재배포), relayer(X Layer용으로 확장), 고정소수점 계산은 재사용했다고 밝힌다. `docs/BUILD_PERIOD.md`가 커밋별로 구분한다.
+    - 제출하는 USTX 제품, X Layer 연동, 새 계약 6개(USTX 펀드·dUSD·가격 피드·풀·차익거래·대출), 모든 화면은 빌드 기간에 만들었다. 예전 엔진의 5분 주기와 D1 저장소(USTX 단계를 새로 넣음), NAV 레지스트리 계약(변경 없이 X Layer에 재배포), relayer(X Layer용으로 확장), 고정소수점 계산은 재사용했다고 밝힌다. `docs/BUILD_PERIOD.md`가 커밋별로 구분한다.
     - 설명 칸이 따로 있으면 아래 문장을 쓴다.
 ```text
-The repository started in July 2026 as a Korean-won crypto strategy engine with settlement on another testnet (last pre-event commit 7a33392, 30 July 2026). Everything we ask to be judged was built during the build period: settlement on X Layer, the six-xStock USTX basket priced by OKX OnchainOS, the NAV records, wallet investing through the USTX contract, the USTX/dUSD pool and NAV arbitrage keeper, the lending market, the NAV price feed, market activity, browser verification and evidence files, Portfolio, and the public API and badge. It reuses the earlier NAV registry contract (redeployed to X Layer unchanged), the settlement relayer (extended for X Layer) and the fixed-point helpers; the earlier strategy engine runs only the separate paper Lab. docs/BUILD_PERIOD.md separates the two and lists every build-period commit.
+The repository started in July 2026 as a Korean-won crypto strategy engine with settlement on another testnet (last pre-event commit 7a33392, 30 July 2026). Everything we ask to be judged was built during the build period: settlement on X Layer, the six-xStock USTX basket priced by OKX OnchainOS, the NAV records, wallet investing through the USTX contract, the USTX/dUSD pool and NAV arbitrage keeper, the lending market, the NAV price feed, market activity, browser verification and evidence files, Portfolio, and the public API and badge. It reuses the earlier engine's five-minute cycle and database (its strategies run only the separate paper Lab), the NAV registry contract (redeployed to X Layer unchanged), the settlement relayer (extended for X Layer) and the fixed-point helpers. docs/BUILD_PERIOD.md separates the two and lists every build-period commit.
 ```
 
 ### 양식에는 없지만 물어보면 쓸 문구
@@ -267,7 +268,7 @@ AI-assisted development tools were used. The team reviewed the work and is respo
 2. **왜 테스트넷인가?**
    > The NAV records are test records, so nothing of value depends on them yet. The prices and the xStock balances are real X Layer mainnet data. Moving the registry to mainnet is the first next step.
 3. **대회 전과 무엇이 다른가? (기존 프로젝트)**
-   > Before the event it was a Korean-won crypto strategy engine on another testnet. Everything shown in this demo was built during the build period: X Layer settlement, the xStocks basket, verification, the experiment, evidence files and Portfolio. It reuses our earlier NAV registry contract and relayer, and docs/BUILD_PERIOD.md separates the two commit by commit.
+   > Before the event it was a Korean-won crypto strategy engine on another testnet. Everything shown in this demo was built during the build period: X Layer settlement, the xStocks basket, verification, the experiment, evidence files and Portfolio. It reuses our earlier engine cycle, NAV registry contract and relayer, and docs/BUILD_PERIOD.md separates the two commit by commit.
 4. **GMDCORE 소스에 "for GIWA settlement"라고 적혀 있다.**
    > GMDCORE is a share-ledger contract from our earlier settlement work, redeployed to X Layer Testnet. Its supply is zero and it is not part of USTX.
 5. **USTX를 살 수 있나?**
