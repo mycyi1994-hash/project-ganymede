@@ -24,7 +24,7 @@ Those modules still power the separate paper Lab. They are not part of the submi
 | Fund and ecosystem | Fund overview with size, investors and return since launch; the shares outstanding recorded on X Layer with every NAV; a public NAV API with open CORS, an embeddable self-verifying badge, and issuer and developer pages | `0c38037`, `23d35d2` |
 | Hardening | Public reads without writes, identity header gate, relayer retry and nonce handling, paper-ledger integrity, sanitized public errors | `c98e7ea`, `387ec35`, `8cd427f`, `7b18cf9`, `124bebe` |
 
-From `7a33392` to `10dee7a`: 218 files changed, 21500 insertions(+), 7372 deletions(-).
+From `7a33392` to `fdeeb16`: 218 files changed, 21531 insertions(+), 7372 deletions(-).
 
 ## Every commit in the build period (UTC)
 
@@ -126,3 +126,4 @@ From `7a33392` to `10dee7a`: 218 files changed, 21500 insertions(+), 7372 deleti
 | 2026-09-25 02:24 | `7b334e4` | Record the demo dollar and USTX fund on X Layer Testnet | 5 | +110 / −0 |
 | 2026-09-25 03:04 | `bc3bf08` | Invest in USTX from a wallet on X Layer Testnet | 23 | +1064 / −49 |
 | 2026-09-25 03:07 | `10dee7a` | Describe wallet investing in the README, contract and submission docs | 5 | +60 / −37 |
+| 2026-09-25 03:30 | `c71da11` | Record the wallet investing release (f760cd9e) | 3 | +44 / −13 |
