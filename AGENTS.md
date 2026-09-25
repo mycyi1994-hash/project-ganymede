@@ -4,7 +4,7 @@
 
 The public UI presents USTX as a live fund service, laid out like a production
 DeFi app: one testnet notice and the network and "Connect OKX Wallet" in the
-header; Markets (with the market's latest activity and its 24-hour figures); the USTX page (order panel with wallet and demo-balance investing, wallet orders routed to the fund or the pool at the better price, borrowing against USTX, fund
+header; Markets (with the market's latest activity and its 24-hour figures, a countdown to the next NAV record, and a detail panel for each xStock); the USTX page (order panel with wallet and demo-balance investing, wallet orders routed to the fund or the pool at the better price, borrowing against USTX, fund
 overview with the price oracle and the pool's market price, market activity from the contracts' events, factsheet holdings, About); Portfolio (the demo
 balance and the wallet's USTX, including any posted as lending collateral with its loan, looked through to each xStock, and valuation of
 any wallet's xStocks on X Layer mainnet); and Transparency (the customer proof page). Keep pitch and developer
