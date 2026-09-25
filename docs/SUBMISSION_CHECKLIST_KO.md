@@ -2,7 +2,7 @@
 
 비공개 개발 저장소 전용 문서다. 공개 스냅샷에는 넣지 않는다(`SUBMISSION_EXPORT.md`의 제외 목록).
 
-작성 시점: 2026-09-25 01:10 UTC (9/25 금 10:10 KST).
+작성 시점: 2026-09-25 02:30 UTC (9/25 금 11:30 KST).
 
 ## 1. 한눈에 보기
 
@@ -24,9 +24,10 @@
   - Verify: 고객용 증명 페이지(거래소 준비금 증명 형식). 검증 결과, 가격 산정 3단계, 구성 종목과 OKX 가격, 최근 기록과 OKX 탐색기 링크
   - 개발자 페이지 "Verify it yourself": 3가지 확인, 변조 실험 3종, 증거 파일, 원문 문서
   - 모든 숫자에 출처 표시: "Priced by OKX OnchainOS", "OKX price", "OKX Explorer", "Connect OKX Wallet"
-  - Portfolio 아래 실제 지갑 xStocks 평가·계산기
+  - Portfolio 아래 실제 지갑 xStocks 평가(OKX Wallet 연결 또는 주소 입력)
+  - 화면 배치는 실제 서비스처럼 정리했다: 헤더에 테스트넷 안내 한 줄·네트워크·"Connect OKX Wallet", 메뉴 Markets / Portfolio / Transparency. 발표용 설명 구역은 없앴고, 개발자·발행사 자료는 푸터(Docs, For issuers)로 옮겼다
   - 파트너용: 공개 NAV API(`/api/v1/ustx`), 다른 사이트에 붙이는 검증 배지(`/embed/ustx`), 발행사 페이지(`/issuers`, 요금제·로드맵), 개발자 페이지(`/developers`)
-- **최종 확인** (9/25 01:05 UTC, Worker `26694863`): 아래는 그 직전 배포(9/24 18:38 UTC, `bebf23c3`) 때 확인한 내용이고, 새 배포에서도 화면·API 정상, axe 0건을 다시 확인했다.
+- **최종 확인** (9/25, Worker `3a46801e`): 데스크톱·모바일 7개 화면 axe 위반 0건, 가로 넘침·페이지 오류 없음, 화면·API 정상. 아래는 이전 배포(9/24 18:38 UTC, `bebf23c3`) 때의 확인 내용이다.
   - 11개 화면과 공개 API 3개가 200을 반환하고, 이전 경로 이동이 정상이다.
   - axe 접근성 위반 0건(11개 화면).
   - 운영 사이트에서 $250 데모 매수 → 바스켓 6종목 표시 → 포트폴리오 반영까지 확인했다.
@@ -145,8 +146,8 @@
 
 뜻: 포트폴리오에 총평가액·수익률과 내 지분이 담은 토큰이 보인다. 아래에서 OKX Wallet 연결이나 주소 입력으로 X Layer 메인넷의 실제 xStocks를 읽기 전용으로 평가한다.
 
-**장면 5 — Verify 증명 페이지 (1:35~1:55)**
-화면: Verify 탭. 위의 초록 "NAV verified on X Layer"와 "Priced by OKX OnchainOS" 표시 → 1·2·3 단계 카드 → "View on OKX Explorer"를 눌러 탐색기에서 2~3초.
+**장면 5 — Transparency 증명 페이지 (1:35~1:55)**
+화면: 메뉴 Transparency(탭 4). 위의 초록 "NAV verified on X Layer"와 "Priced by OKX OnchainOS" 표시 → 1·2·3 단계 카드 → "View on OKX Explorer"를 눌러 탐색기에서 2~3초.
 > But why trust the price? Every price is set by OKX OnchainOS and recorded on X Layer, and my browser checks that record automatically. Here it is on the OKX explorer.
 
 뜻: 가격을 왜 믿어야 하나? 모든 가격은 OKX OnchainOS가 매기고 X Layer에 기록되며, 내 브라우저가 그 기록을 자동으로 확인한다. OKX 탐색기에서 보면 이렇다.
@@ -158,7 +159,7 @@
 뜻: 개발자용으로 그 뒤의 확인을 브라우저 속 사본으로 보여 준다. 가격 하나를 바꾸면 계산과 지문이 실패하고, 계산까지 맞추면 NAV가 체인과 달라지고, NAV까지 같게 맞추면 오직 X Layer의 지문만 잡아낸다. 전체 검증은 증거 파일로 내려받아 명령 하나로 다시 확인할 수 있다.
 
 **장면 7 — 생태계 (2:30~2:50)**
-화면: Developers 탭. "Embed the verified NAV badge"의 Live preview(초록 Verified 배지)와 API 예시를 보여 준다. 이어서 첫 화면 아래 "For issuers" 카드를 눌러 Pricing·Roadmap을 2~3초 보여 준다.
+화면: Developers 탭(푸터의 Docs). "Embed the verified NAV badge"의 Live preview(초록 Verified 배지)와 API 예시를 보여 준다. 이어서 푸터의 "For issuers"를 눌러 Plans를 2~3초 보여 준다.
 > Other apps on X Layer can show this verified NAV: a public API, and a badge that verifies itself in the visitor's browser. And issuers can launch their own baskets on the same rails.
 
 뜻: X Layer의 다른 앱도 공개 API와 방문자 브라우저에서 스스로 검증하는 배지로 이 NAV를 쓸 수 있고, 발행사는 같은 구조로 자기 바스켓을 낼 수 있다.
