@@ -30,9 +30,9 @@ the Chainlink `AggregatorV3Interface`; it has no owner. USTX also trades on
 `GanymedeUstxPool` (USTX/dUSD, constant product), and `GanymedeNavArbitrage`
 closes the pool's gap to the NAV through the fund in one transaction; the keeper
 checks every five minutes and sends that trade when it earns at least a cent.
-`GanymedeLendingMarket` (dUSD loans against USTX) is written and tested but not
-deployed and not in the app; it starts paused, and deploying or unpausing it
-needs the user's approval.
+`GanymedeLendingMarket` (dUSD loans against USTX) is deployed on X Layer Testnet
+(`0xae2f54ae3d0370295de18510d56de92afb8843c7`) but paused and not in the app; unpausing it needs the
+user's approval.
 Real money stays out of scope: no mainnet deployment of these contracts, no real deposits, withdrawals, custody or payment destinations, and
 no value for dUSD or USTX. Never create or name an address that would receive
 real funds, and keep the demo, testnet and simulation labels.
