@@ -1,0 +1,36 @@
+{
+  "kind": "ganymede-nav-evidence",
+  "version": 1,
+  "generatedAt": "2026-09-25T18:44:15.730Z",
+  "product": {
+    "id": "us-tech-x",
+    "ticker": "GMD USTX",
+    "key": "0x7fd4bda948705c478ec63926a4cdececd33422c85c3e35f414251992b48c2a20"
+  },
+  "network": {
+    "name": "X Layer Testnet",
+    "chainId": 1952,
+    "registry": "0xf320d2a7f280b7ab61e24374986869d7be34289c",
+    "rpcUrl": "https://testrpc.xlayer.tech/terigon",
+    "explorerUrl": "https://www.okx.com/web3/explorer/xlayer-test"
+  },
+  "record": {
+    "navPerShareMicros": "99699969",
+    "holdingsHash": "0xf2cfe15dadf5396034f6f500f93a5c7fe0f9bd830af418fd53b90449052edff7",
+    "effectiveAt": "2026-09-25T18:40:54.000Z",
+    "transactionHash": "0xe188bacec52eb1207579b7565cfb998dc7f4fd0b7308577cf43d020316cdf233"
+  },
+  "document": "{\"asOf\":\"2026-09-25T18:40:54.306Z\",\"basketFixedAt\":\"2026-09-23T11:15:53.624Z\",\"holdings\":[{\"address\":\"0x9d275685dc284c8eb1c79f6aba7a63dc75ec890a\",\"priceMicros\":\"340045003\",\"priceSource\":\"okx-onchainos-dex-market-price\",\"priceTime\":\"2026-09-25T18:40:55.161Z\",\"symbol\":\"AAPLx\",\"unitsWad\":\"48960259717877296\",\"valueMicros\":\"16648691\",\"weightBps\":1667},{\"address\":\"0x5621737f42dae558b81269fcb9e9e70c19aa6b35\",\"priceMicros\":\"517419013\",\"priceSource\":\"okx-onchainos-dex-market-price\",\"priceTime\":\"2026-09-25T18:40:55.161Z\",\"symbol\":\"MSFTx\",\"unitsWad\":\"33137842591271945\",\"valueMicros\":\"17146149\",\"weightBps\":1667},{\"address\":\"0xc845b2894dbddd03858fd2d643b4ef725fe0849d\",\"priceMicros\":\"224192501\",\"priceSource\":\"okx-onchainos-dex-market-price\",\"priceTime\":\"2026-09-25T18:40:55.161Z\",\"symbol\":\"NVDAx\",\"unitsWad\":\"73001954674413252\",\"valueMicros\":\"16366490\",\"weightBps\":1667},{\"address\":\"0x3557ba345b01efa20a1bddc61f573bfd87195081\",\"priceMicros\":\"249785468\",\"priceSource\":\"okx-onchainos-dex-market-price\",\"priceTime\":\"2026-09-25T18:40:55.161Z\",\"symbol\":\"AMZNx\",\"unitsWad\":\"65082834695163343\",\"valueMicros\":\"16256746\",\"weightBps\":1667},{\"address\":\"0x96702be57cd9777f835117a809c7124fe4ec989a\",\"priceMicros\":\"751230024\",\"priceSource\":\"okx-onchainos-dex-market-price\",\"priceTime\":\"2026-09-25T18:40:55.161Z\",\"symbol\":\"METAx\",\"unitsWad\":\"22530397763150735\",\"valueMicros\":\"16925511\",\"weightBps\":1666},{\"address\":\"0x8ad3c73f833d3f9a523ab01476625f269aeb7cf0\",\"priceMicros\":\"372525015\",\"priceSource\":\"okx-onchainos-dex-market-price\",\"priceTime\":\"2026-09-25T18:40:55.161Z\",\"symbol\":\"TSLAx\",\"unitsWad\":\"43906803092957554\",\"valueMicros\":\"16356382\",\"weightBps\":1666}],\"navPerShareMicros\":\"99699969\",\"pricingChainIndex\":\"196\",\"productId\":\"us-tech-x\"}",
+  "browserChecks": {
+    "chainRead": "pass",
+    "fingerprint": "pass",
+    "recalculatedNav": "pass"
+  },
+  "verify": [
+    "npm run verify:evidence -- <this file>   (from a checkout of the repository)",
+    "SHA-256 of the UTF-8 bytes of `document` must equal record.holdingsHash.",
+    "For each holding, floor(unitsWad × priceMicros / 10^18) must equal valueMicros, and the values must sum to navPerShareMicros.",
+    "The transaction receipt on X Layer Testnet must contain a NavPublished event from the registry with this product key, fingerprint, NAV and time."
+  ],
+  "scope": "Consistency of one published document, its arithmetic and its X Layer record. It does not show that the prices are accurate, that any asset is held, or that the NAV can be traded or redeemed."
+}
