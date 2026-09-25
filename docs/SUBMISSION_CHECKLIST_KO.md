@@ -17,28 +17,29 @@
 | 대표 이미지(1:1) | 선택 항목. Claude가 만든 1024×1024 PNG(`ganymede-team-1x1.png`)를 쓴다 |
 | 개발 | 제출 가능한 상태로 완료. 제출 뒤에는 새 기능을 배포하지 않는다 |
 
-### 개발 쪽에서 끝난 것 (9/25 10:50 UTC 기준)
+### 개발 쪽에서 끝난 것 (9/25 12:20 UTC 기준)
 
 - **운영 제품** (X Layer Testnet, 가치 없는 데모 달러 dUSD)
-  - **Markets**: USTX NAV(OKX OnchainOS 가격, X Layer 기록), 펀드 규모·투자자·24시간 순유입, 차트, 구성 종목, 그리고 **시장 활동 카드**(24시간 거래액·거래 수·키퍼 차익거래와 번 금액·대출 동작, 최근 거래 4줄).
+  - **Markets**: USTX NAV(OKX OnchainOS 가격, X Layer 기록)와 **다음 기록까지 카운트다운**(새 기록이 오면 초록·빨강으로 반짝임), 펀드 규모·투자자·24시간 순유입, 차트(마우스를 올리면 툴팁, **키퍼 차익거래와 $1,000 이상 주문 표시**), 구성 종목(가격·고정 이후 변화·목표 비중 막대, **누르면 상세 패널**), 그리고 **시장 활동 카드**(24시간 거래액·거래 수·키퍼 차익거래와 번 금액·대출 동작, 최근 거래 4줄).
   - **USTX 화면**
     - 투자 패널: OKX Wallet → X Layer Testnet 전환 → dUSD 받기 → 주문. 펀드(NAV)와 풀(시장가) 중 **더 좋은 가격으로 자동 선택**한다. 체결 후 "Added to your basket"에 6종목 토큰 수량이 나온다. 지갑이 없으면 Demo balance 탭으로 같은 체험을 한다.
-    - 펀드 개요: 규모, 투자자, 수익률, 핵심 조건, 풀의 시장가격과 NAV 대비 괴리율, 가격 오라클.
+    - 펀드 개요: 규모, 투자자, 수익률, 핵심 조건, 풀의 시장가격과 NAV 대비 괴리율(**±0.3% 수수료 구간이 칠해진 게이지**), 가격 오라클.
     - **시장 활동**: 펀드 투자·환매, 풀 매매, 키퍼 차익거래(번 금액 포함), 대출의 각 단계가 실시간으로 나온다. 줄마다 OKX 탐색기로 연결된다.
-    - **Borrow against USTX**: USTX를 담보로 넣고 dUSD를 빌리고, 갚고, 빼고, 빌려주는 대출 시장.
-  - **Portfolio**: 지갑의 USTX와 담보(대출 포함)를 6종목으로 들여다보기, 데모 잔고, X Layer 메인넷의 실제 xStocks 평가와 명세서.
+    - **Borrow against USTX**: USTX를 담보로 넣고 dUSD를 빌리고, 갚고, 빼고, 빌려주는 대출 시장. 내 대출은 **50% 한도·65% 청산선이 있는 막대**로 보인다.
+  - **Portfolio**: 지갑의 USTX와 담보(대출 포함)를 6종목으로 들여다보기(**도넛 차트**와 표), 데모 잔고, X Layer 메인넷의 실제 xStocks 평가와 명세서.
   - **Transparency**: 고객용 증명 페이지. 방문자 브라우저가 X Layer 기록을 직접 읽어 확인한다.
   - **파트너용**: `/developers`(검증 실험·증거 파일·API·NAV 가격 피드·풀·담보 예시), `/issuers`, `/embed/ustx` 배지, 공개 API `/api/v1/ustx`·`/api/v1/ustx/activity`.
 - **컨트랙트 8개** (X Layer Testnet): NAV 기록, USTX 펀드, dUSD, Chainlink 방식 NAV 피드, USTX/dUSD 풀, NAV 차익거래, 대출 시장, 예전 GMDCORE 장부. 모두 OKX 탐색기와 Sourcify에서 소스 검증을 마쳤다.
 - **자동으로 도는 것**: 5분마다 NAV 기록, 5분마다 키퍼(풀이 NAV에서 벗어나면 차익거래로 되돌림), 5분마다 시장 활동 수집.
+- **화면 개선 배포** (9/25 12:05 UTC, Worker `5225c560`): 위의 상세 패널·카운트다운·게이지·대출 막대·차트 툴팁과 표시·첫 로딩 자리 표시·도넛. 배포 뒤 공개 경로 17개 200, 이전 경로 4개 307, 데스크톱·모바일·지갑 있음·없음으로 7개 화면과 상세 패널을 연 상태 모두 axe 위반 0건.
 - **최종 점검** (9/25 10:30~10:50 UTC, 운영, Worker `90840b50`)
   - 공개 경로 17개 200, 이전 경로 4개 307. 데스크톱·모바일, 지갑 있음·없음으로 7개 화면 axe 위반 0건, 가로 넘침·페이지 오류 없음.
   - 테스트 지갑으로 실제 거래: 풀 매수·매도, 펀드 $10 투자와 환매, 대출(입금 → $5 대출 → 상환 → 인출)이 모두 성공했다. 거래마다 몇 초 안에 시장 활동 맨 위에 "You"로 나왔다.
   - 데모 잔고 $250 매수, 지갑 Portfolio(지갑·담보·대출·공급 표시)가 정상이었다.
   - 운영에서 내려받은 증거 파일을 `npm run verify:evidence`로 다시 확인해 5개 항목 모두 PASS였다.
   - USTX 공시는 최근 1시간 동안 5분마다 빠짐없이 기록됐다. 지난 24시간은 233건이다. 9/24 12:30~9/25 00:45 UTC에는 OKX 요청 제한(429) 대기로 10~35분 공백이 여러 번 있었다(8절).
-- **테스트**: 앱 156개, relayer 28개, 컨트랙트 62개 통과, lint 오류 0.
-- **공개 저장소**: 운영 소스 `6e3e143`과 같은 코드. README, 빌드 기간 작업 목록(`docs/BUILD_PERIOD.md`), 출처 기록(`docs/BUILD_EVIDENCE.md`), 비밀값 검사 통과. 문서의 링크 31개 중 30개가 200이다. 남은 1개(Centrifuge 문서)는 Cloudflare 봇 확인 화면이 뜨지만, 실제 브라우저에서는 열린다.
+- **테스트**: 앱 160개, relayer 28개, 컨트랙트 62개 통과, lint 오류 0.
+- **공개 저장소**: 운영 소스와 같은 코드(갱신 기록은 `docs/SUBMISSION_EXPORT.md` 절차). README, 빌드 기간 작업 목록(`docs/BUILD_PERIOD.md`), 출처 기록(`docs/BUILD_EVIDENCE.md`), 비밀값 검사 통과. 문서의 링크 31개 중 30개가 200이다. 남은 1개(Centrifuge 문서)는 Cloudflare 봇 확인 화면이 뜨지만, 실제 브라우저에서는 열린다.
 
 ## 2. 사용자가 해야 할 일 (순서대로)
 
@@ -115,10 +116,10 @@
 영어 문장을 천천히 읽는다. 영어 녹음이 어려우면 5절의 "목소리 대안"을 쓴다.
 
 **장면 1 — Markets (0:00~0:25)**
-화면: 첫 화면. NAV와 초록 "Verified in your browser", 차트, 오른쪽 여섯 종목. 아래로 내려 **Market activity** 카드(24시간 거래액·거래 수·차익거래·대출)를 보여 준다.
-> This is Ganymede, built on X Layer for OKX Dev Day. USTX, the US Tech Basket, holds Apple, Microsoft, NVIDIA, Amazon, Meta and Tesla in one share, through their xStocks on X Layer. OKX OnchainOS prices it every five minutes, and every price is recorded on X Layer. Below is the market's last 24 hours, read straight from the chain.
+화면: 첫 화면. NAV와 옆의 "Next NAV in 3:12" 카운트다운, 초록 "Verified in your browser", 차트(선 위에 마우스를 올려 툴팁을 1초), 오른쪽 여섯 종목. 종목 하나(예: Meta)를 눌러 상세 패널을 2~3초 보여 주고 닫는다. 아래로 내려 **Market activity** 카드(24시간 거래액·거래 수·차익거래·대출)를 보여 준다.
+> This is Ganymede, built on X Layer for OKX Dev Day. USTX, the US Tech Basket, holds Apple, Microsoft, NVIDIA, Amazon, Meta and Tesla in one share, through their xStocks on X Layer. OKX OnchainOS prices it every five minutes, and every price is recorded on X Layer; the next record is a few minutes away. Tap any stock for its price, its weight and the tokens in each share. Below is the market's last 24 hours, read straight from the chain.
 
-뜻: USTX는 미국 기술주 6종을 한 좌에 담았다. 5분마다 OKX OnchainOS로 가격을 매기고 X Layer에 기록한다. 아래는 체인에서 바로 읽은 최근 24시간 시장 활동이다.
+뜻: USTX는 미국 기술주 6종을 한 좌에 담았다. 5분마다 OKX OnchainOS로 가격을 매기고 X Layer에 기록한다(다음 기록까지 몇 분). 종목을 누르면 가격·비중·한 좌에 든 토큰이 나온다. 아래는 체인에서 바로 읽은 최근 24시간 시장 활동이다.
 
 **장면 2 — OKX Wallet으로 투자 (0:25~1:05)** ← 핵심 장면 1
 화면: USTX 탭. 투자 패널(Wallet 탭)에 $100 입력 → 두 거래처(펀드·풀) 비교와 "Best price" → Review order → Confirm in wallet → OKX Wallet 창에서 확인 → "Order filled"와 "Added to your basket" → 아래 **Market activity** 맨 위에 "You"로 뜬 줄.
@@ -127,19 +128,19 @@
 뜻: OKX Wallet으로 데모 달러 $100를 투자한다. 주문 패널이 X Layer에 기록된 NAV의 펀드와 USTX 시장 풀을 비교해 더 좋은 가격을 고른다. 지갑에서 확인하면 몇 초 안에 체결되고, 내 돈이 무엇에 담겼는지와 시장 활동 맨 위의 내 거래가 보인다.
 
 **장면 3 — 시장과 키퍼 (1:05~1:30)** ← 핵심 장면 2
-화면: 펀드 개요의 "Market price · … NAV · USTX/dUSD pool" → 시장 활동에서 "Closed the gap to the NAV … earned $… · Arbitrage keeper" 줄(Show all을 눌러 찾는다) → 눌러서 OKX 탐색기 2~3초.
+화면: 펀드 개요의 **Pool price against the NAV** 게이지(칠해진 0.3% 수수료 구간 안의 점) → 위 차트의 검은 점(키퍼 차익거래)에 마우스를 올려 "Closed the gap to the NAV" 툴팁 → 시장 활동에서 "Closed the gap to the NAV … earned $… · Arbitrage keeper" 줄(Show all을 눌러 찾는다) → 눌러서 OKX 탐색기 2~3초.
 > USTX also trades in a pool with its own market price. When that price drifts from the NAV, our keeper buys or sells through the fund in one transaction, the way ETF creation and redemption keep a fund's price in line. Here it closed a gap and earned a few demo dollars.
 
 뜻: USTX는 자체 시장가격이 있는 풀에서도 거래된다. 가격이 NAV에서 벗어나면 키퍼가 펀드를 통해 한 번의 거래로 되돌린다. ETF의 설정·환매와 같은 원리다.
 
 **장면 4 — 담보 대출 (1:30~1:55)**
-화면: "Borrow against USTX". 지갑이 있으면 Deposit USTX 소량 → Borrow $20. 포지션(대출 한도, LTV, 청산 NAV)을 보여 준다.
+화면: "Borrow against USTX". 지갑이 있으면 Deposit USTX 소량 → Borrow $20. 포지션(대출 한도, LTV, 청산 NAV)과 50% 한도·65% 청산선이 있는 **대출 비율 막대**("Healthy")를 보여 준다.
 > USTX is also collateral. I deposit USTX and borrow demo dollars against it, up to half its value at the NAV recorded on X Layer. If a loan passes sixty-five percent, anyone can liquidate it, and the fund redeems the collateral at the NAV.
 
 뜻: USTX를 담보로 넣고 X Layer에 기록된 NAV 기준 가치의 절반까지 빌린다. 65%를 넘으면 누구나 청산할 수 있다.
 
 **장면 5 — Portfolio (1:55~2:15)**
-화면: Portfolio 탭. 지갑의 USTX와 담보 USTX 행, 종목별 들여다보기 표.
+화면: Portfolio 탭. 지갑의 USTX와 담보 USTX 행(담보 줄의 대출 비율 막대), 종목별 **도넛**(조각에 마우스를 올리면 가운데에 종목 금액)과 들여다보기 표.
 > My portfolio shows the USTX in my wallet and the USTX I posted as collateral, looked through to the six xStocks at the recorded prices.
 
 **장면 6 — Transparency (2:15~2:35)**
