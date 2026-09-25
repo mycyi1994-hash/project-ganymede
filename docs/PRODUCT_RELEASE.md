@@ -275,4 +275,4 @@ USTX와 GMDCORE는 다른 대상이다. USTX는 모델 바스켓이다. 지갑 �
     - `npm run fork:lending`으로 실제 컨트랙트를 복제한 메모리 포크에서 공급 $5,000, NAV로 산 USTX 담보, $950 대출, NAV 30% 하락, 청산(보너스 8%), 압류 USTX의 펀드 환매, 상환·인출까지 한 바퀴를 확인했다. 아무것도 전송하지 않았다.
   - 배포 후
     - 체인에서 `dollar`, `fund`, `administrator`, `paused = true`를 다시 읽어 확인했다.
-    - Sourcify에서 생성·런타임 바이트코드가 완전 일치했다. OKX 탐색기 소스 업로드는 캡차가 있어 사용자가 한다(`onchain/deployments/verification/xlayer-testnet/GanymedeLendingMarket.*`).
+    - Sourcify에서 생성·런타임 바이트코드가 완전 일치했다. OKX 탐색기에는 사용자가 소스를 올렸고(`onchain/deployments/verification/xlayer-testnet/GanymedeLendingMarket.*`, 캡차 때문에 사용자 몫), 탐색기의 Contracts 탭에서 "Contract source code verified"를 확인했다. 이로써 X Layer Testnet 컨트랙트 8개 모두 OKX 탐색기와 Sourcify에서 검증됐다.
