@@ -5,7 +5,7 @@
 The public UI presents USTX as a live fund service, laid out like a production
 DeFi app: one testnet notice and the network and "Connect OKX Wallet" in the
 header; Markets; the USTX page (order panel with wallet and demo-balance investing, fund
-overview with the price oracle, factsheet holdings, About); Portfolio (the demo
+overview with the price oracle and the pool's market price, factsheet holdings, About); Portfolio (the demo
 balance and the wallet's USTX looked through to each xStock, and valuation of
 any wallet's xStocks on X Layer mainnet); and Transparency (the customer proof page). Keep pitch and developer
 material out of those screens: the technical checks, the tamper experiment and
@@ -25,9 +25,12 @@ the registry and redeems at that NAV, holding no assets. Demo-balance investing
 (`lib/demo/`, `app/api/demo/`) keeps a D1 ledger per browser and issues nothing
 on chain. Each NAV record carries the shares outstanding in wallets plus demo
 balances. `GanymedeNavFeed` serves the registry's USTX NAV to other contracts in
-the Chainlink `AggregatorV3Interface`; it has no owner. `GanymedeLendingMarket`
-(dUSD loans against USTX) is written and tested but not deployed and not in the
-app; it starts paused, and deploying or unpausing it needs the user's approval.
+the Chainlink `AggregatorV3Interface`; it has no owner. USTX also trades on
+`GanymedeUstxPool` (USTX/dUSD, constant product), and `GanymedeNavArbitrage`
+closes the pool's gap to the NAV through the fund in one transaction.
+`GanymedeLendingMarket` (dUSD loans against USTX) is written and tested but not
+deployed and not in the app; it starts paused, and deploying or unpausing it
+needs the user's approval.
 Real money stays out of scope: no mainnet deployment of these contracts, no real deposits, withdrawals, custody or payment destinations, and
 no value for dUSD or USTX. Never create or name an address that would receive
 real funds, and keep the demo, testnet and simulation labels.
