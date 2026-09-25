@@ -19,6 +19,7 @@ import {
   type Evaluation,
 } from "./basket";
 import { fetchXStockQuotes, MAX_COOLDOWN_MS, onchainOsCredentials } from "./prices";
+import { comparePrices, formatDifference, readPoolPrices, XSTOCK_POOLS, type PoolPrices } from "./pool-prices";
 import { parseComposition } from "./proof";
 import { updateNavSeries } from "./series";
 import { demoSharesOutstanding } from "../demo/ledger";
@@ -170,7 +171,30 @@ async function readWalletShares(repo: EngineRepository, now: string, warnings: s
   }
 }
 
-export async function runXStocksCycle(env: EngineEnv, repo: EngineRepository, settlementClient: SettlementClient, now = new Date().toISOString()): Promise<XStocksCycleResult> {
+/** Bounded, like the wallet-share read: a slow mainnet RPC delays a record by seconds, never a cycle. */
+const readPoolsBounded = () => readPoolPrices((input, init) => fetch(input, { ...init, signal: AbortSignal.timeout(8_000) }));
+
+/**
+ * The second price source. A NAV of the pinned xStocks is recorded only if the OnchainOS prices
+ * agree with the X Layer pools read now; a document of other tokens has no pools to compare, and an
+ * unreadable RPC leaves a warning rather than stopping the record.
+ */
+async function poolDisagreement(composition: Composition, warnings: string[], read: () => Promise<PoolPrices>): Promise<string | null> {
+  if (!composition.holdings.every((holding) => XSTOCK_POOLS.some((pool) => pool.symbol === holding.symbol && pool.token === holding.address.toLowerCase()))) return null;
+  let pools: PoolPrices;
+  try {
+    pools = await read();
+  } catch (error) {
+    warnings.push(`${XSTOCKS_PRODUCT.ticker} prices were not compared with the X Layer pools: ${error instanceof Error ? error.message : "unknown error"}`);
+    return null;
+  }
+  const comparison = comparePrices(composition, pools);
+  if (!comparison || comparison.agrees) return null;
+  const widest = comparison.rows.reduce((a, b) => (Math.abs(b.differenceBps) > Math.abs(a.differenceBps) ? b : a));
+  return `OnchainOS prices disagree with the X Layer pools (${widest.symbol} ${formatDifference(widest.differenceBps)}, NAV ${formatDifference(comparison.navDifferenceBps)} at block ${pools.blockNumber})`;
+}
+
+export async function runXStocksCycle(env: EngineEnv, repo: EngineRepository, settlementClient: SettlementClient, now = new Date().toISOString(), sources: { poolPrices?: () => Promise<PoolPrices> } = {}): Promise<XStocksCycleResult> {
   // Reconciling earlier attempts needs no prices, so it runs even during a provider cooldown.
   let settlementsQueued = await reconcileUnresolved(repo, settlementClient);
   const previousLatest = JSON.parse((await repo.getState(STATE_LATEST))?.value ?? "null") as LatestState | null;
@@ -203,6 +227,14 @@ export async function runXStocksCycle(env: EngineEnv, repo: EngineRepository, se
     if (lastConfirmed && Math.floor(Date.parse(evaluation.composition.asOf) / 1000) <= Math.floor(Date.parse(lastConfirmed.asOf) / 1000)) {
       evaluation.publishable = false;
       evaluation.blockers.push("No price is newer than the last NAV record");
+    }
+  }
+
+  if (evaluation.publishable && evaluation.composition) {
+    const disagreement = await poolDisagreement(evaluation.composition, warnings, sources.poolPrices ?? readPoolsBounded);
+    if (disagreement) {
+      evaluation.publishable = false;
+      evaluation.blockers.push(disagreement);
     }
   }
 

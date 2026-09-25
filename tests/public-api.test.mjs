@@ -73,6 +73,10 @@ test("the public NAV API serves the X Layer record to any origin and never write
     assert.equal(body.market.pool, "0x286f5e7ffdbc30db12665d7a3854217d7cd05cc1");
     assert.equal(body.market.keeper, "0xccf372068496d9bef0f7cf83d697183d358dec1b");
     assert.equal(body.lending.market, "0xae2f54ae3d0370295de18510d56de92afb8843c7");
+    // The second price source is named with its pools, so a partner can repeat the comparison.
+    assert.equal(body.pricing.crossCheck.factory, "0x4b2ab38dbf28d31d467aa8993f6c2585981d6804");
+    assert.deepEqual(body.pricing.crossCheck.pools.map((pool) => pool.symbol), ["AAPLx", "MSFTx", "NVDAx", "AMZNx", "METAx", "TSLAx"]);
+    assert.deepEqual(body.pricing.crossCheck.toleranceBps, { nav: 100, asset: 500 });
     const preflight = OPTIONS();
     assert.equal(preflight.status, 204);
     assert.match(preflight.headers.get("access-control-allow-methods"), /GET/);

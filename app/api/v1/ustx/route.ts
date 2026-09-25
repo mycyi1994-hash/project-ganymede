@@ -1,6 +1,7 @@
 import { engineEnv } from "@/lib/engine/api-helpers";
 import { EngineRepository } from "@/lib/engine/repository";
 import { SettlementClient } from "@/lib/engine/settlement";
+import { POOL_FACTORY, POOL_FEE, POOL_TOLERANCE, XSTOCK_POOLS } from "@/lib/xstocks/pool-prices";
 import { XSTOCKS_CHAIN, XSTOCKS_PRODUCT } from "@/lib/xstocks/basket";
 import { STATE_CONFIRMED, STATE_HISTORY, type Publication } from "@/lib/xstocks/cycle";
 import { readLatestNav } from "@/lib/xstocks/onchain";
@@ -65,7 +66,15 @@ export async function GET(request: Request) {
         transactionHash,
         explorerUrl: transactionHash ? `${settlement.chain.explorerUrl}/tx/${transactionHash}` : `${settlement.chain.explorerUrl}/address/${registry.toLowerCase()}`,
       },
-      pricing: { source: "OKX OnchainOS", chain: XSTOCKS_CHAIN.name, chainIndex: XSTOCKS_CHAIN.chainIndex, interval: "5 minutes" },
+      pricing: {
+        source: "OKX OnchainOS", chain: XSTOCKS_CHAIN.name, chainIndex: XSTOCKS_CHAIN.chainIndex, interval: "5 minutes",
+        // The second source every record is compared with, so a partner can repeat the comparison from the chain.
+        crossCheck: {
+          source: "Uniswap V3 pools on X Layer mainnet", factory: POOL_FACTORY, fee: POOL_FEE,
+          toleranceBps: { nav: POOL_TOLERANCE.navBps, asset: POOL_TOLERANCE.assetBps },
+          pools: XSTOCK_POOLS.map((entry) => ({ symbol: entry.symbol, pool: entry.pool, wrapper: entry.wrapper, quote: entry.stable.symbol })),
+        },
+      },
       shares: {
         token: FUND_DEPLOYMENT.fund,
         symbol: "USTX",

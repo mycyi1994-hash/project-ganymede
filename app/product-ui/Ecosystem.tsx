@@ -20,7 +20,10 @@ const apiExample = `{
     "holdingsHash": "0x3858…96fb"
   },
   "record": { "network": "X Layer Testnet", "chainId": 1952, "registry": "${PROOF_DEPLOYMENT.registry}", "transactionHash": "0x…", … },
-  "pricing": { "source": "OKX OnchainOS", "chain": "X Layer", "chainIndex": "196", "interval": "5 minutes" },
+  "pricing": {
+    "source": "OKX OnchainOS", "chain": "X Layer", "chainIndex": "196", "interval": "5 minutes",
+    "crossCheck": { "source": "Uniswap V3 pools on X Layer mainnet", "toleranceBps": { "nav": 100, "asset": 500 }, "pools": [ … ] }
+  },
   "shares": {
     "token": "0x77ea…7596",
     "outstanding": { "recordedMicros": "1520833514", "inWalletsMicros": "706600000", "inDemoBalancesMicros": "827100000", … },
