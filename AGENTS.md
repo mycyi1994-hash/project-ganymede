@@ -16,8 +16,11 @@ GMDCORE test ledger page (`/activity`) and the paper Lab are earlier work and
 stay out of the navigation. Production is the `ganymede-xlayer` Worker; the
 settlement relayer is `ganymede-settlement-relayer`, and the arbitrage keeper is
 `ganymede-arbitrage-keeper` (`relayer/wrangler.keeper.jsonc`). The app Worker has two
-crons: the engine cycle and NAV record every five minutes, and the market activity
-index (`lib/xstocks/activity-index.ts`) four minutes past, apart so it never holds up the NAV.
+crons: the USTX NAV record every five minutes (`runUstxNavCycle`; the earlier engine's
+paper strategies run only through the operator API, so the record stays small in CPU time),
+and the market activity index (`lib/xstocks/activity-index.ts`) four minutes past, apart so
+it never holds up the NAV. The fund and the lending market refuse a NAV older than one hour,
+so a stalled record stops wallet orders and loans; check the cron's outcome after each deploy.
 `docs/PRODUCT_RELEASE.md` records the current source and Worker version.
 
 Investing uses demo dollars with no value, in two ways. Wallet investing
