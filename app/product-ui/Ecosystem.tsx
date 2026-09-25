@@ -6,6 +6,7 @@ import { ProductShell } from "./ProductShell";
 import { DocumentMenu } from "./DocumentMenu";
 import { Icon } from "./Icons";
 import VerifyYourself from "./VerifyYourself";
+import BasketCheckPanel from "./BasketCheck";
 
 const SITE = "https://ganymede-xlayer.gana003.workers.dev";
 const REPOSITORY = "https://github.com/mycyi1994-hash/project-ganymede-submission";
@@ -114,6 +115,29 @@ await wallet.writeContract({ address: market, abi, functionName: "supplyCollater
 const [value, borrowLimit] = await client.readContract({ address: market, abi, functionName: "collateralValueOf", args: [wallet.account.address] });
 await wallet.writeContract({ address: market, abi, functionName: "borrow", args: [20_000_000n] });`;
 
+const basketExample = `{
+  "schema": "ganymede-basket/v1",
+  "id": "mag3-demo", "ticker": "MAG3", "name": "Three-stock demo basket",
+  "productKey": "0xff42…6dc6",
+  "registry": { "network": "X Layer Testnet", "chainId": 1952, "address": "0xf412…aa60", … },
+  "pricing": { "chainIndex": "196", "source": "Uniswap V3 pools on X Layer mainnet" },
+  "fixedAt": "2026-09-25T17:48:04.000Z",
+  "constituents": [
+    { "symbol": "AAPLx", "address": "0x9d27…890a", "weightBps": 3334, "unitsWad": "98133456909669712" },
+    { "symbol": "MSFTx", "address": "0x5621…6b35", "weightBps": 3333, "unitsWad": "64573252953059528" },
+    { "symbol": "NVDAx", "address": "0xc845…849d", "weightBps": 3333, "unitsWad": "148316832896550717" }
+  ],
+  "documents": "/baskets/mag3/documents/{hash}.json"
+}`;
+
+const basketPublishExample = `# once: deploy the issuer's own registry and fix the units at $100 a share
+ISSUER_PRIVATE_KEY=0x… npm run basket:publish -- public/baskets/mag3/basket.json --init
+# each record: price from the X Layer pools, write the document, record it, check it
+ISSUER_PRIVATE_KEY=0x… npm run basket:publish -- public/baskets/mag3/basket.json`;
+
+const basketEmbedExample = `<iframe src="${SITE}/embed/basket?config=/baskets/mag3/basket.json"
+  title="MAG3 verified NAV" width="440" height="260" style="border:0" loading="lazy"></iframe>`;
+
 const embedExample = `<iframe src="${SITE}/embed/ustx" title="USTX verified NAV"
   width="440" height="260" style="border:0" loading="lazy"></iframe>`;
 
@@ -160,6 +184,14 @@ export function DevelopersPage() {
           <VerifyYourself />
           <Code label="Re-check a downloaded file">{`git clone ${REPOSITORY}\ncd project-ganymede-submission && npm install\nnpm run verify:evidence -- ustx-evidence.json`}</Code>
         </section>
+        <section id="baskets"><h2>Publish your own basket</h2><p>A basket does not need Ganymede’s code to be verified. One configuration file describes it: the constituents and the units fixed for each, the registry and product key its records are written under, and where the document behind each record is served. The checks that verify USTX then verify it in the browser, with one more: the document must hold exactly the configured units. MAG3 is a three-stock demo basket that a separate wallet published to its own registry on X Layer Testnet, priced from the X Layer pools with no API key. This page checks its latest record now.</p>
+          <BasketCheckPanel path="/baskets/mag3/basket.json" />
+          <Code label="basket.json (abridged)">{basketExample}</Code>
+          <Code label="Publish a record">{basketPublishExample}</Code>
+          <Code label="Badge for any configured basket">{basketEmbedExample}</Code>
+          <div className="gmd-embed-preview"><span>Live preview</span><iframe src="/embed/basket?config=/baskets/mag3/basket.json" title="MAG3 verified NAV badge preview" width="440" height="260" loading="lazy" /></div>
+          <p className="gmd-caption">MAG3 is recorded by hand rather than on a schedule and issues no shares. Its registry is the same GanymedeNavRegistry contract, with an exact source match on Sourcify, and the issuer wallet is its only administrator and publisher.</p>
+        </section>
         <section id="okx"><h2>Built on the OKX stack</h2>
           <ul className="gmd-stack-list">
             <li><b>OKX OnchainOS Market API</b><span>Prices all six xStocks on X Layer every five minutes. The NAV is never published without them.</span></li>
@@ -200,7 +232,7 @@ export function IssuersPage() {
           <li><b>Operations</b><span>Scheduled pricing, publication with idempotent retries, and rate-limit handling for the price provider.</span></li>
         </ul><Link prefetch={false} className="gmd-inline-link" href="/products/ustx">See it working with USTX <Icon name="arrow" size={16} /></Link></section>
         <section id="plans"><h2>Plans</h2><div className="gmd-plans">{plans.map(plan => <article key={plan.name}><span>{plan.note}</span><h3>{plan.name}</h3><strong>{plan.price}</strong><ul>{plan.items.map(item => <li key={item}><Icon name="check" size={15} />{item}</li>)}</ul></article>)}</div><p className="gmd-caption">Real-money services are offered only with licensed partners in the markets they serve.</p></section>
-        <section id="pilot"><h2>A pilot</h2><p>A pilot for a basket issuer: we record your basket’s NAV and composition on X Layer every five minutes and give you its verification page, public API and badge. You provide the constituents and the fixing, and every record, and any delay, shows on the verification page. No pilot has run yet.</p></section>
+        <section id="pilot"><h2>A pilot</h2><p>A pilot for a basket issuer: we record your basket’s NAV and composition on X Layer every five minutes and give you its verification page, public API and badge. You provide the constituents and the fixing, and every record, and any delay, shows on the verification page. No pilot has run yet. An issuer can also record its own basket with one configuration file and its own wallet, as the <Link prefetch={false} href="/developers#baskets">MAG3 demo basket</Link> does.</p></section>
         <section id="cost"><h2>What it costs to run</h2><p>Measured on 25 September 2026: one NAV record on X Layer uses about 68,200 gas. At X Layer mainnet’s gas price then (0.02 gwei) and OKB at $120.49, that is about $0.00016 a record, so a basket recorded every five minutes costs about $1.40 a month in gas. Each record also makes one OnchainOS price request and a few database writes, and one hosting plan serves every basket. The costs that grow with each issuer are onboarding, monitoring and support.</p></section>
         <footer><p>Launching a basket, listing USTX or showing its NAV in your app? Get in touch on GitHub.</p><div className="gmd-terms-links"><a className="gmd-button" href={`${REPOSITORY}/issues`} target="_blank" rel="noreferrer">Contact us on GitHub <Icon name="external" size={16} /></a><Link prefetch={false} className="gmd-inline-link" href="/developers">Developer docs <Icon name="arrow" size={16} /></Link></div></footer>
       </article></div></ProductShell>;

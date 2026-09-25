@@ -17,6 +17,7 @@ Ganymede sells USTX, the US Tech Basket: one share holds six tokenized US tech s
 - The result can be downloaded as an evidence file that `npm run verify:evidence` re-checks against the publishing transaction.
 - Portfolio shows the wallet's USTX on X Layer Testnet and values any wallet's real xStocks on X Layer mainnet at those verified prices, with a downloadable statement.
 - Partners get a public NAV API (`/api/v1/ustx`, open CORS) and a market activity API (`/api/v1/ustx/activity`), an embeddable badge that verifies the NAV in the visitor's browser (`/embed/ustx`), and issuer and developer pages.
+- Another issuer's basket needs one configuration file, not our code: MAG3, a three-stock demo basket, is recorded by a separate wallet in its own registry on X Layer Testnet, priced from the X Layer pools, and the developer page and `/embed/basket` verify it with the same checks as USTX.
 
 **Intended users.** Investors who want tokenized-stock exposure they can check; issuers or operators of tokenized-stock baskets who need to publish a value that others can check; wallets and apps on X Layer that want to show a verified NAV.
 
