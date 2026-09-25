@@ -10,7 +10,8 @@ balance and the wallet's USTX, including any posted as lending collateral with i
 any wallet's xStocks on X Layer mainnet); and Transparency (the customer proof page). Keep pitch and developer
 material out of those screens: the technical checks, the tamper experiment and
 the evidence download (re-checked by `npm run verify:evidence`) live on
-`/developers`, which with `/issuers`, the `/embed/ustx` badge and the public
+`/developers`, which with `/issuers`, the `/embed/ustx` badge (and `/embed/basket` for a basket
+defined by a file under `public/baskets/`, such as the MAG3 demo in its own registry) and the public
 `GET /api/v1/ustx` (with `GET /api/v1/ustx/activity`) forms the partner surface linked from the footer. The
 GMDCORE test ledger page (`/activity`) and the paper Lab are earlier work and
 stay out of the navigation. Production is the `ganymede-xlayer` Worker; the
@@ -40,7 +41,8 @@ checks every five minutes and sends that trade when it earns at least a cent.
 Borrow section (`app/product-ui/Lending.tsx`, `lib/xstocks/lending.ts`) deposits
 USTX, borrows, repays, withdraws and lends through it. Pausing it again or any
 other administrator action needs the user's approval.
-Real money stays out of scope: no mainnet deployment of these contracts, no real deposits, withdrawals, custody or payment destinations, and
+`GanymedeBasketVault` (in-kind creation and redemption) runs only on a fork (`npm run fork:vault` in
+`onchain/`); deploying it anywhere needs the user's approval. Real money stays out of scope: no mainnet deployment of these contracts, no real deposits, withdrawals, custody or payment destinations, and
 no value for dUSD or USTX. Never create or name an address that would receive
 real funds, and keep the demo, testnet and simulation labels.
 `lib/product-contract.ts` keeps `canSubscribe`, `canRedeem`, `settlementAsset`

@@ -33,20 +33,25 @@
 - **자동으로 도는 것**: 5분마다 NAV 기록, 5분마다 키퍼(풀이 NAV에서 벗어나면 차익거래로 되돌림), 5분마다 시장 활동 수집.
 - **화면 개선 배포** (9/25 12:05 UTC, Worker `5225c560`): 위의 상세 패널·카운트다운·게이지·대출 막대·차트 툴팁과 표시·첫 로딩 자리 표시·도넛. 배포 뒤 공개 경로 17개 200, 이전 경로 4개 307, 데스크톱·모바일·지갑 있음·없음으로 7개 화면과 상세 패널을 연 상태 모두 axe 위반 0건.
 - **제출물 정리 배포** (9/25 12:50 UTC, Worker `ae1dae8a`): 쓰지 않던 7월 이미지·템플릿 파일 삭제, 재사용 부분(예전 엔진의 D1 저장소, NAV 레지스트리 계약, relayer, 고정소수점 계산)을 문서와 양식 답에 정확히 적음. 화면은 그대로다.
-- **NAV 기록 복구 배포** (9/25 14:45 UTC, Worker `28351ac7`): 14:10부터 Cloudflare가 5분 작업을 CPU 10ms(무료 요금제 한도)에서 끊어 NAV 기록이 14:01~14:45 동안 멈췄다. 5분 작업이 USTX NAV 기록만 하도록 줄여 복구했다(14:45:56, 14:50:54 기록 확인). 줄인 작업도 10ms를 넘으므로 **Cloudflare 계정의 Workers Paid 복구가 근본 해결**이다(사용자 할 일).
-- **가격 신선도 배포** (9/25 16:38 UTC, 현재 Worker `014ecc17`, Codex 검토 반영): 10분 넘은 가격은 NAV 기록을 막는다(전에는 360분). 펀드 규모 아래에 지갑 USTX와 데모 잔고 지분을 나눠 보인다. README에 직접 구매 비교표, 실측 운영 원가, 기록 시각의 뜻, 발행자 가격 신뢰의 한계를 넣었다.
+- **NAV 기록 복구 배포** (9/25 14:45 UTC, Worker `28351ac7`): 14:10부터 Cloudflare가 5분 작업을 CPU 10ms(무료 요금제 한도)에서 끊어 NAV 기록이 14:01~14:45 동안 멈췄다. 5분 작업이 USTX NAV 기록만 하도록 줄여 복구했다(14:45:56, 14:50:54 기록 확인). 줄인 작업도 10ms를 넘으므로 **Cloudflare 계정의 Workers Paid 복구가 근본 해결**이었다. 사용자가 9/25에 Workers Paid($5/월)를 결제해 해결됐다. 이후 5분 작업은 CPU 한도에 걸리지 않았다(17:35~18:10 모든 실행 성공, CPU 최대 130ms).
+- **가격 신선도 배포** (9/25 16:38 UTC, Worker `014ecc17`, Codex 검토 반영): 10분 넘은 가격은 NAV 기록을 막는다(전에는 360분). 펀드 규모 아래에 지갑 USTX와 데모 잔고 지분을 나눠 보인다. README에 직접 구매 비교표, 실측 운영 원가, 기록 시각의 뜻, 발행자 가격 신뢰의 한계를 넣었다.
+- **Codex 피드백 11개 반영 배포** (9/25 17:13~18:56 UTC, 현재 Worker `4011ca58`, 소스 `75e9197`)
+  - 7개: 발행자 가격 한계 표기, 지갑·데모 지분 구분 API, 여섯 종목 직접 구매 비교, 가격 신선도 10분, 자산 흐름 문구, 발행사 파일럿·실측 원가, USTX 전용 경계.
+  - 4개: **두 번째 가격원**(X Layer 메인넷 Uniswap V3 풀, NAV 1% 넘게 어긋나면 기록 안 함, Transparency에서 브라우저가 비교), **실물 인도 금고**(`GanymedeBasketVault`, 메인넷 포크에서 실제 AAPLx·MSFTx·NVDAx로 발행·환매, 배포 안 함), **두 번째 바스켓 MAG3**(데모 발행자 지갑의 자체 레지스트리 `0xf412…aa60`, 설정 파일 하나로 기록·검증·배지), **시각 분리**(기록 시각=가장 오래된 가격 시각, 계산 시각·유효 시각).
+  - 검토 2회(에이전트 6개)에서 나온 문제를 모두 고쳤다. OKX 429는 같은 주기에서 두 번 다시 묻는다.
+  - 운영 확인: 주요 16개 경로 200, 이전 경로 4개 307, axe 위반 0건, 지갑 투자·환매와 대출 E2E 성공, 증거 파일 PASS, NAV 18:40~19:00 연속 확정.
 - **최종 점검** (9/25 10:30~10:50 UTC, 운영, Worker `90840b50`)
   - 공개 경로 17개 200, 이전 경로 4개 307. 데스크톱·모바일, 지갑 있음·없음으로 7개 화면 axe 위반 0건, 가로 넘침·페이지 오류 없음.
   - 테스트 지갑으로 실제 거래: 풀 매수·매도, 펀드 $10 투자와 환매, 대출(입금 → $5 대출 → 상환 → 인출)이 모두 성공했다. 거래마다 몇 초 안에 시장 활동 맨 위에 "You"로 나왔다.
   - 데모 잔고 $250 매수, 지갑 Portfolio(지갑·담보·대출·공급 표시)가 정상이었다.
   - 운영에서 내려받은 증거 파일을 `npm run verify:evidence`로 다시 확인해 5개 항목 모두 PASS였다.
   - USTX 공시는 최근 1시간 동안 5분마다 빠짐없이 기록됐다. 지난 24시간은 233건이다. 9/24 12:30~9/25 00:45 UTC에는 OKX 요청 제한(429) 대기로 10~35분 공백이 여러 번 있었다(8절).
-- **테스트**: 앱 160개, relayer 28개, 컨트랙트 62개 통과, lint 오류 0.
-- **공개 저장소**: 운영 소스 `6bcee81`와 같은 코드(공개 커밋 `4cd8a6f`). README 첫머리에 운영 화면 캡처 5장이 있다. 행사 전 코드가 있다는 공개 문장과 빌드 기간 작업 목록은 규칙(기존 프로젝트는 추가 기능 목록·커밋 증거 제출)에 따라 그대로 두었다. README, 빌드 기간 작업 목록(`docs/BUILD_PERIOD.md`), 출처 기록(`docs/BUILD_EVIDENCE.md`), 비밀값 검사 통과. 문서의 링크 31개 중 30개가 200이다. 남은 1개(Centrifuge 문서)는 Cloudflare 봇 확인 화면이 뜨지만, 실제 브라우저에서는 열린다.
+- **테스트**: 앱 180개, relayer 28개, 컨트랙트 69개 통과, lint 오류 0.
+- **공개 저장소**: 운영 소스 `75e9197`와 같은 코드(9/25 19시대 UTC에 갱신). README 첫머리에 운영 화면 캡처 5장이 있다. 행사 전 코드가 있다는 공개 문장과 빌드 기간 작업 목록은 규칙(기존 프로젝트는 추가 기능 목록·커밋 증거 제출)에 따라 그대로 두었다. README, 빌드 기간 작업 목록(`docs/BUILD_PERIOD.md`), 출처 기록(`docs/BUILD_EVIDENCE.md`), 비밀값 검사 통과. 문서의 링크 31개 중 30개가 200이다. 남은 1개(Centrifuge 문서)는 Cloudflare 봇 확인 화면이 뜨지만, 실제 브라우저에서는 열린다.
 
 ## 2. 사용자가 해야 할 일 (순서대로)
 
-- [ ] **0. (긴급, 5분, $5/월) Cloudflare Workers Paid로 올리기**: Cloudflare 대시보드 → Workers & Pages → 오른쪽 또는 Plans의 요금제 → **Workers Paid** 선택 → 결제 수단 입력.
+- [x] **0. (완료, 9/25) Cloudflare Workers Paid로 올리기**: 사용자가 Workers Paid($5/월)를 결제했다.
   - 이유: 이 계정은 무료 요금제로 보인다(9/23 D1 무료 쓰기 한도 초과, 9/25 14:10부터 CPU 10ms 강제 종료). 무료 요금제는 한 번 실행에 CPU 10ms까지만 허용한다. 5분 NAV 기록은 한 번에 약 35–50ms를 쓴다. Cloudflare가 가끔 넘는 것은 봐주지만 계속 넘으면 끊는다. 끊기면 NAV가 멈추고, 1시간 뒤에는 지갑 투자·대출이 막힌다.
   - 올리면 코드 변경 없이 한도가 1회 30초, D1 쓰기가 월 5천만 행이 된다. 심사가 끝나는 10/7 이후에 내리면 된다.
 - [ ] **1. 데모 영상 녹화 (필수, 1~2시간)**: 4절 대본과 5절 방법을 따른다. 길이는 2~4분, 목표는 3분이다.
@@ -77,7 +82,7 @@
 | 데모 영상 없음 | 필수 제출물. 없으면 제출 불완전 | 사용자가 제작(4·5절) |
 | 실제 고객·수요 근거 없음 | 성장성 점수에 약점 | 주장하지 않는다. 요금제는 Sandbox(무료)만 열려 있고 나머지는 "Contact us"로 표시했다. 가능하면 지인 1~2명에게 데모 투자를 해 보게 하고 받은 반응을 발표에서 말한다 |
 | NAV 기록이 X Layer **Testnet** | 메인넷 실사용이 아니라는 지적 가능 | 가격·xStocks 잔고는 메인넷이다. 기록 메인넷 이전은 "다음 단계"로 명시 |
-| 가격 출처가 OKX OnchainOS 하나 | 가격 정확성은 증명하지 않음 | 화면과 문서에 "가격이 맞는지는 확인하지 않는다"고 적었다. 두 번째 출처는 다음 단계 |
+| 가격 출처 | 가격 정확성은 증명하지 않음 | OKX OnchainOS 가격을 X Layer 메인넷 Uniswap V3 풀(두 번째 출처)과 비교한다. 발행자는 NAV가 1% 넘게 어긋나면 기록하지 않고, Transparency가 브라우저에서 다시 비교한다. 둘 다 X Layer 시장이라 증권거래소 가격과는 비교하지 않는다고 적었다 |
 | 원문 문서는 최근 12건(약 1시간)만 보관 | 오래된 기록은 화면에서 재검증 불가 | 증거 파일을 받아 두면 언제든 재확인된다(명령어가 거래 영수증과 대조) |
 | 실제 지갑 확장 프로그램으로는 미검증 | 드물게 연결·서명 창 문제가 있을 수 있음 | 테스트 지갑을 브라우저에 주입해 받기·승인·투자·취소·환매를 X Layer Testnet에서 끝까지 확인했다. 실제 OKX Wallet 확장 프로그램은 사용자가 한 번 확인 |
 | OKX AI(에이전트) 연동 없음 | "X Layer and/or OKX AI" 중 X Layer만 사용 | 의도적 선택. Build a Market 트랙 요건은 충족 |
@@ -277,11 +282,11 @@ AI-assisted development tools were used. The team reviewed the work and is respo
 4. **GMDCORE 소스에 "for GIWA settlement"라고 적혀 있다.**
    > GMDCORE is a share-ledger contract from our earlier settlement work, redeployed to X Layer Testnet. Its supply is zero and it is not part of USTX.
 5. **USTX를 살 수 있나?**
-   > Yes, from OKX Wallet on X Layer Testnet, with demo dollars that have no value: the USTX contract issues shares at the NAV recorded on X Layer and shows the tokens behind them. Real money would need an issuer, custody and licensing; the issuer page shows that path. We have not started it.
+   > Yes, from OKX Wallet on X Layer Testnet, with demo dollars that have no value: the USTX contract issues shares at the NAV recorded on X Layer and shows the tokens behind them. Real money would need an issuer, custody and licensing; the issuer page shows that path. An in-kind vault is built and ran with the real xStocks on a fork of X Layer mainnet, creating shares only against the tokens and redeeming them for a proportional share; it is not deployed.
 6. **Chainlink Proof of Reserve, DTCC Smart NAV, Centrifuge와 무엇이 다른가?**
    > Proof of Reserve covers asset backing, which we do not. DTCC and Centrifuge put NAV data on chain. What we add is that any visitor can reproduce a basket NAV row by row in their own browser against the X Layer record, see which check catches which edit, and pass the result on as a file anyone can verify.
 7. **가격이 틀리면? (발행자가 틀린 가격을 앞뒤가 맞게 올리면?)**
-   > Publication gates reject missing or mismatched quotes and any quote more than ten minutes old. A match proves consistency, not price accuracy: if we recorded a wrong price in a document whose arithmetic and fingerprint agree, every check would pass. Catching that needs a second, independent price source that a verifier uses to re-price the basket itself. That is our next step, and we say so on the site.
+   > Publication gates reject missing or mismatched quotes and any quote more than ten minutes old, and every record is checked against a second source: the Uniswap V3 pools on X Layer mainnet where the xStocks' wrappers trade. The publisher does not record a NAV more than 1% from its value at the pool prices (if the pools cannot be read, the record goes ahead with a warning), and the Transparency page repeats the comparison in the visitor's browser, straight from the chain. Both sources are X Layer markets, so a price wrong in both would still pass; an exchange price is the next reference.
 8. **누가 돈을 내나? (비즈니스 모델)**
    > Issuers pay to publish verifiable baskets: a free sandbox today, then a planned per-basket subscription on X Layer mainnet, and a distribution fee on assets raised through licensed partners. This is planned pricing; we do not claim customers.
 9. **OKX 생태계에 무엇을 더하나?**
@@ -289,11 +294,11 @@ AI-assisted development tools were used. The team reviewed the work and is respo
 10. **주식 분할이나 종목 변경은?**
     > The methodology page explains constituent and token changes. Corporate actions such as splits and dividends are not modelled yet. That is a stated limitation.
 11. **펀드가 실제 xStocks를 들고 있나?**
-    > No. On testnet the fund holds no assets: an investment's demo dollars are burned and a redemption mints new ones, so the NAV is a model price. xStocks exist on X Layer mainnet, and holding them for investors needs real money, custody and an issuer. The mainnet design is a vault that holds the six tokens; it has not started.
+    > No. On testnet the fund holds no assets: an investment's demo dollars are burned and a redemption mints new ones, so the NAV is a model price. xStocks exist on X Layer mainnet, and holding them for investors needs real money, custody and an issuer. The in-kind vault, GanymedeBasketVault, is built and ran with real AAPLx, MSFTx and NVDAx on a fork of X Layer mainnet; it is not deployed.
 12. **펀드 규모에 데모 잔고가 섞여 있지 않나?**
     > Yes, and the page shows the split: USTX tokens in wallets, which trade in the pool and serve as loan collateral, and shares in demo balances, which stay in the app. Both were issued at the same recorded NAV, and the X Layer record counts both.
 13. **AI를 썼나?**
-    > Yes, AI-assisted development tools. We reviewed the work, it has about 250 automated tests (app, contracts and relayer), and we can explain each part.
+    > Yes, AI-assisted development tools. We reviewed the work, it has about 280 automated tests (app, contracts and relayer), and we can explain each part.
 
 ## 8. 심사 기간 운영 유지 (10/7까지)
 
@@ -304,11 +309,11 @@ AI-assisted development tools were used. The team reviewed the work and is respo
 - **OKX OnchainOS API 키**
   - OKX 문서에 따르면 trial 키는 초당 1회 요청까지 쓸 수 있고, 키 생성 후 60일 동안 유효하다. OKX 개발자 포털에서 키를 만든 날짜를 확인한다. 9월 하순에 만들었다면 심사 기간(10/7)을 넘긴다.
   - 키가 만료되면 새 기록이 멈춘다. 화면은 마지막 기록을 보여 준다.
-  - OKX 쪽 요청 제한기가 가끔 HTTP 429를 준다. 이때는 10~15분 동안 기록이 비었다가 저절로 다시 기록된다.
+  - OKX 쪽 요청 제한기(Cloudflare "error code: 1015", 출구 IP 기준)가 가끔 HTTP 429를 준다. 9/25 `2024e85`부터 같은 주기에서 30초·90초 뒤 다시 묻고, 그래도 막히면 다음 5분 주기에 다시 시도한다. 9/25 17:35~18:45 UTC에는 가장 긴 공백이 25분이었다.
     - 확인된 것은 9/24 14:20과 14:35 UTC 두 번이다. 12:35와 12:45 UTC에도 기록이 하나씩 빠졌지만, 원인은 남아 있지 않다. 00:00~12:30 UTC에는 빠진 기록이 없었다.
     - 원인은 확인하지 못했다. 마감이 다가와 같은 API를 쓰는 팀이 늘었을 가능성이 있다.
-    - 그동안에도 화면은 직전 기록을 "Last recorded on X Layer"로 보여 주고, Transparency는 그 기록으로 "NAV verified on X Layer"를 보여 준다. Methodology 화면에도 "공급자 한도 등으로 공시가 늦어질 수 있다"고 적혀 있다.
-    - 재시도하지 않고 기다리는 것은 코드 검토 때 정한 설계라서 마감 전에는 바꾸지 않는다.
+    - 그동안에도 화면은 직전 기록을 "Last recorded on X Layer"로 보여 주고, Transparency는 그 기록으로 "NAV verified on X Layer"를 보여 준다. Limitations 화면에도 "공급자 한도 등으로 공시가 늦어질 수 있다"고 적혀 있다.
+    - 예전에는 재시도하지 않고 10분을 기다렸다. 9/25 `2024e85`부터 주기 안에서 두 번 다시 묻는다.
 - **Cloudflare D1 무료 한도**
   - 하루(00:00 UTC 기준) 쓰기 한도는 10만 행이다. 9/24 기준 최근 24시간에 약 3.4만 행을 써서 여유가 약 3배다.
   - 9/23 12:26~24:00 UTC의 11시간 반 기록 공백은 이 한도를 넘었기 때문이었다. 요청마다 쓰던 코드를 그날 고쳤다.
