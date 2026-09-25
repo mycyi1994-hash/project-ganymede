@@ -29,7 +29,7 @@ balances. `GanymedeNavFeed` serves the registry's USTX NAV to other contracts in
 the Chainlink `AggregatorV3Interface`; it has no owner. USTX also trades on
 `GanymedeUstxPool` (USTX/dUSD, constant product), and `GanymedeNavArbitrage`
 closes the pool's gap to the NAV through the fund in one transaction; the keeper
-sends that trade every five minutes when the gap is wider than the fee.
+checks every five minutes and sends that trade when it earns at least a cent.
 `GanymedeLendingMarket` (dUSD loans against USTX) is written and tested but not
 deployed and not in the app; it starts paused, and deploying or unpausing it
 needs the user's approval.

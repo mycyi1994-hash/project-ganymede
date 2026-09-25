@@ -33,7 +33,7 @@
   - axe 접근성 위반 0건(11개 화면).
   - 운영 사이트에서 $250 데모 매수 → 바스켓 6종목 표시 → 포트폴리오 반영까지 확인했다.
   - 배포 뒤 첫 기록(18:35 UTC)에 발행 좌수가 X Layer에 올라간 것을 확인했다.
-- **테스트**: 앱 135개, relayer 25개, 컨트랙트 60개가 통과했고, lint 오류는 0이다.
+- **테스트**: 앱 135개, relayer 28개, 컨트랙트 60개가 통과했고, lint 오류는 0이다.
 - **공시 기록**: 9/23 11:15 UTC부터 5분마다 USTX NAV를 X Layer Testnet에 기록하고 있다. 9/24 18:40 UTC까지 216건이 확정됐다. 차트는 첫 공시부터 모든 기록을 보여 준다.
 - **공개 저장소**: README, 빌드 기간 작업 목록(`docs/BUILD_PERIOD.md`), 출처 기록(`docs/BUILD_EVIDENCE.md`)을 갖췄다. 비밀값 검사를 통과했다.
 
@@ -261,7 +261,7 @@ Investors who want diversified exposure to tokenized US stocks with prices they 
 - X Layer Testnet (chain 1952): GanymedeNavRegistry stores each NAV, the shares outstanding, the effective time and the composition fingerprint and emits NavPublished. A USTX record has been published about every five minutes since 23 Sep 2026 11:15 UTC (216 confirmed by 24 Sep 18:40 UTC).
 - X Layer Testnet: GanymedeBasketFund (USTX) issues and redeems shares only at the registry's latest NAV, paid in no-value demo dollars (GanymedeDemoDollar); wallets invest through it from the USTX page.
 - X Layer Testnet: GanymedeNavFeed serves the USTX NAV through the Chainlink AggregatorV3Interface (8 decimals), so other X Layer contracts can read it without custom code.
-- X Layer Testnet: USTX trades on a USTX/dUSD pool (GanymedeUstxPool), and GanymedeNavArbitrage closes the pool's gap to the NAV through the fund in one transaction, like ETF creation and redemption; a keeper runs it every five minutes, and the USTX page shows the market price and its premium or discount.
+- X Layer Testnet: USTX trades on a USTX/dUSD pool (GanymedeUstxPool), and GanymedeNavArbitrage closes the pool's gap to the NAV through the fund in one transaction, like ETF creation and redemption; a keeper checks every five minutes and runs it when closing the gap earns at least a cent, and the USTX page shows the market price and its premium or discount.
 - OKX Wallet: signs the claim, approve, invest and redeem transactions on X Layer Testnet from the USTX page; Portfolio reads its balances.
 - Public NAV API and embeddable badge: other X Layer apps can read or show the verified NAV.
 ```

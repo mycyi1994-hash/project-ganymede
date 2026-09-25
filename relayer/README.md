@@ -161,11 +161,13 @@ nonce belongs to a signer on one chain.
 
 `src/keeper.ts` is a second Worker, `ganymede-arbitrage-keeper`
 (`wrangler.keeper.jsonc`), with its own key and no role on any contract. Every
-five minutes it asks `GanymedeNavArbitrage.quote()` for the trade that closes the
-USTX pool's gap to the NAV. When the best trade is at least $1 ($10 when it
-invests at the fund), it sends `buyAndRedeem` or `investAndSell` and insists on
-half the expected profit. It claims demo dollars when it runs low and approves
-the arbitrage contract once; a trade that is no longer profitable when it lands
+five minutes, three minutes past each mark so the app's NAV record for the mark
+has landed, it asks `GanymedeNavArbitrage.quote()` for the trade that closes the
+USTX pool's gap to the NAV. When that trade earns at least a cent, it runs it as
+a call first, so it never pays gas for a trade that would revert, then sends
+`buyAndRedeem` or `investAndSell` and insists on half the profit the call showed.
+It claims demo dollars when it runs low, approves the arbitrage contract once and
+quotes again after either; a trade that is no longer profitable when it lands
 reverts in the contract. The wallet holds only testnet OKB for gas and no-value
 demo dollars, and logs never carry the RPC URL.
 

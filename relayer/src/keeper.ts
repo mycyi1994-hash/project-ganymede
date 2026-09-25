@@ -1,16 +1,18 @@
-import { createPublicClient, createWalletClient, http, maxUint256, parseAbi, type Address, type Hex } from "viem";
+import { BaseError, ContractFunctionRevertedError, createPublicClient, createWalletClient, http, maxUint256, parseAbi, type Address, type Hex } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { xlayerTestnet } from "./chain";
 
 /**
  * The USTX arbitrage keeper, a Worker of its own (wrangler.keeper.jsonc). Every five minutes it
- * asks GanymedeNavArbitrage for the trade that closes the USTX pool's gap to the NAV and, when the
- * gap is wider than the pool's fee, sends that trade from its own wallet. That keeps the pool's
- * market price near the NAV, the way ETF creation and redemption do for a fund.
+ * asks GanymedeNavArbitrage for the trade that closes the USTX pool's gap to the NAV and, when that
+ * trade earns at least a cent, sends it from its own wallet. That keeps the pool's market price
+ * near the NAV, the way ETF creation and redemption do for a fund.
  *
- * Its key (KEEPER_PRIVATE_KEY, a Worker secret) holds testnet OKB for gas and no-value demo
- * dollars, claimed from the demo dollar when it runs low. It has no role on any contract, and a
- * trade that is no longer profitable when it lands reverts in the arbitrage contract.
+ * It runs three minutes past each five-minute mark, after the app's NAV record for that mark has
+ * landed, and runs every trade as a call before sending it, so it does not pay gas for a trade
+ * that would revert. Its key (KEEPER_PRIVATE_KEY, a Worker secret) holds testnet OKB for gas and
+ * no-value demo dollars, claimed from the demo dollar when it runs low. It has no role on any
+ * contract, and a trade that is no longer profitable when it lands reverts in the arbitrage contract.
  */
 
 export interface KeeperEnv {
@@ -20,14 +22,15 @@ export interface KeeperEnv {
   SETTLEMENT_RPC_URL?: string;
 }
 
-/** The smallest trade worth sending, in demo-dollar micros. */
-export const MIN_TRADE_MICROS = 1_000_000n;
+/** The least a trade must earn to be worth sending, in demo-dollar micros: a cent. */
+export const MIN_PROFIT_MICROS = 10_000n;
 // The fund refuses investments under $10, and a claim adds 10,000 demo dollars.
 const MIN_INVESTMENT_MICROS = 10_000_000n;
 const CLAIM_MICROS = 10_000_000_000n;
 
 export type Quote = { buyInPool: boolean; dollarsIn: bigint; dollarsOut: bigint };
 export type Sent = { hash: Hex; success: boolean };
+export type Simulation = { dollarsOut: bigint } | { revert: string };
 
 /** What the keeper reads and sends. The Worker binds it to X Layer Testnet; tests use a fake. */
 export interface KeeperChain {
@@ -36,6 +39,8 @@ export interface KeeperChain {
   allowance(): Promise<bigint>;
   nextClaimAt(): Promise<bigint>;
   now(): Promise<bigint>;
+  /** Runs the trade as a call on the latest block, insisting only on no loss, without sending it. */
+  simulate(buyInPool: boolean, dollarsIn: bigint): Promise<Simulation>;
   claim(): Promise<Sent>;
   approve(): Promise<Sent>;
   arbitrage(buyInPool: boolean, dollarsIn: bigint, minProfit: bigint): Promise<Sent>;
@@ -46,46 +51,87 @@ export type KeeperOutcome =
   | { action: "arbitrage"; direction: "buyAndRedeem" | "investAndSell"; dollarsIn: string; expectedOut: string; hash: Hex; success: boolean };
 
 export async function runKeeper(chain: KeeperChain): Promise<KeeperOutcome> {
+  let quote = await quoteOrReason(chain);
+  if (typeof quote === "string") return none(quote);
+
+  let balance = await chain.dollarBalance();
+  let wrote = false;
+  if (balance < quote.dollarsIn && (await chain.nextClaimAt()) <= (await chain.now())) {
+    const claimed = await chain.claim();
+    if (!claimed.success) return none(`claim reverted: ${claimed.hash}`);
+    balance += CLAIM_MICROS;
+    wrote = true;
+  }
+  if (balance > 0n && (await chain.allowance()) < balance) {
+    const approved = await chain.approve();
+    if (!approved.success) return none(`approve reverted: ${approved.hash}`);
+    wrote = true;
+  }
+  // Claiming and approving take a few blocks, and the pool or the NAV can move meanwhile.
+  if (wrote) {
+    quote = await quoteOrReason(chain);
+    if (typeof quote === "string") return none(quote);
+  }
+
+  const size = balance < quote.dollarsIn ? balance : quote.dollarsIn;
+  if (size === 0n || (!quote.buyInPool && size < MIN_INVESTMENT_MICROS)) {
+    return none(`holds ${balance} demo-dollar micros, too few for the trade`);
+  }
+  // A trade that would revert still costs gas, so run it as a call first; the call also gives the
+  // exact demo dollars back at this size.
+  const simulated = await chain.simulate(quote.buyInPool, size);
+  if ("revert" in simulated) return none(`the trade would revert: ${simulated.revert}`);
+  const profit = simulated.dollarsOut - size;
+  if (profit < MIN_PROFIT_MICROS) return none(`a trade of ${size} demo-dollar micros would earn ${profit}, under the ${MIN_PROFIT_MICROS} worth a trade`);
+  // Insist on half that profit, so a trade that lands after the pool or the NAV has moved reverts
+  // instead of losing.
+  const sent = await chain.arbitrage(quote.buyInPool, size, profit / 2n);
+  return {
+    action: "arbitrage",
+    direction: quote.buyInPool ? "buyAndRedeem" : "investAndSell",
+    dollarsIn: size.toString(),
+    expectedOut: simulated.dollarsOut.toString(),
+    hash: sent.hash,
+    success: sent.success,
+  };
+}
+
+/** The quote when closing the gap is worth a trade, or why it is not. */
+async function quoteOrReason(chain: KeeperChain): Promise<Quote | string> {
   let quote: Quote;
   try {
     quote = await chain.quote();
   } catch (error) {
     // For example NavTooOld: without a usable NAV there is no gap to close.
-    return { action: "none", reason: `no quote: ${describe(error)}` };
+    return `no quote: ${describe(error)}`;
   }
-  if (quote.dollarsIn === 0n) return { action: "none", reason: "the pool is within its fee of the NAV" };
-  const minimum = quote.buyInPool ? MIN_TRADE_MICROS : MIN_INVESTMENT_MICROS;
-  if (quote.dollarsIn < minimum) return { action: "none", reason: `the gap calls for ${quote.dollarsIn} demo-dollar micros, below the ${minimum} a trade needs` };
+  if (quote.dollarsIn === 0n) return "the pool is within its fee of the NAV";
+  const profit = quote.dollarsOut - quote.dollarsIn;
+  if (profit < MIN_PROFIT_MICROS) return `closing the gap would earn ${profit} demo-dollar micros, under the ${MIN_PROFIT_MICROS} worth a trade`;
+  return quote;
+}
 
-  let balance = await chain.dollarBalance();
-  if (balance < quote.dollarsIn && (await chain.nextClaimAt()) <= (await chain.now())) {
-    const claimed = await chain.claim();
-    if (!claimed.success) return { action: "none", reason: `claim reverted: ${claimed.hash}` };
-    balance += CLAIM_MICROS;
-  }
-  const size = balance < quote.dollarsIn ? balance : quote.dollarsIn;
-  if (size < minimum) return { action: "none", reason: `holds ${size} demo-dollar micros, below the ${minimum} a trade needs` };
-  if ((await chain.allowance()) < size) {
-    const approved = await chain.approve();
-    if (!approved.success) return { action: "none", reason: `approve reverted: ${approved.hash}` };
-  }
-  // At the quoted size, insist on half the expected profit; a smaller trade only insists on no loss.
-  const minProfit = size === quote.dollarsIn ? (quote.dollarsOut - quote.dollarsIn) / 2n : 0n;
-  const sent = await chain.arbitrage(quote.buyInPool, size, minProfit);
-  return {
-    action: "arbitrage",
-    direction: quote.buyInPool ? "buyAndRedeem" : "investAndSell",
-    dollarsIn: size.toString(),
-    expectedOut: quote.dollarsOut.toString(),
-    hash: sent.hash,
-    success: sent.success,
-  };
+function none(reason: string): KeeperOutcome {
+  return { action: "none", reason };
 }
 
 const ARBITRAGE_ABI = parseAbi([
   "function quote() view returns (bool buyInPool, uint256 dollarsIn, uint256 dollarsOut)",
   "function buyAndRedeem(uint256 dollarsIn, uint256 minProfit) returns (uint256)",
   "function investAndSell(uint256 dollarsIn, uint256 minProfit) returns (uint256)",
+  // Its own errors and those the fund, the pool and the demo dollar pass up through it.
+  "error Unprofitable(uint256 dollarsIn, uint256 dollarsOut)",
+  "error TransferFailed()",
+  "error InvalidAmount()",
+  "error BelowMinimum()",
+  "error NavUnavailable()",
+  "error NavTooOld(uint64 effectiveAt)",
+  "error SlippageExceeded()",
+  "error InsufficientBalance()",
+  "error InsufficientAllowance()",
+  "error InsufficientLiquidity()",
+  "error ContractPaused()",
+  "error Expired()",
 ]);
 
 const DOLLAR_ABI = parseAbi([
@@ -131,6 +177,22 @@ export function xlayerKeeperChain(env: KeeperEnv): KeeperChain {
     allowance: () => publicClient.readContract({ address: dollar, abi: DOLLAR_ABI, functionName: "allowance", args: [account.address, arbitrage] }),
     nextClaimAt: () => publicClient.readContract({ address: dollar, abi: DOLLAR_ABI, functionName: "nextClaimAt", args: [account.address] }),
     now: async () => (await publicClient.getBlock()).timestamp,
+    async simulate(buyInPool, dollarsIn) {
+      try {
+        const { result } = await publicClient.simulateContract({
+          account,
+          address: arbitrage,
+          abi: ARBITRAGE_ABI,
+          functionName: buyInPool ? "buyAndRedeem" : "investAndSell",
+          args: [dollarsIn, 0n],
+        });
+        return { dollarsOut: result };
+      } catch (error) {
+        const reason = revertReason(error);
+        if (reason === undefined) throw error;
+        return { revert: reason };
+      }
+    },
     claim: () => send(n => walletClient.writeContract({ address: dollar, abi: DOLLAR_ABI, functionName: "claim", nonce: n, gas: 150_000n })),
     approve: () => send(n => walletClient.writeContract({ address: dollar, abi: DOLLAR_ABI, functionName: "approve", args: [arbitrage, maxUint256], nonce: n, gas: 80_000n })),
     arbitrage: (buyInPool, dollarsIn, minProfit) =>
@@ -143,6 +205,15 @@ export function xlayerKeeperChain(env: KeeperEnv): KeeperChain {
         gas: 400_000n,
       })),
   };
+}
+
+/** The contract error a failed call reverted with, such as `Unprofitable(1834955, 1834943)`; undefined for any other failure. */
+export function revertReason(error: unknown): string | undefined {
+  if (!(error instanceof BaseError)) return undefined;
+  const reverted = error.walk(cause => cause instanceof ContractFunctionRevertedError);
+  if (!(reverted instanceof ContractFunctionRevertedError)) return undefined;
+  if (reverted.data) return `${reverted.data.errorName}(${(reverted.data.args ?? []).map(String).join(", ")})`;
+  return reverted.reason ?? reverted.signature ?? "an unknown error";
 }
 
 // Log messages only; an RPC URL can carry a provider key.

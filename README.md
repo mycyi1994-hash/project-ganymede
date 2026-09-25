@@ -69,7 +69,7 @@ For OKX Dev Day we moved settlement to X Layer and built the tokenized-stock pro
 | OKX Wallet | `window.okxwallet` first: the USTX page switches it to X Layer Testnet and sends the claim, approve, invest and redeem transactions; Portfolio reads its balances |
 | OKX explorer | Every record, token and transaction links to the OKX X Layer explorer |
 | Public API and badge | `/api/v1/ustx` and `/embed/ustx` let other X Layer apps show the verified NAV |
-| USTX market | `GanymedeUstxPool` is a constant-product USTX/dUSD pool, and `GanymedeNavArbitrage` closes its gap to the NAV through the fund in one transaction, like ETF creation and redemption. A keeper Worker sends that trade every five minutes when the gap is wider than the fee. The USTX page shows the pool price and its premium or discount to the NAV |
+| USTX market | `GanymedeUstxPool` is a constant-product USTX/dUSD pool, and `GanymedeNavArbitrage` closes its gap to the NAV through the fund in one transaction, like ETF creation and redemption. A keeper Worker checks the pool every five minutes and sends that trade when closing the gap earns at least a cent. The USTX page shows the pool price and its premium or discount to the NAV |
 | NAV price feed | `GanymedeNavFeed` serves the registry's USTX NAV through `AggregatorV3Interface`, the interface Chainlink price feeds use (8 decimals, "USTX / USD"), so X Layer contracts that read Chainlink prices can read USTX without custom code |
 | Browser verifier | Reads the registry over public RPC after checking the chain ID, then verifies exact document bytes and integer arithmetic |
 | Evidence command | Re-checks a downloaded file and matches it to the `NavPublished` event in its transaction receipt |
