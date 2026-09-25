@@ -61,6 +61,8 @@ export interface Deployment {
       symbol: string;
       constructorArgs: unknown[];
     };
+    // Lending against USTX (scripts/deploy-lending.ts). Written and tested; not deployed.
+    GanymedeLendingMarket?: { address: string; deployedAt: string; constructorArgs: unknown[] };
   };
 }
 

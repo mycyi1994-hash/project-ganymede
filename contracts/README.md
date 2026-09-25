@@ -6,8 +6,9 @@ These contracts separate the fund's off-chain asset custody and execution from i
 - `GanymedeNavRegistry.sol` publishes monotonic NAV snapshots and rebalance evidence hashes.
 - `GanymedeBasketFund.sol` is the USTX share token on X Layer Testnet. `invest(dollars, minShares)` takes demo dollars and issues shares at the latest NAV that `GanymedeNavRegistry` holds for `us-tech-x`; `redeem(shares, minDollars)` burns shares and pays demo dollars at that NAV. Orders need a record at most an hour old and at least $10, round down both ways, and revert past the caller's minimum. It holds no assets, no key can issue shares directly, and `investorCount()` counts holders on chain. The administrator can only pause.
 - `GanymedeDemoDollar.sol` (dUSD) is a no-value demo dollar: anyone can `claim()` 10,000 once a day, and only the fund contract can mint more, to pay redemptions.
+- `GanymedeLendingMarket.sol` lends dUSD against USTX. Lenders `supply` dUSD and earn the interest borrowers pay, on a jump-rate curve (2% a year plus 10% × utilization up to 80%, then 200% × the excess); 10% of the interest stays in the market as reserves. Borrowers post USTX with `supplyCollateral` and `borrow` up to 50% of its value at the fund's `currentNav()`, so a stale NAV stops new loans. Once a loan's debt passes 65% of that value, anyone can `liquidate` up to half of it and receive USTX worth 8% more at NAV, which the fund redeems at NAV. The market starts paused, and pausing never blocks repaying, withdrawing or liquidating. It is written and tested but not deployed.
 
-The fund and demo-dollar contracts are for testnet demonstration with no value; they are not the production settlement path described below.
+The fund, demo-dollar and lending contracts are for testnet demonstration with no value; they are not the production settlement path described below.
 
 Production deployment requirements:
 

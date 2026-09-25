@@ -10,7 +10,7 @@ sources stay in `contracts/`.
 cd onchain
 npm install
 npm run build   # compile
-npm test        # 29 tests, no network needed
+npm test        # 42 tests, no network needed
 ```
 
 ## Keys
@@ -69,9 +69,49 @@ both to `deployments/xlayer-testnet.json`. The app pins the two addresses in
 `lib/xstocks/fund.ts`; `test/AppFundClient.test.ts` checks the pin and the
 app's hard-coded selectors against the compiled contracts.
 
+## Lending market (written and tested, not deployed)
+
+`GanymedeLendingMarket` lends dUSD against USTX collateral valued at the fund's
+current NAV (rules in `../contracts/README.md`; 13 tests in
+`test/GanymedeLendingMarket.test.ts`). It is not deployed and not in the app.
+
+Try it against the live contracts without deploying anything:
+
+```bash
+npm run fork:lending
+```
+
+This forks X Layer Testnet into memory, deploys the market next to the recorded
+dUSD, USTX fund and NAV registry, and runs one cycle with local test accounts:
+supply, USTX bought at the live NAV and posted, a loan, a 30% lower NAV recorded
+by the impersonated publisher, liquidation, redemption of the seized USTX at the
+fund (the 8% bonus), repayment and withdrawal. It uses no key and broadcasts
+nothing.
+
+Deploying needs the user's approval. Then:
+
+```bash
+npm run deploy:lending
+```
+
+deploys the market next to the recorded fund, reads the wiring back, confirms it
+is paused and adds it to `deployments/xlayer-testnet.json`. The script never
+unpauses it; activating the market is a separate decision.
+
 ## Verify the sources
 
-Source verification makes the contract readable on the explorer. Pick either option.
+Source verification makes the contract readable on the explorer. All four
+deployed contracts are verified on the OKX explorer and match exactly (creation
+and runtime bytecode) on Sourcify:
+
+| Contract | OKX explorer | Sourcify |
+| --- | --- | --- |
+| `GanymedeNavRegistry` | [verified](https://web3.okx.com/explorer/x-layer-testnet/address/0xf320d2a7f280b7ab61e24374986869d7be34289c) | [exact match](https://repo.sourcify.dev/1952/0xf320d2a7f280b7ab61e24374986869d7be34289c) |
+| `GanymedeFundShare` | [verified](https://web3.okx.com/explorer/x-layer-testnet/address/0x68c4e8c904b3eddb1146ef52a76a0a2755a55b59) | [exact match](https://repo.sourcify.dev/1952/0x68c4e8c904b3eddb1146ef52a76a0a2755a55b59) |
+| `GanymedeDemoDollar` (dUSD) | [verified](https://web3.okx.com/explorer/x-layer-testnet/address/0xf07535080f74e8b0f571e58dfa600f47e72ea9bf) | [exact match](https://repo.sourcify.dev/1952/0xf07535080f74e8b0f571e58dfa600f47e72ea9bf) |
+| `GanymedeBasketFund` (USTX) | [verified](https://web3.okx.com/explorer/x-layer-testnet/address/0x77eaeba1366bde7818da12d3cbdbea0a2ee97596) | [exact match](https://repo.sourcify.dev/1952/0x77eaeba1366bde7818da12d3cbdbea0a2ee97596) |
+
+To verify a new deployment, pick one of the options below.
 
 **Option A: manual upload (no API key).**
 
@@ -98,6 +138,14 @@ the two commands the deploy step printed:
 npx hardhat verify --network xlayerTestnet <fundShare> "Ganymede Core 20" "GMDCORE" <admin>
 npx hardhat verify --network xlayerTestnet <navRegistry> <admin> <relayer>
 ```
+
+**Option C: Sourcify (no API key).** Sourcify supports X Layer Testnet. POST the
+same Standard JSON input to `https://sourcify.dev/server/v2/verify/1952/<address>`
+with `compilerVersion` (`0.8.28+commit.7893614a`), `contractIdentifier`
+(`contracts/<Contract>.sol:<Contract>`) and `creationTransactionHash`, then poll
+`/v2/verify/<verificationId>`. Sourcify recompiles the input and compares both
+the creation and the runtime bytecode. The OKX explorer does not read Sourcify,
+so it still needs option A or B.
 
 ## Allowlist an investor
 
@@ -127,5 +175,5 @@ than hand-made demo transactions.
 
 ## Status
 
-Source-verified on the explorer, **unaudited**. X Layer testnet and GIWA Sepolia are settlement test
+Source-verified on the OKX explorer and on Sourcify, **unaudited**. X Layer testnet and GIWA Sepolia are settlement test
 rail; it is not proof of custody, licensing or an Upbit mainnet relationship.
