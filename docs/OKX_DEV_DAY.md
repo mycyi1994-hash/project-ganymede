@@ -88,7 +88,7 @@ The official criteria are holistic and unweighted. The evidence behind each one:
 
 ## Submission package
 
-The development repository is PRIVATE; the commit links above are not public. Reviewers use the public snapshot repository `project-ganymede-submission`, which must be refreshed to the current production source before submission (see [the export guide](SUBMISSION_EXPORT.md)).
+The development repository is public with its full history, so every commit linked above opens on GitHub. The snapshot repository [`project-ganymede-submission`](https://github.com/mycyi1994-hash/project-ganymede-submission), submitted first, holds the same application code and is refreshed from this repository (see [the export guide](SUBMISSION_EXPORT.md)).
 
 The demo video, the team, track and route details, and the final declaration are submitted by the team through the official form. They are not part of this repository.
 
