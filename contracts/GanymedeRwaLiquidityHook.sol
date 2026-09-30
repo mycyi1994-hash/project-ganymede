@@ -36,7 +36,10 @@ interface IRwaPoolToken {
 ///         asset's NAV, and the vault of the liquidity providers who fund it: on X Layer Testnet,
 ///         USTX against dUSD, priced by GanymedeNavFeed. The hook owns all of the pool's liquidity
 ///         and issues ERC-20 shares for it. Liquidity providers deposit both tokens at the ratio the
-///         hook holds them and withdraw their share of everything it holds, fees included.
+///         hook holds them and withdraw their share of everything it holds, fees included. Deposits
+///         are priced forward, like a fund's subscriptions: each one waits for the next NAV record
+///         and becomes shares there, valued with the holdings at that NAV, so it earns nothing from
+///         trades made before its liquidity is in the pool.
 ///
 ///         At every new NAV record the hook takes its liquidity out, moves the empty pool to the NAV
 ///         and puts the liquidity back around it: a base range BASE_TICKS either side of the NAV, as
@@ -50,13 +53,14 @@ interface IRwaPoolToken {
 /// @dev Pool: the two tokens sorted by address, a dynamic fee and TICK_SPACING, with this hook. It is
 ///      opened at the NAV in the constructor; the pool manager does not call a hook back for its
 ///      own calls, and the hook refuses every other pool and all liquidity it does not add itself.
-///      Deposits wait as ERC-6909 claims in the pool manager until the next re-peg puts them to work,
-///      which also keeps liquidity from being added just in time around a known trade. Shares are
-///      priced on the holdings: the first deposit mints its value at the NAV in dollar units and
-///      locks MINIMUM_SHARES; later deposits pay each token's share of the holdings rounded up, and
-///      withdrawals receive it rounded down. Tokens sent to the hook outside a deposit are ignored.
-///      Standard ERC-20 tokens only: a token that delivers less than it is asked to send leaves the
-///      pool manager unsettled and the call reverts. No owner, no pause, nothing to configure.
+///      The first deposit mints its value at the NAV in dollar units and locks MINIMUM_SHARES.
+///      Later deposits take each token in proportion to the holdings, wait as ERC-6909 claims in the
+///      pool manager, and at the next re-peg mint shares for their value against the holdings' value
+///      at that NAV, rounded down; each depositor then claims their part, and can cancel before.
+///      Withdrawals receive the shares' part of everything held, rounded down. Tokens sent to the
+///      hook outside a deposit are ignored. Standard ERC-20 tokens only: a token that delivers less
+///      than it is asked to send leaves the pool manager unsettled and the call reverts. No owner,
+///      no pause, nothing to configure.
 contract GanymedeRwaLiquidityHook is IHooks, IUnlockCallback {
     using StateLibrary for IPoolManager;
 
@@ -66,8 +70,24 @@ contract GanymedeRwaLiquidityHook is IHooks, IUnlockCallback {
         uint128 liquidity;
     }
 
+    /// @notice A deposit waiting for the re-peg that ends `epoch`.
+    struct Pending {
+        uint128 amount0;
+        uint128 amount1;
+        uint64 epoch;
+    }
+
+    /// @notice How an epoch's deposits became shares: their total value at the NAV `answer`, and
+    ///         the shares minted for it, which the depositors claim in proportion to their value.
+    struct Conversion {
+        uint128 answer;
+        uint128 value;
+        uint256 shares;
+    }
+
     enum Action {
         Deposit,
+        Cancel,
         Withdraw,
         Repeg
     }
@@ -120,11 +140,23 @@ contract GanymedeRwaLiquidityHook is IHooks, IUnlockCallback {
     uint256 public peggedAt;
     uint160 public bandLowerSqrtPriceX96;
     uint160 public bandUpperSqrtPriceX96;
+    /// @notice The number of re-pegs so far. Deposits made in an epoch become shares at the re-peg
+    ///         that ends it.
+    uint256 public epoch;
+    /// @notice Deposits waiting for the next re-peg, per currency; part of the idle claims but not of
+    ///         the holdings the shares own.
+    uint256 public pending0;
+    uint256 public pending1;
+    mapping(address => Pending) public pendingOf;
+    mapping(uint256 => Conversion) public conversions;
     uint256 private _locked = 1;
 
     event Transfer(address indexed from, address indexed to, uint256 value);
     event Approval(address indexed owner, address indexed spender, uint256 value);
-    event Deposited(address indexed account, uint256 shares, uint256 amount0, uint256 amount1);
+    event Deposited(address indexed account, uint256 indexed epoch, uint256 amount0, uint256 amount1);
+    event DepositCancelled(address indexed account, uint256 indexed epoch, uint256 amount0, uint256 amount1);
+    event Converted(uint256 indexed epoch, uint256 navAnswer, uint256 value, uint256 shares);
+    event SharesClaimed(address indexed account, uint256 indexed epoch, uint256 shares);
     event Withdrawn(address indexed account, uint256 shares, uint256 amount0, uint256 amount1);
     event Repegged(
         uint256 indexed navUpdatedAt,
@@ -149,8 +181,10 @@ contract GanymedeRwaLiquidityHook is IHooks, IUnlockCallback {
     error Expired();
     error SlippageExceeded();
     error NoLiquidity();
+    error NothingToCancel();
     error NavUnavailable();
     error NavTooOld(uint256 updatedAt);
+    error NavInFuture(uint256 updatedAt);
     error NavOutOfRange();
     error OutsideBand(uint160 sqrtPriceX96);
     error InsufficientBalance();
@@ -205,9 +239,10 @@ contract GanymedeRwaLiquidityHook is IHooks, IUnlockCallback {
                 afterRemoveLiquidityReturnDelta: false
             })
         );
+        // Dollar tokens have 6 to 18 decimals; fewer would leave a $10 first deposit too few units.
         uint256 dollarDecimals = IRwaPoolToken(dollarToken).decimals();
         uint256 priceDecimals = uint256(IRwaNavFeed(feed).decimals()) + IRwaPoolToken(assetToken).decimals();
-        if (dollarDecimals > 18 || priceDecimals > 36) revert InvalidToken();
+        if (dollarDecimals < 6 || dollarDecimals > 18 || priceDecimals > 36) revert InvalidToken();
 
         poolManager = IPoolManager(manager);
         navFeed = IRwaNavFeed(feed);
@@ -234,24 +269,38 @@ contract GanymedeRwaLiquidityHook is IHooks, IUnlockCallback {
     // ---- Liquidity providers ----
 
     /// @notice Deposits up to `amount0Max` of currency0 and `amount1Max` of currency1 (both approved
-    ///         to this contract) for the most shares they buy at the ratio the hook holds the two
-    ///         tokens, and takes only what those shares cost. The first deposit takes both amounts in
-    ///         full, needs a fresh NAV and mints their value at the NAV, in dollar-token units, as
-    ///         shares. Deposits join the ranges at the next re-peg.
-    function deposit(uint256 amount0Max, uint256 amount1Max, uint256 minShares, uint256 deadline)
+    ///         to this contract) at the ratio the hook holds the two tokens, taking only what that
+    ///         ratio needs. The deposit waits for the next NAV record: the re-peg then puts it to work
+    ///         and mints its shares, valuing it and the holdings at that NAV, and `claimShares` pays
+    ///         them out (`withdraw` and the next `deposit` claim first). Until then `cancelDeposit`
+    ///         returns it. The first deposit instead takes both amounts in full, needs a fresh NAV,
+    ///         mints their value at the NAV in dollar-token units as shares at once and opens the
+    ///         ranges; `shares` is 0 for every later deposit.
+    function deposit(uint256 amount0Max, uint256 amount1Max, uint256 deadline)
         external
         nonReentrant
         beforeDeadline(deadline)
         returns (uint256 shares, uint256 amount0, uint256 amount1)
     {
+        _claim(msg.sender);
         bytes memory result = poolManager.unlock(abi.encode(Action.Deposit, msg.sender, amount0Max, amount1Max));
         (shares, amount0, amount1) = abi.decode(result, (uint256, uint256, uint256));
-        if (shares < minShares) revert SlippageExceeded();
-        emit Deposited(msg.sender, shares, amount0, amount1);
     }
 
-    /// @notice Burns `shares` and pays their part of the ranges and of the idle balances, fees
-    ///         included. Works with any NAV, stale or missing.
+    /// @notice Returns the caller's deposit that is still waiting for the next NAV record.
+    function cancelDeposit() external nonReentrant returns (uint256 amount0, uint256 amount1) {
+        bytes memory result = poolManager.unlock(abi.encode(Action.Cancel, msg.sender, uint256(0), uint256(0)));
+        (amount0, amount1) = abi.decode(result, (uint256, uint256));
+    }
+
+    /// @notice Pays `account` the shares its deposit became at a re-peg. Anyone can call it.
+    function claimShares(address account) external nonReentrant returns (uint256 shares) {
+        return _claim(account);
+    }
+
+    /// @notice Burns `shares` and pays their part of the ranges and of the idle claims, fees
+    ///         included. Works with any NAV, stale or missing. Claims the caller's converted deposit
+    ///         first.
     function withdraw(uint256 shares, uint256 amount0Min, uint256 amount1Min, uint256 deadline)
         external
         nonReentrant
@@ -259,6 +308,7 @@ contract GanymedeRwaLiquidityHook is IHooks, IUnlockCallback {
         returns (uint256 amount0, uint256 amount1)
     {
         if (shares == 0) revert InvalidAmount();
+        _claim(msg.sender);
         bytes memory result = poolManager.unlock(abi.encode(Action.Withdraw, msg.sender, shares, uint256(0)));
         (amount0, amount1) = abi.decode(result, (uint256, uint256));
         if (amount0 < amount0Min || amount1 < amount1Min) revert SlippageExceeded();
@@ -276,6 +326,10 @@ contract GanymedeRwaLiquidityHook is IHooks, IUnlockCallback {
         if (action == Action.Deposit) {
             (uint256 shares, uint256 amount0, uint256 amount1) = _deposit(account, a, b);
             return abi.encode(shares, amount0, amount1);
+        }
+        if (action == Action.Cancel) {
+            (uint256 amount0, uint256 amount1) = _cancel(account);
+            return abi.encode(amount0, amount1);
         }
         if (action == Action.Withdraw) {
             (uint256 amount0, uint256 amount1) = _withdraw(account, a);
@@ -387,13 +441,14 @@ contract GanymedeRwaLiquidityHook is IHooks, IUnlockCallback {
         return _fee(updatedAt);
     }
 
-    /// @notice Everything the hook holds for liquidity providers now, per currency: the ranges at
-    ///         the pool's price, their uncollected fees and the idle balances. Rounded down.
+    /// @notice Everything the shares own now, per currency: the ranges at the pool's price, their
+    ///         uncollected fees and the idle claims, without the deposits waiting for the next
+    ///         re-peg. Rounded down.
     function totalAmounts() public view returns (uint256 amount0, uint256 amount1) {
         (uint160 sqrtPriceX96, int24 tick, , ) = poolManager.getSlot0(poolId);
         (amount0, amount1) = _pendingFees();
-        amount0 += idle0;
-        amount1 += idle1;
+        amount0 += idle0 - pending0;
+        amount1 += idle1 - pending1;
         (uint256 base0, uint256 base1) = _amountsFor(baseRange, sqrtPriceX96, tick);
         (uint256 limit0, uint256 limit1) = _amountsFor(limitRange, sqrtPriceX96, tick);
         amount0 += base0 + limit0;
@@ -407,19 +462,35 @@ contract GanymedeRwaLiquidityHook is IHooks, IUnlockCallback {
         return _value(amount0, amount1, answer);
     }
 
-    /// @notice What `deposit` would mint and take now for these maxima.
-    function previewDeposit(uint256 amount0Max, uint256 amount1Max)
-        external
-        view
-        returns (uint256 shares, uint256 amount0, uint256 amount1)
-    {
+    /// @notice What `deposit` would take now for these maxima: the ratio of the holdings, or both
+    ///         amounts in full for the first deposit.
+    function previewDeposit(uint256 amount0Max, uint256 amount1Max) external view returns (uint256 amount0, uint256 amount1) {
         uint256 supply = totalSupply;
-        if (supply == 0) {
-            (, , uint256 answer) = _nav();
-            return (_firstShares(amount0Max, amount1Max, answer), amount0Max, amount1Max);
-        }
+        if (supply == 0) return (amount0Max, amount1Max);
         (uint256 held0, uint256 held1) = totalAmounts();
-        return _sharesFor(amount0Max, amount1Max, held0, held1, supply);
+        (, amount0, amount1) = _sharesFor(amount0Max, amount1Max, held0, held1, supply);
+    }
+
+    /// @notice The shares these amounts would buy at the current NAV and holdings: exact for the
+    ///         first deposit; for a later one an estimate, since its shares are set at the next
+    ///         re-peg. Reverts like `nav()`.
+    function estimateShares(uint256 amount0, uint256 amount1) external view returns (uint256) {
+        (, , uint256 answer) = _nav();
+        uint256 supply = totalSupply;
+        if (supply == 0) return _firstShares(amount0, amount1, answer);
+        (uint256 held0, uint256 held1) = totalAmounts();
+        uint256 heldValue = _value(held0, held1, answer);
+        uint256 value = _value(amount0, amount1, answer);
+        return heldValue == 0 ? value : FullMath.mulDiv(value, supply, heldValue);
+    }
+
+    /// @notice The shares `account` can claim now from a deposit a re-peg has converted.
+    function claimableShares(address account) public view returns (uint256) {
+        Pending memory waiting = pendingOf[account];
+        if ((waiting.amount0 == 0 && waiting.amount1 == 0) || waiting.epoch == epoch) return 0;
+        Conversion memory conversion = conversions[waiting.epoch];
+        if (conversion.value == 0) return 0;
+        return FullMath.mulDiv(_value(waiting.amount0, waiting.amount1, conversion.answer), conversion.shares, conversion.value);
     }
 
     /// @notice What `withdraw` would pay now for `shares`.
@@ -428,8 +499,8 @@ contract GanymedeRwaLiquidityHook is IHooks, IUnlockCallback {
         if (shares == 0 || shares > supply) revert InvalidAmount();
         (uint160 sqrtPriceX96, int24 tick, , ) = poolManager.getSlot0(poolId);
         (uint256 fees0, uint256 fees1) = _pendingFees();
-        amount0 = FullMath.mulDiv(idle0 + fees0, shares, supply);
-        amount1 = FullMath.mulDiv(idle1 + fees1, shares, supply);
+        amount0 = FullMath.mulDiv(idle0 - pending0 + fees0, shares, supply);
+        amount1 = FullMath.mulDiv(idle1 - pending1 + fees1, shares, supply);
         Range memory part = baseRange;
         part.liquidity = _part(part.liquidity, shares, supply);
         (uint256 base0, uint256 base1) = _amountsFor(part, sqrtPriceX96, tick);
@@ -481,24 +552,55 @@ contract GanymedeRwaLiquidityHook is IHooks, IUnlockCallback {
             _receive(currency0, account, amount0);
             _receive(currency1, account, amount1);
             _toIdle(amount0, amount1);
+            emit Deposited(account, epoch, amount0, amount1);
             _repeg(sqrtPriceX96, updatedAt, answer);
             return (shares, amount0, amount1);
         }
         _collectFees();
         (uint256 held0, uint256 held1) = _holdings();
-        (shares, amount0, amount1) = _sharesFor(amount0Max, amount1Max, held0, held1, supply);
-        _mint(account, shares);
+        (, amount0, amount1) = _sharesFor(amount0Max, amount1Max, held0, held1, supply);
         _receive(currency0, account, amount0);
         _receive(currency1, account, amount1);
         _toIdle(amount0, amount1);
+        pending0 += amount0;
+        pending1 += amount1;
+        // `deposit` claimed any earlier deposit first, so a waiting one is from this epoch.
+        Pending storage waiting = pendingOf[account];
+        waiting.amount0 = _toUint128(waiting.amount0 + amount0);
+        waiting.amount1 = _toUint128(waiting.amount1 + amount1);
+        waiting.epoch = uint64(epoch);
+        emit Deposited(account, epoch, amount0, amount1);
+    }
+
+    function _cancel(address account) private returns (uint256 amount0, uint256 amount1) {
+        Pending memory waiting = pendingOf[account];
+        (amount0, amount1) = (waiting.amount0, waiting.amount1);
+        if ((amount0 == 0 && amount1 == 0) || waiting.epoch != epoch) revert NothingToCancel();
+        delete pendingOf[account];
+        pending0 -= amount0;
+        pending1 -= amount1;
+        _fromIdle(amount0, amount1);
+        if (amount0 > 0) poolManager.take(currency0, account, amount0);
+        if (amount1 > 0) poolManager.take(currency1, account, amount1);
+        emit DepositCancelled(account, epoch, amount0, amount1);
+    }
+
+    /// @dev Pays out a converted deposit's shares from the hook's balance.
+    function _claim(address account) private returns (uint256 shares) {
+        Pending memory waiting = pendingOf[account];
+        if ((waiting.amount0 == 0 && waiting.amount1 == 0) || waiting.epoch == epoch) return 0;
+        shares = claimableShares(account);
+        delete pendingOf[account];
+        if (shares > 0) _transfer(address(this), account, shares);
+        emit SharesClaimed(account, waiting.epoch, shares);
     }
 
     function _withdraw(address account, uint256 shares) private returns (uint256 amount0, uint256 amount1) {
         uint256 supply = totalSupply;
         _burn(account, shares);
         _collectFees();
-        amount0 = FullMath.mulDiv(idle0, shares, supply);
-        amount1 = FullMath.mulDiv(idle1, shares, supply);
+        amount0 = FullMath.mulDiv(idle0 - pending0, shares, supply);
+        amount1 = FullMath.mulDiv(idle1 - pending1, shares, supply);
         _fromIdle(amount0, amount1);
         (uint256 base0, uint256 base1) = _remove(baseRange, BASE_SALT, _part(baseRange.liquidity, shares, supply));
         (uint256 limit0, uint256 limit1) = _remove(limitRange, LIMIT_SALT, _part(limitRange.liquidity, shares, supply));
@@ -508,14 +610,16 @@ contract GanymedeRwaLiquidityHook is IHooks, IUnlockCallback {
         if (amount1 > 0) poolManager.take(currency1, account, amount1);
     }
 
-    /// @dev Takes both ranges out, moves the empty pool to the NAV and places the base and limit
-    ///      ranges around it with everything the hook holds. Runs inside an unlock; the hook's
-    ///      balance with the pool manager is zero again when it returns.
+    /// @dev Takes both ranges out, turns the waiting deposits into shares, moves the empty pool to
+    ///      the NAV and places the base and limit ranges around it with everything the hook holds.
+    ///      Runs inside an unlock; the hook's balance with the pool manager is zero again when it
+    ///      returns.
     function _repeg(uint160 navSqrtPriceX96, uint256 updatedAt, uint256 answer) private {
         int24 center = _center(navSqrtPriceX96);
         (uint256 base0, uint256 base1) = _remove(baseRange, BASE_SALT, baseRange.liquidity);
         (uint256 limit0, uint256 limit1) = _remove(limitRange, LIMIT_SALT, limitRange.liquidity);
         _toIdle(base0 + limit0, base1 + limit1);
+        _convert(answer);
 
         (uint160 sqrtPriceX96, , , ) = poolManager.getSlot0(poolId);
         if (sqrtPriceX96 != navSqrtPriceX96) {
@@ -548,6 +652,23 @@ contract GanymedeRwaLiquidityHook is IHooks, IUnlockCallback {
         emit Repegged(
             updatedAt, answer, navSqrtPriceX96, base.lower, base.upper, base.liquidity, limit.lower, limit.upper, limit.liquidity
         );
+    }
+
+    /// @dev Mints the epoch's deposits their shares: their value at the NAV against the value of
+    ///      everything else held, fees included, rounded down. Then a new epoch begins.
+    function _convert(uint256 answer) private {
+        uint256 waiting0 = pending0;
+        uint256 waiting1 = pending1;
+        if (waiting0 > 0 || waiting1 > 0) {
+            uint256 value = _value(waiting0, waiting1, answer);
+            uint256 heldValue = _value(idle0 - waiting0, idle1 - waiting1, answer);
+            uint256 shares = heldValue == 0 ? value : FullMath.mulDiv(value, totalSupply, heldValue);
+            conversions[epoch] = Conversion(uint128(answer), _toUint128(value), shares);
+            (pending0, pending1) = (0, 0);
+            _mint(address(this), shares);
+            emit Converted(epoch, answer, value, shares);
+        }
+        epoch += 1;
     }
 
     /// @dev The NAV's tick rounded down to TICK_SPACING, with room for the band on both sides.
@@ -640,25 +761,28 @@ contract GanymedeRwaLiquidityHook is IHooks, IUnlockCallback {
 
     // ---- Pricing and accounting ----
 
-    /// @dev The NAV at most MAX_NAV_AGE old and the pool price it maps to.
+    /// @dev The NAV at most MAX_NAV_AGE old and the pool price it maps to. A record dated after the
+    ///      block is refused: it would never age.
     function _nav() private view returns (uint160 sqrtPriceX96, uint256 updatedAt, uint256 answer) {
         (, int256 reported, , uint256 updated, ) = navFeed.latestRoundData();
         if (reported <= 0 || updated == 0) revert NavUnavailable();
+        if (updated > block.timestamp) revert NavInFuture(updated);
         if (block.timestamp > updated + MAX_NAV_AGE) revert NavTooOld(updated);
+        if (uint256(reported) > type(uint128).max) revert NavOutOfRange();
         answer = uint256(reported);
         updatedAt = updated;
-        // Pool prices are currency1 per currency0 in base units, as a Q64.96 square root.
-        uint256 priceX192 = assetIsCurrency0
-            ? FullMath.mulDiv(answer * dollarUnit, 1 << 192, navUnit)
-            : FullMath.mulDiv(navUnit, 1 << 192, answer * dollarUnit);
-        uint256 root = _sqrt(priceX192);
+        // Pool prices are currency1 per currency0 in base units, as a Q64.96 square root. The price
+        // must stay below 2^64 in base units for its square to fit in 256 bits.
+        uint256 dollarsPerAsset = answer * dollarUnit;
+        (uint256 numerator, uint256 denominator) = assetIsCurrency0 ? (dollarsPerAsset, navUnit) : (navUnit, dollarsPerAsset);
+        if (numerator / denominator >= 1 << 64) revert NavOutOfRange();
+        uint256 root = _sqrt(FullMath.mulDiv(numerator, 1 << 192, denominator));
         if (root <= TickMath.MIN_SQRT_PRICE || root >= TickMath.MAX_SQRT_PRICE) revert NavOutOfRange();
         sqrtPriceX96 = uint160(root);
     }
 
     function _fee(uint256 updatedAt) private view returns (uint24) {
-        uint256 age = block.timestamp > updatedAt ? block.timestamp - updatedAt : 0;
-        return uint24(MIN_FEE + (uint256(MAX_FEE - MIN_FEE) * age) / MAX_NAV_AGE);
+        return uint24(MIN_FEE + (uint256(MAX_FEE - MIN_FEE) * (block.timestamp - updatedAt)) / MAX_NAV_AGE);
     }
 
     /// @dev Value at the NAV in dollar-token units, rounded down.
@@ -692,12 +816,13 @@ contract GanymedeRwaLiquidityHook is IHooks, IUnlockCallback {
         amount1 = FullMath.mulDivRoundingUp(held1, shares, supply);
     }
 
-    /// @dev Holdings after `_collectFees`: the ranges at the pool's price and the idle balances.
+    /// @dev What the shares own after `_collectFees`: the ranges at the pool's price and the idle
+    ///      claims, without the waiting deposits.
     function _holdings() private view returns (uint256 amount0, uint256 amount1) {
         (uint160 sqrtPriceX96, int24 tick, , ) = poolManager.getSlot0(poolId);
         (uint256 base0, uint256 base1) = _amountsFor(baseRange, sqrtPriceX96, tick);
         (uint256 limit0, uint256 limit1) = _amountsFor(limitRange, sqrtPriceX96, tick);
-        return (idle0 + base0 + limit0, idle1 + base1 + limit1);
+        return (idle0 - pending0 + base0 + limit0, idle1 - pending1 + base1 + limit1);
     }
 
     /// @dev What removing a range's liquidity would pay at this price, rounded down as the pool
@@ -805,8 +930,9 @@ contract GanymedeRwaLiquidityHook is IHooks, IUnlockCallback {
 
     // ---- LP share internals ----
 
+    // The hook's own balance holds converted deposits until their depositors claim them.
     function _transfer(address from, address to, uint256 value) private {
-        if (to == address(0)) revert InvalidAddress();
+        if (to == address(0) || (to == address(this) && from != address(this))) revert InvalidAddress();
         uint256 balance = balanceOf[from];
         if (balance < value) revert InsufficientBalance();
         balanceOf[from] = balance - value;

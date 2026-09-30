@@ -107,11 +107,10 @@ async function main() {
   await send("approve hook USTX", options => fund.write.approve([hook.address, maxUint256], { account: admin.account, ...options }), 80_000n);
   const assetIsCurrency0 = BigInt(fundAddress) < BigInt(dollarAddress);
   const [amount0, amount1] = assetIsCurrency0 ? [shares, SEED_DOLLARS] : [SEED_DOLLARS, shares];
-  // The first deposit mints its value at the NAV less 1,000 locked shares; allow 1% for the NAV to move.
-  const minShares = (2n * SEED_DOLLARS * 99n) / 100n;
+  // The first deposit mints its value at the NAV, less 1,000 locked shares, and opens the ranges.
   const seed = await send(
     "first deposit",
-    options => hook.write.deposit([amount0, amount1, minShares, now + 900n], { account: admin.account, ...options }),
+    options => hook.write.deposit([amount0, amount1, now + 900n], { account: admin.account, ...options }),
     900_000n,
   );
 

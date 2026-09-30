@@ -4,9 +4,10 @@
  * Uniswap's PoolManager, GanymedeRwaLiquidityHook (USTX / dUSD, priced by the recorded
  * GanymedeNavFeed) and GanymedeV4Router with the routine `npm run deploy:v4` uses. Then, with local
  * test accounts: a liquidity provider deposits USTX bought at the live NAV with the same value in
- * dUSD; a trader buys and sells; the (impersonated) publisher records a NAV 1% higher, which opens
- * an arbitrage against the live constant-product pool and re-pegs the hooked pool at the next
- * swap; and the provider withdraws. No key is used and nothing is broadcast.
+ * dUSD; a trader buys and sells; a second provider deposits, which waits for the next record; the
+ * (impersonated) publisher records a NAV 1% higher, which opens an arbitrage against the live
+ * constant-product pool, while the next swap re-pegs the hooked pool and turns the waiting deposit
+ * into shares; and both providers withdraw. No key is used and nothing is broadcast.
  *
  * Run: npm run fork:v4
  */
@@ -57,7 +58,7 @@ async function main() {
   // Calls run on a local block: the node knows no hardfork history for X Layer's own blocks.
   await hre.network.provider.request({ method: "evm_mine", params: [] });
 
-  const [deployer, provider, trader] = await hre.viem.getWalletClients();
+  const [deployer, provider, trader, second] = await hre.viem.getWalletClients();
   const dollar = await hre.viem.getContractAt("GanymedeDemoDollar", dollarRecord.address as Address);
   const fund = await hre.viem.getContractAt("GanymedeBasketFund", fundRecord.address as Address);
   const registry = await hre.viem.getContractAt("GanymedeNavRegistry", contracts.GanymedeNavRegistry.address as Address);
@@ -125,17 +126,17 @@ async function main() {
   const deadline = async () => (await publicClient.getBlock()).timestamp + 900n;
   console.log(`pool ${poolId}: USTX is currency${assetIsCurrency0 ? 0 : 1}, opened at ${price(await poolPrice())}`);
 
-  for (const wallet of [provider, trader]) {
+  for (const wallet of [provider, trader, second]) {
     await dollar.write.claim({ account: wallet.account });
     for (const spender of [fund.address, hook.address, router.address]) await dollar.write.approve([spender, maxUint256], { account: wallet.account });
     for (const spender of [hook.address, router.address]) await fund.write.approve([spender, maxUint256], { account: wallet.account });
   }
   await fund.write.invest([5_000n * USD, 0n], { account: provider.account });
   const providerShares = await fund.read.balanceOf([provider.account.address]);
-  let logs = await send("first deposit", await hook.write.deposit([...pair(providerShares, 5_000n * USD), 0n, await deadline()], { account: provider.account }));
-  const deposited = logs.find(event => event.eventName === "Deposited")!.args as { shares: bigint };
+  let logs = await send("first deposit", await hook.write.deposit([...pair(providerShares, 5_000n * USD), await deadline()], { account: provider.account }));
+  const firstShares = await hook.read.balanceOf([provider.account.address]);
   const [baseLower, baseUpper] = await hook.read.baseRange();
-  console.log(`\nprovider bought ${ustx(providerShares)} for $5,000 at the fund and deposited it with $5,000: ${formatUnits(deposited.shares, 6)} LP shares`);
+  console.log(`\nprovider bought ${ustx(providerShares)} for $5,000 at the fund and deposited it with $5,000: ${formatUnits(firstShares, 6)} LP shares`);
   const [low, high] = [tickToUsd(baseLower, assetIsCurrency0), tickToUsd(baseUpper, assetIsCurrency0)].sort((a, b) => a - b);
   console.log(`  base range ${price(low)} to ${price(high)} around the NAV; holdings worth ${usd(await valueAt(liveNav))} at the NAV`);
 
@@ -146,6 +147,14 @@ async function main() {
   console.log(`\ntrader bought ${ustx(bought)} for $1,000 (${usd((1_000n * USD * SHARE) / bought)} each, fee ${(fee / 10_000).toFixed(4)}%); pool price now ${price(await poolPrice())}`);
   await send("swap", await router.write.swapExactInput([key, assetIsCurrency0, bought / 2n, 0n, await deadline()], { account: trader.account }));
   console.log(`trader sold half of it back; pool price ${price(await poolPrice())}`);
+
+  // A later deposit waits for the next NAV record and is priced there.
+  await fund.write.invest([2_000n * USD, 0n], { account: second.account });
+  const secondShares = await fund.read.balanceOf([second.account.address]);
+  logs = await send("later deposit", await hook.write.deposit([...pair(secondShares, 2_000n * USD), await deadline()], { account: second.account }));
+  const [waiting0, waiting1] = await hook.read.pendingOf([second.account.address]);
+  const waiting = split([waiting0, waiting1]);
+  console.log(`second provider deposited ${ustx(waiting.shares)} and ${usd(waiting.dollars)} at the pool's ratio; it waits for the next NAV record`);
 
   // A NAV 1% higher: the constant-product pool now sells USTX below the NAV.
   const newNav = (liveNav * 101n) / 100n;
@@ -172,12 +181,19 @@ async function main() {
       console.log("  live constant-product pool: no profitable arbitrage at this size");
     }
   }
-  const hookBefore = await valueAt(newNav);
+  // What the first provider's shares would withdraw, valued at the new NAV.
+  const firstWorth = async () => {
+    const paid = split(await hook.read.previewWithdraw([firstShares]));
+    return (paid.shares * newNav) / SHARE + paid.dollars;
+  };
+  const firstBefore = await firstWorth();
   logs = await send("swap that re-pegs", await router.write.swapExactInput([key, !assetIsCurrency0, 10n * USD, 0n, await deadline()], { account: trader.account }));
   const repegged = logs.find(event => event.eventName === "Repegged");
-  if (!repegged) throw new Error("the swap after the record did not re-peg the pool");
+  const converted = logs.find(event => event.eventName === "Converted")?.args as { value: bigint; shares: bigint } | undefined;
+  if (!repegged || !converted) throw new Error("the swap after the record did not re-peg the pool and convert the deposit");
   console.log(`  hooked pool: the next swap moved it to the new NAV before trading; price after the $10 swap ${price(await poolPrice())}`);
-  console.log(`  providers' holdings at the new NAV ${usd(hookBefore)} before, ${usd(await valueAt(newNav))} after (the $10 swap's fee included)`);
+  console.log(`  the first provider's shares at the new NAV: ${usd(firstBefore)} before, ${usd(await firstWorth())} after (with their part of the $10 swap's fee)`);
+  console.log(`  the waiting deposit, worth ${usd(converted.value)} at the new NAV, became ${formatUnits(converted.shares, 6)} shares`);
 
   const shares = await hook.read.balanceOf([provider.account.address]);
   const [out0, out1] = await hook.read.previewWithdraw([shares]);
@@ -186,6 +202,12 @@ async function main() {
   const worth = (paid.shares * newNav) / SHARE + paid.dollars;
   const held = (providerShares * newNav) / SHARE + 5_000n * USD;
   console.log(`\nprovider withdrew ${ustx(paid.shares)} and ${usd(paid.dollars)}: ${usd(worth)} at the new NAV (holding the deposit instead: ${usd(held)})`);
+  const secondOwned = await hook.read.claimableShares([second.account.address]);
+  const [second0, second1] = await hook.read.previewWithdraw([secondOwned]);
+  await send("claim and withdraw", await hook.write.withdraw([secondOwned, second0, second1, await deadline()], { account: second.account }));
+  const secondPaid = split([second0, second1]);
+  const secondWorth = (secondPaid.shares * newNav) / SHARE + secondPaid.dollars;
+  console.log(`second provider claimed its shares and withdrew ${ustx(secondPaid.shares)} and ${usd(secondPaid.dollars)}: ${usd(secondWorth)} at the new NAV`);
 
   console.log("\ngas used");
   for (const [label, used] of gas) console.log(`  ${label.padEnd(20)} ${used.toLocaleString("en-US")}`);

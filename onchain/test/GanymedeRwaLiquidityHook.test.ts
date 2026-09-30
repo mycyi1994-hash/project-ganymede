@@ -185,7 +185,12 @@ async function deploy(options: { assetFirst?: boolean; nav?: bigint } = {}) {
   /** Deposits `ustx` USTX and `dollars` dUSD as maxima (the first deposit takes both in full). */
   async function seed(wallet: typeof admin, ustx = 50n * SHARE, dollars = 5_000n * USD) {
     const [amount0, amount1] = pair(ustx, dollars);
-    return hook.write.deposit([amount0, amount1, 0n, await deadline()], { account: wallet.account });
+    return hook.write.deposit([amount0, amount1, await deadline()], { account: wallet.account });
+  }
+  /** Records the NAV again and lets a keeper re-peg, which turns waiting deposits into shares. */
+  async function nextRecord(nav: bigint) {
+    await publish(nav);
+    return hook.write.repeg({ account: keeper.account });
   }
   /** Buys USTX with exactly `dollars` dUSD through the router. */
   async function buy(wallet: typeof admin, dollars: bigint) {
@@ -209,7 +214,7 @@ async function deploy(options: { assetFirst?: boolean; nav?: bigint } = {}) {
     admin, relayer, lp, lp2, trader, keeper, other, publicClient,
     registry, dollar, fund, feed, hook, router, manager, managerAddress,
     key, poolId, assetIsCurrency0, pair, split, buyUstx, sellUstx,
-    publish, prepare, slot0, poolNav, liquidity, expectedSqrt, valueAt, receipt, events, seed, buy, sell, swapFee,
+    publish, nextRecord, prepare, slot0, poolNav, liquidity, expectedSqrt, valueAt, receipt, events, seed, buy, sell, swapFee,
   };
 }
 
@@ -259,21 +264,22 @@ describe("GanymedeRwaLiquidityHook", () => {
     const { hook, lp, pair, split, prepare, slot0, liquidity, valueAt, events, seed, publish } = await deploy();
     await prepare(lp, 5_000n * USD);
     // Below $10 at the NAV, and with a stale NAV, the first deposit is refused.
-    await expectRevert(hook.write.deposit([...pair(0n, 9_999_999n), 0n, await deadline()], { account: lp.account }), "BelowMinimum");
+    await expectRevert(hook.write.deposit([...pair(0n, 9_999_999n), await deadline()], { account: lp.account }), "BelowMinimum");
     await time.increase(HOUR + 1n);
-    await expectRevert(hook.write.deposit([...pair(50n * SHARE, 5_000n * USD), 0n, await deadline()], { account: lp.account }), "NavTooOld(uint256)");
+    await expectRevert(hook.write.deposit([...pair(50n * SHARE, 5_000n * USD), await deadline()], { account: lp.account }), "NavTooOld(uint256)");
     await publish(NAV);
 
-    const [previewShares, preview0, preview1] = await hook.read.previewDeposit(pair(50n * SHARE, 5_000n * USD));
+    const previewShares = await hook.read.estimateShares(pair(50n * SHARE, 5_000n * USD));
     expect(previewShares).to.equal(10_000n * USD - 1_000n);
-    expect([preview0, preview1]).to.deep.equal(pair(50n * SHARE, 5_000n * USD));
-    await expectRevert(hook.write.deposit([...pair(50n * SHARE, 5_000n * USD), previewShares + 1n, await deadline()], { account: lp.account }), "SlippageExceeded");
-    await expectRevert(hook.write.deposit([...pair(50n * SHARE, 5_000n * USD), 0n, BigInt(await time.latest())], { account: lp.account }), "Expired");
+    expect(await hook.read.previewDeposit(pair(50n * SHARE, 5_000n * USD))).to.deep.equal(pair(50n * SHARE, 5_000n * USD));
+    await expectRevert(hook.write.deposit([...pair(50n * SHARE, 5_000n * USD), BigInt(await time.latest())], { account: lp.account }), "Expired");
 
     const logs = await events(await seed(lp));
-    const deposited = logs.find(event => event.eventName === "Deposited")!.args as { shares: bigint; amount0: bigint; amount1: bigint };
-    expect(deposited.shares).to.equal(previewShares);
+    const deposited = logs.find(event => event.eventName === "Deposited")!.args as { epoch: bigint; amount0: bigint; amount1: bigint };
+    expect(deposited.epoch).to.equal(0n);
     expect(split([deposited.amount0, deposited.amount1])).to.deep.equal({ ustx: 50n * SHARE, dollars: 5_000n * USD });
+    // The first deposit's shares arrive at once, and opening the ranges is the first re-peg.
+    expect(await hook.read.epoch()).to.equal(1n);
     expect(await hook.read.totalSupply()).to.equal(10_000n * USD);
     expect(await hook.read.balanceOf([zeroAddress])).to.equal(1_000n);
     expect(await hook.read.balanceOf([lp.account.address])).to.equal(previewShares);
@@ -299,7 +305,7 @@ describe("GanymedeRwaLiquidityHook", () => {
     expect(await hook.read.totalValue()).to.equal(value);
   });
 
-  it("prices later deposits on the holdings and puts them to work at the next NAV record", async () => {
+  it("prices later deposits at the next NAV record, where they go to work", async () => {
     const { hook, lp, lp2, trader, keeper, pair, split, prepare, liquidity, valueAt, seed, buy, publish, events } = await deploy();
     await prepare(lp, 5_000n * USD);
     await prepare(lp2, 2_000n * USD);
@@ -308,40 +314,102 @@ describe("GanymedeRwaLiquidityHook", () => {
     await buy(trader, 1_000n * USD); // the pool now holds fewer USTX and more dollars
     const supply = await hook.read.totalSupply();
     const held = split(await hook.read.totalAmounts());
-    const valuePerShare = (await valueAt(NAV)) * 10n ** 12n / supply;
 
-    // 20 USTX and $2,000 on offer: the dollars bind, since the pool holds about $150 per USTX.
-    const [shares, amount0, amount1] = await hook.read.previewDeposit(pair(20n * SHARE, 2_000n * USD));
+    // 20 USTX and $2,000 on offer: the dollars bind, since the pool holds about $150 per USTX, and
+    // each token is taken at its share of the holdings, rounded up.
+    const [amount0, amount1] = await hook.read.previewDeposit(pair(20n * SHARE, 2_000n * USD));
     const cost = split([amount0, amount1]);
     expect(cost.dollars <= 2_000n * USD && cost.dollars > 2_000n * USD - 2n).to.equal(true);
     expect(cost.ustx < 20n * SHARE).to.equal(true);
-    expect(shares).to.equal((2_000n * USD * supply) / held.dollars);
-    // Each token is paid at its share of the holdings, rounded up.
-    expect(cost.ustx).to.equal((held.ustx * shares + supply - 1n) / supply);
+    const byDollars = (2_000n * USD * supply) / held.dollars;
+    expect(cost.ustx).to.equal((held.ustx * byDollars + supply - 1n) / supply);
 
     const rangesBefore = [await hook.read.baseRange(), await hook.read.limitRange()];
     const liquidityBefore = await liquidity();
+    const valueBefore = await valueAt(NAV);
     const logs = await events(await seed(lp2, 20n * SHARE, 2_000n * USD));
-    const deposited = logs.find(event => event.eventName === "Deposited")!.args as { shares: bigint; amount0: bigint; amount1: bigint };
-    expect([deposited.shares, deposited.amount0, deposited.amount1]).to.deep.equal([shares, amount0, amount1]);
-    expect(await hook.read.balanceOf([lp2.account.address])).to.equal(shares);
-    // The deposit waits as idle claims: the ranges and the pool's liquidity are unchanged.
-    expect(split([await hook.read.idle0(), await hook.read.idle1()]).dollars >= cost.dollars).to.equal(true);
+    const deposited = logs.find(event => event.eventName === "Deposited")!.args as { epoch: bigint; amount0: bigint; amount1: bigint };
+    expect([deposited.epoch, deposited.amount0, deposited.amount1]).to.deep.equal([1n, amount0, amount1]);
+    // It waits for the next record: no shares yet, and the ranges, the pool's liquidity and what the
+    // existing shares own are unchanged.
+    expect(await hook.read.balanceOf([lp2.account.address])).to.equal(0n);
+    expect(await hook.read.pendingOf([lp2.account.address])).to.deep.equal([amount0, amount1, 1n]);
+    expect([await hook.read.pending0(), await hook.read.pending1()]).to.deep.equal([amount0, amount1]);
     expect([await hook.read.baseRange(), await hook.read.limitRange()]).to.deep.equal(rangesBefore);
     expect(await liquidity()).to.equal(liquidityBefore);
-    // Existing holders lose nothing to the deposit's rounding.
-    expect((await valueAt(NAV)) * 10n ** 12n / (await hook.read.totalSupply()) >= valuePerShare).to.equal(true);
+    expect(await valueAt(NAV)).to.equal(valueBefore);
+    expect(await hook.read.claimableShares([lp2.account.address])).to.equal(0n);
 
-    // The next NAV record puts it to work: a keeper re-pegs without waiting for a swap.
+    // The next NAV record converts it: a keeper re-pegs without waiting for a swap.
     expect((await hook.simulate.repeg({ account: keeper.account.address })).result).to.equal(false);
     await publish(NAV);
+    const estimate = await hook.read.estimateShares([amount0, amount1]);
     expect((await hook.simulate.repeg({ account: keeper.account.address })).result).to.equal(true);
-    await hook.write.repeg({ account: keeper.account });
+    const converted = (await events(await hook.write.repeg({ account: keeper.account }))).find(event => event.eventName === "Converted")!
+      .args as { epoch: bigint; navAnswer: bigint; value: bigint; shares: bigint };
+    // Its value at the NAV against everything the shares owned, fees included.
+    const depositValue = (cost.ustx * NAV) / SHARE + cost.dollars;
+    expect(converted.epoch).to.equal(1n);
+    expect(converted.value).to.equal(depositValue);
+    expect(converted.shares).to.equal((depositValue * supply) / valueBefore);
+    expectClose(converted.shares, estimate, estimate / 1_000_000n);
+    expect(await hook.read.epoch()).to.equal(2n);
+    expect([await hook.read.pending0(), await hook.read.pending1()]).to.deep.equal([0n, 0n]);
     expect((await hook.read.idle0()) + (await hook.read.idle1()) < 10n).to.equal(true);
     expect((await liquidity()) > liquidityBefore).to.equal(true);
 
-    // A deposit that offers nothing of a token the pool holds buys no shares.
-    await expectRevert(hook.write.deposit([...pair(0n, 1_000n * USD), 0n, await deadline()], { account: lp2.account }), "InvalidAmount");
+    // The depositor claims the shares; anyone can pay them out, and they arrive once.
+    expect(await hook.read.claimableShares([lp2.account.address])).to.equal(converted.shares);
+    await hook.write.claimShares([lp2.account.address], { account: trader.account });
+    expect(await hook.read.balanceOf([lp2.account.address])).to.equal(converted.shares);
+    expect(await hook.read.claimableShares([lp2.account.address])).to.equal(0n);
+    expect(await hook.read.balanceOf([hook.address])).to.equal(0n);
+    // Shares now worth what was deposited, at the NAV, less rounding.
+    const worth = ((await valueAt(NAV)) * converted.shares) / (await hook.read.totalSupply());
+    expect(worth <= depositValue && worth > depositValue - 1_000n).to.equal(true);
+
+    // A deposit that offers nothing of a token the pool holds takes nothing.
+    await expectRevert(hook.write.deposit([...pair(0n, 1_000n * USD), await deadline()], { account: lp2.account }), "InvalidAmount");
+  });
+
+  it("gives a deposit made just before a trade none of that trade's gain", async () => {
+    // A deposit priced on the holdings at once would share in the fees and spread of a trade made
+    // while its tokens sat idle; priced at the next record, it gets back what it put in.
+    const { hook, dollar, fund, lp, lp2, trader, split, prepare, seed, buy, nextRecord, valueAt } = await deploy();
+    await prepare(lp, 5_000n * USD);
+    await prepare(lp2, 5_000n * USD);
+    await prepare(trader);
+    await seed(lp);
+    const lpValue = await valueAt(NAV);
+    await seed(lp2, 50n * SHARE, 5_000n * USD);
+    const [sniper0, sniper1] = await hook.read.pendingOf([lp2.account.address]);
+    await buy(trader, 2_000n * USD);
+    const gain = (await valueAt(NAV)) - lpValue;
+    expect(gain > 10n * USD).to.equal(true); // the fee and the spread over the NAV
+
+    // Cancelling returns the deposit exactly; the gain stays with the shares that took the trade.
+    const ustxBefore = await fund.read.balanceOf([lp2.account.address]);
+    const dollarsBefore = await dollar.read.balanceOf([lp2.account.address]);
+    await hook.write.cancelDeposit({ account: lp2.account });
+    const returned = split([sniper0, sniper1]);
+    expect((await fund.read.balanceOf([lp2.account.address])) - ustxBefore).to.equal(returned.ustx);
+    expect((await dollar.read.balanceOf([lp2.account.address])) - dollarsBefore).to.equal(returned.dollars);
+    expect(await hook.read.pendingOf([lp2.account.address])).to.deep.equal([0n, 0n, 0n]);
+    expect((await valueAt(NAV)) - lpValue).to.equal(gain);
+    await expectRevert(hook.write.cancelDeposit({ account: lp2.account }), "NothingToCancel");
+
+    // Waiting instead, it is priced after the trade: its shares are worth its deposit, not a part of the gain.
+    await seed(lp2, 50n * SHARE, 5_000n * USD);
+    const [again0, again1] = await hook.read.pendingOf([lp2.account.address]);
+    await buy(trader, 1_000n * USD);
+    await nextRecord(NAV);
+    await expectRevert(hook.write.cancelDeposit({ account: lp2.account }), "NothingToCancel"); // it is shares now
+    await hook.write.claimShares([lp2.account.address], { account: lp2.account });
+    const deposited = split([again0, again1]);
+    const shares = await hook.read.balanceOf([lp2.account.address]);
+    const worth = ((await valueAt(NAV)) * shares) / (await hook.read.totalSupply());
+    const put = (deposited.ustx * NAV) / SHARE + deposited.dollars;
+    expect(worth <= put && worth > put - 1_000n).to.equal(true);
   });
 
   it("pays withdrawals their share of the ranges, fees and idle balances, with any NAV", async () => {
@@ -350,7 +418,7 @@ describe("GanymedeRwaLiquidityHook", () => {
     await prepare(lp2, 2_000n * USD);
     await prepare(trader, 2_000n * USD);
     await seed(lp);
-    await seed(lp2, 20n * SHARE, 2_000n * USD); // idle until the next record
+    await seed(lp2, 20n * SHARE, 2_000n * USD); // waits for the next record, which never comes here
     for (let round = 0; round < 3; round++) {
       await buy(trader, 500n * USD);
       await sell(trader, 5n * SHARE);
@@ -382,10 +450,11 @@ describe("GanymedeRwaLiquidityHook", () => {
 
     await expectRevert(hook.write.withdraw([lpShares, 0n, 0n, await deadline()], { account: lp.account }), "InsufficientBalance");
     await expectRevert(hook.write.withdraw([0n, 0n, 0n, await deadline()], { account: lp.account }), "InvalidAmount");
-    // Everyone can leave: what stays belongs to the locked shares.
+    // Everyone can leave, the waiting deposit by cancelling it; what stays belongs to the locked shares.
     await hook.write.withdraw([lpShares - half, 0n, 0n, await deadline()], { account: lp.account });
-    await hook.write.withdraw([await hook.read.balanceOf([lp2.account.address]), 0n, 0n, await deadline()], { account: lp2.account });
+    await hook.write.cancelDeposit({ account: lp2.account });
     expect(await hook.read.totalSupply()).to.equal(1_000n);
+    expect([await hook.read.pending0(), await hook.read.pending1()]).to.deep.equal([0n, 0n]);
     const left = split(await hook.read.totalAmounts());
     expect(left.ustx * NAV / SHARE + left.dollars < 10_000n).to.equal(true); // under a cent
   });
@@ -495,6 +564,25 @@ describe("GanymedeRwaLiquidityHook", () => {
     expect((ustxOut * 105n * USD) / SHARE < 1_000n * USD).to.equal(true);
   });
 
+  it("still loses to a trade made before a known NAV record lands (the limit the fee bounds)", async () => {
+    // The re-peg removes the jump when a record lands; until then the pool quotes the old NAV. Someone
+    // who knows the next NAV from public prices can buy first and redeem at the fund after it lands.
+    const { lp, trader, fund, dollar, prepare, seed, buy, publish, valueAt } = await deploy();
+    await prepare(lp, 5_000n * USD);
+    await prepare(trader);
+    await seed(lp);
+    const valueBefore = await valueAt(102n * USD);
+    const dollarsBefore = await dollar.read.balanceOf([trader.account.address]);
+    await buy(trader, 1_500n * USD);
+    await publish(102n * USD);
+    await fund.write.redeem([await fund.read.balanceOf([trader.account.address]), 0n], { account: trader.account });
+    const profit = (await dollar.read.balanceOf([trader.account.address])) - dollarsBefore;
+    const loss = valueBefore - (await valueAt(102n * USD));
+    // With a $10,000 pool and a 2% record, $20.69: the fee and the curve take part of the move, not all of it.
+    expect(profit > 20n * USD && profit < 21n * USD).to.equal(true);
+    expectClose(loss, profit, 1_000n);
+  });
+
   it("stops swaps once the NAV is an hour old and resumes at the next record", async () => {
     const { hook, lp, trader, keeper, prepare, seed, buy, sell, publish, poolNav, events } = await deploy();
     await prepare(lp, 5_000n * USD);
@@ -506,12 +594,32 @@ describe("GanymedeRwaLiquidityHook", () => {
     await expectRevert(hook.read.totalValue(), "NavTooOld(uint256)");
     // Deposits after the first need no NAV; they wait for the next record.
     const deposited = (await events(await seed(trader, SHARE, 100n * USD))).find(event => event.eventName === "Deposited");
-    expect((deposited!.args as { shares: bigint }).shares > 0n).to.equal(true);
+    const { amount0, amount1 } = deposited!.args as { amount0: bigint; amount1: bigint };
+    expect(amount0 > 0n && amount1 > 0n).to.equal(true);
     await publish(98n * USD);
     const logs = await events(await sell(trader, SHARE));
     expect(logs.some(event => event.eventName === "Repegged")).to.equal(true);
+    expect(logs.some(event => event.eventName === "Converted")).to.equal(true);
+    expect((await hook.read.claimableShares([trader.account.address])) > 0n).to.equal(true);
     const price = await poolNav();
     expect(price < 98n * USD && price > 97n * USD).to.equal(true); // the sale moved it down from the new NAV
+  });
+
+  it("refuses a NAV dated after the block, which would never age", async () => {
+    const { hook, lp, trader, keeper, registry, prepare, seed, buy, publish } = await deploy();
+    await prepare(lp, 5_000n * USD);
+    await prepare(trader, 1_000n * USD);
+    await seed(lp);
+    const future = BigInt(await time.latest()) + 30n * 24n * HOUR;
+    await publish(NAV, future);
+    expect((await registry.read.latestNav([USTX]))[3]).to.equal(future);
+    await expectRevert(hook.read.nav(), "NavInFuture(uint256)");
+    await expectRevert(buy(trader, 100n * USD), "NavInFuture(uint256)");
+    await expectRevert(hook.write.repeg({ account: keeper.account }), "NavInFuture(uint256)");
+    // Liquidity providers can still leave.
+    const shares = await hook.read.balanceOf([lp.account.address]);
+    await hook.write.withdraw([shares, 0n, 0n, await deadline()], { account: lp.account });
+    expect(await hook.read.balanceOf([lp.account.address])).to.equal(0n);
   });
 
   it("refuses a swap that would take the price more than 5% from the NAV", async () => {
@@ -627,6 +735,8 @@ describe("GanymedeRwaLiquidityHook", () => {
     await prepare(lp, 5_000n * USD);
     await seed(lp);
     await expectRevert(hook.write.transfer([zeroAddress, 1n], { account: lp.account }), "InvalidAddress");
+    // The hook's own balance holds converted deposits until they are claimed.
+    await expectRevert(hook.write.transfer([hook.address, 1n], { account: lp.account }), "InvalidAddress");
     await expectRevert(hook.write.transfer([other.account.address, 10n ** 12n], { account: lp.account }), "InsufficientBalance");
     await hook.write.transfer([other.account.address, 1_000n * USD], { account: lp.account });
     await hook.write.approve([trader.account.address, 500n * USD], { account: other.account });
@@ -727,69 +837,101 @@ describe("GanymedeRwaLiquidityHook", () => {
     await prepare(trader, 5_000n * USD);
     await seed(lp, 40n * SHARE, 4_000n * USD);
     const claims = async (currency: Address) => manager.read.balanceOf([hook.address, BigInt(currency)]) as Promise<bigint>;
+    const owned = async (holder: Address) => (await hook.read.balanceOf([holder])) + (await hook.read.claimableShares([holder]));
+    const counts = { deposits: 1, cancels: 0, withdrawals: 0, swaps: 0, repegs: 0, refused: 0 };
     let nav = NAV;
-    let deposits = 1;
-    let withdrawals = 0;
-    let swaps = 0;
-    let repegs = 0;
-    let refused = 0;
-    for (let step = 0; step < 120; step++) {
-      const action = random(6n);
+    for (let step = 0; step < 140; step++) {
+      const action = random(7n);
       const wallet = providers[Number(random(3n))];
       try {
         if (action === 0n) {
           await seed(wallet, random(20n) * SHARE + 1n, random(2_000n) * USD + 1n);
-          deposits++;
+          counts.deposits++;
         } else if (action === 1n) {
-          const balance = await hook.read.balanceOf([wallet.account.address]);
-          if (balance > 0n) {
-            await hook.write.withdraw([(balance * (random(100n) + 1n)) / 100n, 0n, 0n, await deadline()], { account: wallet.account });
-            withdrawals++;
+          const shares = await owned(wallet.account.address);
+          if (shares > 0n) {
+            await hook.write.withdraw([(shares * (random(100n) + 1n)) / 100n, 0n, 0n, await deadline()], { account: wallet.account });
+            counts.withdrawals++;
           }
         } else if (action === 2n) {
           await buy(trader, random(1_500n) * USD + USD);
-          swaps++;
+          counts.swaps++;
         } else if (action === 3n) {
           await sell(trader, random(15n) * SHARE + SHARE / 10n);
-          swaps++;
+          counts.swaps++;
         } else if (action === 4n) {
           nav = (nav * (10_000n + random(400n) - 200n)) / 10_000n; // within ±2%
           await publish(nav);
-        } else if ((await hook.simulate.repeg({ account: keeper.account.address })).result) {
-          await hook.write.repeg({ account: keeper.account });
-          repegs++;
+        } else if (action === 5n) {
+          if ((await hook.simulate.repeg({ account: keeper.account.address })).result) {
+            await hook.write.repeg({ account: keeper.account });
+            counts.repegs++;
+          }
+        } else {
+          const [waiting0, waiting1, waitingEpoch] = await hook.read.pendingOf([wallet.account.address]);
+          if (waiting0 + waiting1 > 0n && waitingEpoch === (await hook.read.epoch())) {
+            await hook.write.cancelDeposit({ account: wallet.account });
+            counts.cancels++;
+          }
         }
       } catch (error) {
-        // A trade the band refuses, or a deposit too small to buy a share, is an allowed outcome.
+        // A trade the band refuses, or a deposit too small to take anything, is an allowed outcome.
         const text = revertText(error);
         const allowed = text.toLowerCase().includes(selector("OutsideBand(uint160)")) || /\bInvalidAmount\b/.test(text);
         if (!allowed) throw error;
-        refused++;
+        counts.refused++;
       }
-      // The claims the hook holds are exactly its idle balances, and every holder could leave.
-      expect(await claims(key.currency0)).to.equal(await hook.read.idle0());
-      expect(await claims(key.currency1)).to.equal(await hook.read.idle1());
+      // The claims the hook holds are exactly its idle balances, which cover the waiting deposits;
+      // the waiting deposits add up; and every holder could leave with their shares.
+      const [idle0, idle1, pending0, pending1, currentEpoch] = await Promise.all([
+        hook.read.idle0(),
+        hook.read.idle1(),
+        hook.read.pending0(),
+        hook.read.pending1(),
+        hook.read.epoch(),
+      ]);
+      expect(await claims(key.currency0)).to.equal(idle0);
+      expect(await claims(key.currency1)).to.equal(idle1);
+      expect(idle0 >= pending0 && idle1 >= pending1).to.equal(true);
       const [held0, held1] = await hook.read.totalAmounts();
       let owed0 = 0n;
       let owed1 = 0n;
+      let waitingSum0 = 0n;
+      let waitingSum1 = 0n;
+      let claimable = 0n;
       for (const holder of providers) {
-        const balance = await hook.read.balanceOf([holder.account.address]);
-        if (balance === 0n) continue;
-        const [out0, out1] = await hook.read.previewWithdraw([balance]);
+        const [waiting0, waiting1, waitingEpoch] = await hook.read.pendingOf([holder.account.address]);
+        if (waitingEpoch === currentEpoch) {
+          waitingSum0 += waiting0;
+          waitingSum1 += waiting1;
+        }
+        claimable += await hook.read.claimableShares([holder.account.address]);
+        const shares = await owned(holder.account.address);
+        if (shares === 0n) continue;
+        const [out0, out1] = await hook.read.previewWithdraw([shares]);
         owed0 += out0;
         owed1 += out1;
       }
+      expect([waitingSum0, waitingSum1]).to.deep.equal([pending0, pending1]);
+      expect(claimable <= (await hook.read.balanceOf([hook.address]))).to.equal(true);
       expect(owed0 <= held0 && owed1 <= held1).to.equal(true);
     }
     const records = await publicClient.getContractEvents({ address: hook.address, abi: hook.abi, eventName: "Repegged", fromBlock: 0n });
-    expect(deposits > 10 && withdrawals > 5 && swaps > 30 && repegs > 0 && records.length > 10 && refused < 20).to.equal(true);
+    const conversions = await publicClient.getContractEvents({ address: hook.address, abi: hook.abi, eventName: "Converted", fromBlock: 0n });
+    expect(counts.deposits > 10 && counts.cancels > 0 && counts.withdrawals > 5 && counts.swaps > 30).to.equal(true);
+    expect(counts.repegs > 0 && records.length > 10 && conversions.length > 3 && counts.refused < 20).to.equal(true);
 
-    // Everyone leaves; what stays belongs to the locked shares and is dust.
+    // Everyone leaves; what stays belongs to the locked shares, or is claim rounding, and is dust.
     for (const holder of providers) {
-      const balance = await hook.read.balanceOf([holder.account.address]);
-      if (balance > 0n) await hook.write.withdraw([balance, 0n, 0n, await deadline()], { account: holder.account });
+      const [waiting0, waiting1, waitingEpoch] = await hook.read.pendingOf([holder.account.address]);
+      if (waiting0 + waiting1 > 0n && waitingEpoch === (await hook.read.epoch())) await hook.write.cancelDeposit({ account: holder.account });
+      const shares = await owned(holder.account.address);
+      if (shares > 0n) await hook.write.withdraw([shares, 0n, 0n, await deadline()], { account: holder.account });
     }
-    expect(await hook.read.totalSupply()).to.equal(1_000n);
+    const unclaimed = await hook.read.balanceOf([hook.address]);
+    expect(unclaimed < 100n).to.equal(true);
+    expect(await hook.read.totalSupply()).to.equal(1_000n + unclaimed);
+    expect([await hook.read.pending0(), await hook.read.pending1()]).to.deep.equal([0n, 0n]);
     const left = split(await hook.read.totalAmounts());
     expect((left.ustx * nav) / SHARE + left.dollars < 100_000n).to.equal(true); // under 10 cents
     expect(await claims(key.currency0)).to.equal(await hook.read.idle0());

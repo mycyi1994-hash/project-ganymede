@@ -20,14 +20,19 @@ hook back for the hook's own calls, and the hook refuses every other pool (`befo
 liquidity it does not add itself (`beforeAddLiquidity`). So the hook is the pool's only liquidity
 provider, and it issues ERC-20 shares (`USTX-V4LP`, 6 decimals) to the people who fund it.
 
-**Deposits and withdrawals.** The first deposit takes both tokens in full, needs a fresh NAV and mints
-their value at the NAV in dollar units, less 1,000 shares locked for good; a first deposit must be
-worth at least $10. Later deposits name the most of each token they will pay and a minimum number of
-shares; they get the most shares those amounts buy at the ratio the hook holds the two tokens, and pay
-each token's share of the holdings rounded up. A deposit waits as an ERC-6909 claim in the pool
-manager until the next NAV record puts it to work, so liquidity cannot be added just in time around a
-known trade. A withdrawal pays the shares' part of the ranges and of the idle claims, fees included,
-rounded down, at any time and with any NAV, stale or missing.
+**Deposits are priced forward.** The first deposit takes both tokens in full, needs a fresh NAV,
+mints their value at the NAV in dollar units, less 1,000 shares locked for good, and opens the
+ranges; it must be worth at least $10. Every later deposit is priced the way a fund prices
+subscriptions, at the next NAV: it names the most of each token it will pay, takes them at the ratio
+the hook holds the two tokens, and waits as an ERC-6909 claim in the pool manager. At the next NAV
+record the re-peg values the waiting deposits and everything the shares already own at that NAV,
+mints the deposits' shares in that proportion (rounded down) and puts the tokens to work. The
+depositor then claims the shares (`claimShares`, or the next `deposit` or `withdraw` does it) and can
+cancel before, getting exactly the deposit back. A deposit therefore earns nothing from trades made
+before its liquidity is in the pool: without this, a deposit made just before a known trade and
+withdrawn just after would take a pro-rata part of that trade's fee and spread while its tokens sat
+idle. A withdrawal pays the shares' part of the ranges and of the idle claims, fees included, rounded
+down, at any time and with any NAV, stale or missing.
 
 **Ranges.** The liquidity sits in two ranges. The base range covers 200 ticks (about 2%) on each side
 of the NAV and is as large as the holdings allow; whichever token it cannot use goes into a one-sided
@@ -37,8 +42,8 @@ offered just above it. Deep liquidity at the NAV and inventory that leans back t
 a market maker in a tokenized fund aims for.
 
 **Re-peg.** At each new NAV record, before the first swap that follows it (or when anyone calls
-`repeg()`), the hook takes both ranges out, fees included, moves the pool's price to the new NAV and
-puts everything back around it. With the hook's liquidity out the pool is empty, and moving the price
+`repeg()`), the hook takes both ranges out, fees included, turns the waiting deposits into shares,
+moves the pool's price to the new NAV and puts everything back around it. With the hook's liquidity out the pool is empty, and moving the price
 of an empty pool exchanges nothing: the same tokens go back in around the new price. The liquidity
 providers keep the value they had at the new NAV, less a few base units of rounding, instead of
 selling the difference to an arbitrageur.
@@ -46,8 +51,9 @@ selling the difference to an arbitrageur.
 **Fee and limits.** Between records the pool trades on Uniswap's concentrated-liquidity curve. The
 fee is 0.30% with a fresh NAV and rises linearly to 1.00% at an hour, because an older NAV is a less
 certain price. Past an hour swaps stop, as the fund's orders and the lending market's loans do, until
-a new record arrives. No swap may leave the price more than 500 ticks (about 5%) from the NAV. The
-hook has no owner, no pause and nothing to configure.
+a new record arrives; a record dated after the block is refused, since it would never age. No swap
+may leave the price more than 500 ticks (about 5%) from the NAV. The hook has no owner, no pause and
+nothing to configure.
 
 **Around it.** `contracts/GanymedeV4Router.sol` swaps on a v4 pool where no Uniswap router serves it:
 exact input with a minimum output or exact output with a maximum input, a deadline, and quotes that
@@ -67,30 +73,38 @@ contract's own address. X Layer Testnet runs the Cancun opcodes the pool manager
 
 ## What the tests show
 
-`onchain/test/GanymedeRwaLiquidityHook.test.ts`, 19 tests on the canonical pool manager with the
+`onchain/test/GanymedeRwaLiquidityHook.test.ts`, 22 tests on the canonical pool manager with the
 real fund, demo dollar, NAV registry and NAV feed contracts:
 
 - the pool opens at the NAV, the hook's address carries its permissions, and no one else can open a
   pool with the hook, add liquidity to its pool or call its callbacks;
 - NAVs from $0.0001 to $1,000,000,000 a share map to exactly the pool price computed off chain, with
   USTX as either of the pool's two currencies;
-- the first deposit mints its value at the NAV and centres the ranges on it; later deposits pay their
-  share of the holdings rounded up and match `previewDeposit` exactly; withdrawals match
-  `previewWithdraw` exactly, include fees and work with a stale NAV;
+- the first deposit mints its value at the NAV and centres the ranges on it; a later deposit takes its
+  tokens at the holdings' ratio, waits without changing the ranges or what the shares own, and at the
+  next record becomes shares worth its value at that NAV;
+- **a deposit made just before a $2,000 trade gets none of that trade's gain**: cancelled, it returns
+  exactly; left to convert, it is priced after the trade, and its shares are worth what it put in;
+- withdrawals match `previewWithdraw` exactly, include fees, leave waiting deposits alone and work
+  with a stale NAV;
 - the fee is 0.30% plus the NAV's age (0.65% at half an hour, 1.00% at an hour) and swaps stop after
-  an hour; a buy and a sell back leave the providers about 0.3% of each leg richer;
+  an hour, or at once when a record is dated after the block; a buy and a sell back leave the
+  providers about 0.3% of each leg richer;
 - **with the NAV recorded 5% higher, an arbitrageur takes $2.689195 from $10,000 in the
   constant-product pool, exactly what its providers lose, while the hooked pool re-pegs with a zero
   swap and its providers lose less than a tenth of a cent**; afterwards buying USTX in the hooked pool
   and redeeming it at the fund loses money;
+- the limit that remains: buying $1,500 of USTX at the old NAV before a record 2% higher lands, then
+  redeeming it at the fund, still takes $20.69 from the providers;
 - swaps that would take the price more than 5% from the NAV revert; what the base range cannot use is
   placed on the side where it sells, in both token orders;
 - with USTX as the pool's second currency (negative ticks), and with a $1.00 NAV that lands exactly on
   tick 0, where the pool manager leaves its tick at -1 after moving down onto it, the books still
   balance;
-- a seeded random run of 120 steps of deposits, withdrawals, trades and NAV records checks after each
-  one that the hook's ERC-6909 claims equal its idle balances and that every holder could withdraw;
-  at the end everyone does, and less than ten cents stays with the locked shares;
+- a seeded random run of 140 steps (24 deposits, 4 cancellations, 11 withdrawals, 34 trades, NAV
+  records and 16 re-pegs with 9 conversions) checks after each one that the hook's ERC-6909 claims
+  equal its idle balances and cover the waiting deposits, that the waiting deposits add up, and that
+  every holder could withdraw; at the end everyone does, and less than ten cents stays behind;
 - donations to the pool reach the providers; tokens sent to the hook directly are ignored;
 - the router fills exact input and exact output within the trader's limits, and refuses a partial fill.
 
@@ -106,47 +120,54 @@ local test accounts. It uses no key and broadcasts nothing.
 
 ```text
 Uniswap's PoolManager on X Layer mainnet (0x360e68faccca8ca495c1b759fd9eee466db9fb32) runs the same code as the one deployed below, apart from its own address
-forked X Layer Testnet at block 42278119 (in memory only)
+forked X Layer Testnet at block 42280614 (in memory only)
 
-live USTX NAV $97.886159 from 0x292c56c5290cc7b73e3ee33c2c2688eb3e04c3c8, recorded 44 s before the fork's latest block
+live USTX NAV $97.884861 from 0x292c56c5290cc7b73e3ee33c2c2688eb3e04c3c8, recorded 439 s before the fork's latest block
 
 deploying on the fork...
-  deploy PoolManager         0x9dc93854096a120623c90ac429fa9d340d6c3132fd24908ee32f9b14e924bc67  gas 5243607
-  hook address 0x8160B5ad24AF058Dd346C2220e284E15E5b668c0 (salt 0x0000000000000000000000000000000000000000000000000000000000000568)
-  deploy hook (CREATE2)      0x06f2598047b174555134364ff57e5891c641f27995761aafc080b4b652e81272  gas 4794667
-  deploy GanymedeV4Router    0x45bbb84b541a0cb9282cbee453b91b1510d7c75b0ef5f89d9bcc70083dfe9044  gas 1031183
-pool 0xade0fce3b0319ccccb7b95f22291856153ee9e72790d47eecd08e184dbc8c39b: USTX is currency0, opened at $97.8862
+  deploy PoolManager         0x83a2a0576196f5d6f4437340e20cfd70b63204fa825cafbb145f95ed1c1e0b81  gas 5243607
+  hook address 0xe29582d5E1C9083AB4D6C5e6d7c24b50Dd20E8c0 (salt 0x00000000000000000000000000000000000000000000000000000000000024c5)
+  deploy hook (CREATE2)      0x10d159b16baaafaf6d18c350fbb1922b351250a5697cb9c95679fc7dce14edc1  gas 5462181
+  deploy GanymedeV4Router    0xad9edbdcce9cfb8c60bcbb5cffdaeb30195013d4e5205c1685754562d87584d7  gas 1031183
+pool 0xcbba53687e5afdee46a28aecf5976d231a4a38607d4215a26b827941912d3c1d: USTX is currency0, opened at $97.8849
 
-provider bought 51.079744 USTX for $5,000 at the fund and deposited it with $5,000: 9999.998942 LP shares
-  base range $95.9447 to $99.9600 around the NAV; holdings worth $9,999.999842 at the NAV
+provider bought 51.080421 USTX for $5,000 at the fund and deposited it with $5,000: 9999.998909 LP shares
+  base range $95.9447 to $99.9600 around the NAV; holdings worth $9,999.999809 at the NAV
 
-trader bought 10.162071 USTX for $1,000 ($98.405138 each, fee 0.3206%); pool price now $98.2936
-trader sold half of it back; pool price $98.0902
+trader bought 10.154226 USTX for $1,000 ($98.481164 each, fee 0.3989%); pool price now $98.2922
+trader sold half of it back; pool price $98.0890
+second provider deposited 16.717943 USTX and $2,000.00 at the pool's ratio; it waits for the next NAV record
 
-publisher (impersonated) records a NAV 1% higher: $98.86502
+publisher (impersonated) records a NAV 1% higher: $98.863709
   live constant-product pool price $98.059785, -0.81% from the new NAV
-  an arbitrage bought its USTX below the NAV and redeemed it at the fund for $0.033322; its providers ($9,964.469187 at the new NAV) lost $0.033323
-  hooked pool: the next swap moved it to the new NAV before trading; price after the $10 swap $98.8693
-  providers' holdings at the new NAV $10,050.347417 before, $10,050.377767 after (the $10 swap's fee included)
+  an arbitrage bought its USTX below the NAV and redeemed it at the fund for $0.033215; its providers ($9,964.40285 at the new NAV) lost $0.033215
+  hooked pool: the next swap moved it to the new NAV before trading; price after the $10 swap $98.8669
+  the first provider's shares at the new NAV: $10,051.521409 before, $10,051.543785 after (with their part of the $10 swap's fee)
+  the waiting deposit, worth $3,652.797851 at the new NAV, became 3634.07414 shares
 
-provider withdrew 45.897861 USTX and $5,512.683874: $10,050.376819 at the new NAV (holding the deposit instead: $10,049.999912)
+provider withdrew 45.929338 USTX and $5,510.799079: $10,051.543785 at the new NAV (holding the deposit instead: $10,049.999877)
+second provider claimed its shares and withdrew 16.691063 USTX and $2,002.66546: $3,652.805855 at the new NAV
 
 gas used
   deploy PoolManager   5,243,607
-  deploy hook          4,794,667
+  deploy hook          5,462,181
   deploy router        1,031,183
-  first deposit        547,311
-  swap                 185,253
-  swap                 163,047
-  swap that re-pegs    670,472
-  withdraw             320,124
+  first deposit        578,718
+  swap                 185,395
+  swap                 163,225
+  later deposit        394,402
+  swap that re-pegs    706,062
+  withdraw             329,308
+  claim and withdraw   241,479
 
 Nothing was broadcast; the fork is discarded when this process exits.
 ```
 
 The live constant-product pool sat 0.18% above the old NAV, inside its 0.3% fee, so a 1% record
 opened only a small arbitrage there; the tests' 5% record shows the difference more plainly. The
-provider in the hooked pool ended $0.38 ahead of holding the deposit, from the trader's fees.
+first provider in the hooked pool ended $1.54 ahead of holding the deposit, from the trader's fees.
+The second provider's deposit waited through the trades and became shares at the new NAV, which it
+withdrew for what it was worth then plus its part of the last swap's fee.
 
 ## Deploying
 
@@ -163,19 +184,25 @@ NAV record so traders do not pay for it.
 ## What this does not cover
 
 - **The NAV's latency.** A record prices the xStocks a few minutes earlier, and the prices are public
-  before the record lands. Someone who knows the next NAV can trade at the current one until it does.
-  The fee, its rise with the NAV's age and the curve's slippage bound this, but a move larger than the
-  fee between two records is still an opening. The testnet fund's own orders fill at the recorded NAV
-  with no fee, a wider version of the same gap.
+  before the record lands. Someone who knows the next NAV can trade at the current one until it does:
+  in the tests, $1,500 bought before a record 2% higher and redeemed at the fund after it takes $20.69
+  from a $10,000 pool. The fee, its rise with the NAV's age and the curve's slippage bound this, but a
+  move larger than the fee between two records is still an opening; records more often, a fee sized
+  to the move expected between records, or a surcharge on trades that move the price far from the NAV
+  would narrow it. The testnet fund's own orders fill at the recorded NAV with no fee, a wider version
+  of the same gap.
 - **Standard ERC-20 tokens only.** The pool manager credits what actually arrives, so a token that
   delivers less than it is asked to send leaves it unsettled and the call reverts. xStocks can arrive a
   base unit short ([the in-kind vault record](IN_KIND_VAULT.md)); a pool of xStocks would hold
   `GanymedeBasketVault` shares, which are standard, rather than the xStocks themselves.
-- **When it stops.** Swaps stop while the NAV is over an hour old or maps outside the tick range, and a
-  paused USTX stops swaps, deposits and withdrawals until it is unpaused. Deposits earn from the next
-  NAV record. The first swap after a record pays about 500,000 more gas for the re-peg unless someone
-  calls `repeg()` first.
-- **Status.** Not deployed and not audited. The app does not show the pool yet; after a deployment it
-  would read `totalAmounts`, `previewDeposit`, `previewWithdraw` and the router's quotes. The pool
+- **When it stops.** Swaps stop while the NAV is over an hour old, dated after the block or maps
+  outside the tick range, and a paused USTX stops swaps, deposits and withdrawals until it is
+  unpaused. A deposit becomes shares only at the next NAV record, so while records stall it waits (it
+  can be cancelled). The first swap after a record pays about 540,000 more gas for the re-peg unless
+  someone calls `repeg()` first.
+- **Status.** Not deployed and not audited; one independent review round changed deposits to forward
+  pricing and added the future-date check. The app does not show the pool yet; after a deployment it
+  would read `totalAmounts`, `previewDeposit`, `estimateShares`, `pendingOf`, `claimableShares`,
+  `previewWithdraw` and the router's quotes. The pool
   manager is Uniswap's BUSL-1.1 code, deployed here only on a testnet; the hook and router import
   v4-core's MIT-licensed interfaces and libraries. Demo dollars and USTX have no value.
