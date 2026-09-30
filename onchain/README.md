@@ -10,7 +10,7 @@ sources stay in `contracts/`.
 cd onchain
 npm install
 npm run build   # compile
-npm test        # 69 tests, no network needed
+npm test        # 88 tests, no network needed
 ```
 
 ## Keys
@@ -180,6 +180,39 @@ each pool's ERC-4626 wrapper into the xStock; deploys the vault with MAG3's unit
 a second account, which redeems them for 4/10 of the holdings; and redeems the rest, checking every
 amount. It uses no key and broadcasts nothing. The run on 25 September 2026 is recorded in
 `../docs/IN_KIND_VAULT.md`.
+
+## Uniswap v4 liquidity for USTX (fork of X Layer Testnet)
+
+`GanymedeRwaLiquidityHook` is a Uniswap v4 hook that runs a USTX/dUSD pool around the NAV and holds
+its liquidity for the providers who deposit into it; `GanymedeV4Router` swaps on it (rules in
+`../contracts/README.md`, design and a recorded run in `../docs/UNISWAP_V4_LIQUIDITY.md`; 19 tests in
+`test/GanymedeRwaLiquidityHook.test.ts`). The Solidity imports come from `@uniswap/v4-core` 1.0.2 in
+this package; `hardhat.config.ts` lets the repository-root build find them here. Uniswap has deployed
+v4 on X Layer mainnet but not on X Layer Testnet, so the tests and scripts deploy the PoolManager from
+that package as Uniswap built it. Nothing here is deployed. Run it against the live contracts:
+
+```bash
+npm run fork:v4
+```
+
+This first checks that Uniswap's PoolManager on X Layer mainnet runs the same code, then forks X Layer
+Testnet into memory and deploys the PoolManager, the hook (priced by the recorded `GanymedeNavFeed`,
+at a CREATE2 address mined for its permissions through the deterministic deployment proxy) and the
+router. With local test accounts a provider deposits USTX bought at the live NAV with the same value
+in dUSD, a trader buys and sells, the impersonated publisher records a NAV 1% higher, which opens an
+arbitrage on the live constant-product pool and re-pegs the hooked pool at the next swap, and the
+provider withdraws. It prints the gas of each step, uses no key and broadcasts nothing.
+
+Deploying it on X Layer Testnet needs the user's approval:
+
+```bash
+npm run deploy:v4
+```
+
+deploys the PoolManager (owned by the administrator), the hook and the router with the same routine,
+each transaction with its own nonce and gas limit, seeds the pool from the administrator wallet
+(claim 10,000 dUSD, invest $5,000, deposit the USTX with $5,000), reads the wiring back and records
+the addresses, the salt and the pool ID in `deployments/xlayer-testnet.json`.
 
 ## Verify the sources
 

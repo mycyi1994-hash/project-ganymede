@@ -42,7 +42,10 @@ Borrow section (`app/product-ui/Lending.tsx`, `lib/xstocks/lending.ts`) deposits
 USTX, borrows, repays, withdraws and lends through it. Pausing it again or any
 other administrator action needs the user's approval.
 `GanymedeBasketVault` (in-kind creation and redemption) runs only on a fork (`npm run fork:vault` in
-`onchain/`); deploying it anywhere needs the user's approval. Real money stays out of scope: no mainnet deployment of these contracts, no real deposits, withdrawals, custody or payment destinations, and
+`onchain/`); deploying it anywhere needs the user's approval. `GanymedeRwaLiquidityHook` (a Uniswap
+v4 hook that runs a USTX/dUSD pool around the NAV and holds its liquidity for depositors) and
+`GanymedeV4Router` run only on a fork (`npm run fork:v4`); deploying them (`npm run deploy:v4`, which
+also deploys Uniswap's PoolManager on X Layer Testnet) needs the user's approval. Real money stays out of scope: no mainnet deployment of these contracts, no real deposits, withdrawals, custody or payment destinations, and
 no value for dUSD or USTX. Never create or name an address that would receive
 real funds, and keep the demo, testnet and simulation labels.
 `lib/product-contract.ts` keeps `canSubscribe`, `canRedeem`, `settlementAsset`
