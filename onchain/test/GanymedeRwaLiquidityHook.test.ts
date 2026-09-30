@@ -207,7 +207,8 @@ async function deploy(options: { assetFirst?: boolean; nav?: bigint } = {}) {
     const [, , , effectiveAt] = await registry.read.latestNav([USTX]);
     const swaps = (await events(hash)).filter(event => event.eventName === "Swap" && event.args.fee > 0);
     const charged = swaps.at(-1)!.args as { fee: number };
-    return { charged: BigInt(charged.fee), expected: feeAt(block.timestamp - BigInt(effectiveAt)) };
+    const age = block.timestamp > BigInt(effectiveAt) ? block.timestamp - BigInt(effectiveAt) : 0n;
+    return { charged: BigInt(charged.fee), expected: feeAt(age) };
   }
 
   return {
@@ -412,6 +413,38 @@ describe("GanymedeRwaLiquidityHook", () => {
     expect(worth <= put && worth > put - 1_000n).to.equal(true);
   });
 
+  it("applies a record before taking a deposit, so the deposit cannot convert just ahead of a trade", async () => {
+    // A record has landed and nobody has re-pegged yet. Converting a deposit at that record would put
+    // it in range for the next swap, which its depositor may already see; so the deposit re-pegs first
+    // and waits for a record published after it.
+    const { hook, keeper, lp, lp2, trader, dollar, fund, split, prepare, seed, buy, publish, valueAt, events } = await deploy();
+    await prepare(lp, 5_000n * USD);
+    await prepare(lp2, 5_000n * USD);
+    await prepare(trader);
+    await seed(lp);
+    await publish(NAV);
+    const epochBefore = await hook.read.epoch();
+    const logs = await events(await seed(lp2, 50n * SHARE, 5_000n * USD));
+    expect(logs.some(event => event.eventName === "Repegged")).to.equal(true);
+    expect(await hook.read.epoch()).to.equal(epochBefore + 1n);
+    const [waiting0, waiting1, waitingEpoch] = await hook.read.pendingOf([lp2.account.address]);
+    expect(waitingEpoch).to.equal(epochBefore + 1n);
+    expect((await hook.simulate.repeg({ account: keeper.account.address })).result).to.equal(false);
+
+    const lpValue = await valueAt(NAV);
+    await buy(trader, 2_000n * USD);
+    const gain = (await valueAt(NAV)) - lpValue;
+    expect(gain > 10n * USD).to.equal(true);
+    expect(await hook.read.claimableShares([lp2.account.address])).to.equal(0n);
+    const ustxBefore = await fund.read.balanceOf([lp2.account.address]);
+    const dollarsBefore = await dollar.read.balanceOf([lp2.account.address]);
+    await hook.write.cancelDeposit({ account: lp2.account });
+    const returned = split([waiting0, waiting1]);
+    expect((await fund.read.balanceOf([lp2.account.address])) - ustxBefore).to.equal(returned.ustx);
+    expect((await dollar.read.balanceOf([lp2.account.address])) - dollarsBefore).to.equal(returned.dollars);
+    expect((await valueAt(NAV)) - lpValue).to.equal(gain);
+  });
+
   it("pays withdrawals their share of the ranges, fees and idle balances, with any NAV", async () => {
     const { hook, lp, lp2, trader, fund, dollar, split, prepare, seed, buy, sell, events } = await deploy();
     await prepare(lp, 5_000n * USD);
@@ -605,11 +638,18 @@ describe("GanymedeRwaLiquidityHook", () => {
     expect(price < 98n * USD && price > 97n * USD).to.equal(true); // the sale moved it down from the new NAV
   });
 
-  it("refuses a NAV dated after the block, which would never age", async () => {
-    const { hook, lp, trader, keeper, registry, prepare, seed, buy, publish } = await deploy();
+  it("refuses a NAV dated more than a minute after the block, which would not age", async () => {
+    const { hook, lp, trader, keeper, registry, relayer, prepare, seed, buy, publish, swapFee } = await deploy();
     await prepare(lp, 5_000n * USD);
     await prepare(trader, 1_000n * USD);
     await seed(lp);
+    // Clocks differ by a little: a record up to a minute ahead of its block is fresh, at the lowest fee.
+    await time.increase(60);
+    const ahead = BigInt(await time.latest()) + 45n;
+    await registry.write.publishNav([USTX, 101n * USD, 0n, HOLDINGS, ahead], { account: relayer.account });
+    expect((await hook.read.nav())[1]).to.equal(ahead);
+    expect(await hook.read.currentFee()).to.equal(3_000);
+    expect((await swapFee(await buy(trader, 10n * USD))).charged).to.equal(3_000n);
     const future = BigInt(await time.latest()) + 30n * 24n * HOUR;
     await publish(NAV, future);
     expect((await registry.read.latestNav([USTX]))[3]).to.equal(future);

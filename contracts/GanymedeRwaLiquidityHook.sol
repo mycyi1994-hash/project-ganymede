@@ -37,9 +37,9 @@ interface IRwaPoolToken {
 ///         USTX against dUSD, priced by GanymedeNavFeed. The hook owns all of the pool's liquidity
 ///         and issues ERC-20 shares for it. Liquidity providers deposit both tokens at the ratio the
 ///         hook holds them and withdraw their share of everything it holds, fees included. Deposits
-///         are priced forward, like a fund's subscriptions: each one waits for the next NAV record
-///         and becomes shares there, valued with the holdings at that NAV, so it earns nothing from
-///         trades made before its liquidity is in the pool.
+///         are priced forward, like a fund's subscriptions: each one waits for the first NAV record
+///         published after it and becomes shares there, valued with the holdings at that NAV, so it
+///         earns nothing from trades made before its liquidity is in the pool.
 ///
 ///         At every new NAV record the hook takes its liquidity out, moves the empty pool to the NAV
 ///         and puts the liquidity back around it: a base range BASE_TICKS either side of the NAV, as
@@ -103,6 +103,9 @@ contract GanymedeRwaLiquidityHook is IHooks, IUnlockCallback {
     uint24 public constant MIN_FEE = 3_000;
     uint24 public constant MAX_FEE = 10_000;
     uint256 public constant MAX_NAV_AGE = 1 hours;
+    /// @notice How far past its block a record's time may run, as Ganymede's evidence checks allow
+    ///         for clocks; such a record counts as fresh.
+    uint256 public constant CLOCK_TOLERANCE = 60;
     /// @notice Shares locked for good by the first deposit.
     uint256 public constant MINIMUM_SHARES = 1_000;
 
@@ -270,12 +273,14 @@ contract GanymedeRwaLiquidityHook is IHooks, IUnlockCallback {
 
     /// @notice Deposits up to `amount0Max` of currency0 and `amount1Max` of currency1 (both approved
     ///         to this contract) at the ratio the hook holds the two tokens, taking only what that
-    ///         ratio needs. The deposit waits for the next NAV record: the re-peg then puts it to work
-    ///         and mints its shares, valuing it and the holdings at that NAV, and `claimShares` pays
-    ///         them out (`withdraw` and the next `deposit` claim first). Until then `cancelDeposit`
-    ///         returns it. The first deposit instead takes both amounts in full, needs a fresh NAV,
-    ///         mints their value at the NAV in dollar-token units as shares at once and opens the
-    ///         ranges; `shares` is 0 for every later deposit.
+    ///         ratio needs. The deposit waits for the first NAV record published after it: the re-peg
+    ///         to that record puts it to work and mints its shares, valuing it and the holdings at
+    ///         that NAV, and `claimShares` pays them out (`withdraw` and the next `deposit` claim
+    ///         first). Until then `cancelDeposit` returns it. A fresh record the pool has not re-pegged
+    ///         to yet is applied first, so a deposit cannot become liquidity just before trades its
+    ///         depositor can already see. The first deposit instead takes both amounts in full, needs a
+    ///         fresh NAV, mints their value at the NAV in dollar-token units as shares at once and
+    ///         opens the ranges; `shares` is 0 for every later deposit.
     function deposit(uint256 amount0Max, uint256 amount1Max, uint256 deadline)
         external
         nonReentrant
@@ -556,6 +561,14 @@ contract GanymedeRwaLiquidityHook is IHooks, IUnlockCallback {
             _repeg(sqrtPriceX96, updatedAt, answer);
             return (shares, amount0, amount1);
         }
+        // A fresh record not applied yet would convert the deposit at the next swap, the one its
+        // depositor may be waiting for; apply it now, so the deposit waits for a later record.
+        try this.nav() returns (uint256 answer, uint256 updatedAt, uint160 sqrtPriceX96) {
+            if (updatedAt != peggedAt) {
+                _repeg(sqrtPriceX96, updatedAt, answer);
+                _claim(account);
+            }
+        } catch {}
         _collectFees();
         (uint256 held0, uint256 held1) = _holdings();
         (, amount0, amount1) = _sharesFor(amount0Max, amount1Max, held0, held1, supply);
@@ -564,7 +577,7 @@ contract GanymedeRwaLiquidityHook is IHooks, IUnlockCallback {
         _toIdle(amount0, amount1);
         pending0 += amount0;
         pending1 += amount1;
-        // `deposit` claimed any earlier deposit first, so a waiting one is from this epoch.
+        // Any earlier deposit was claimed first, so a waiting one is from this epoch.
         Pending storage waiting = pendingOf[account];
         waiting.amount0 = _toUint128(waiting.amount0 + amount0);
         waiting.amount1 = _toUint128(waiting.amount1 + amount1);
@@ -662,7 +675,7 @@ contract GanymedeRwaLiquidityHook is IHooks, IUnlockCallback {
         if (waiting0 > 0 || waiting1 > 0) {
             uint256 value = _value(waiting0, waiting1, answer);
             uint256 heldValue = _value(idle0 - waiting0, idle1 - waiting1, answer);
-            uint256 shares = heldValue == 0 ? value : FullMath.mulDiv(value, totalSupply, heldValue);
+            uint256 shares = FullMath.mulDiv(value, totalSupply, heldValue == 0 ? 1 : heldValue);
             conversions[epoch] = Conversion(uint128(answer), _toUint128(value), shares);
             (pending0, pending1) = (0, 0);
             _mint(address(this), shares);
@@ -761,12 +774,12 @@ contract GanymedeRwaLiquidityHook is IHooks, IUnlockCallback {
 
     // ---- Pricing and accounting ----
 
-    /// @dev The NAV at most MAX_NAV_AGE old and the pool price it maps to. A record dated after the
-    ///      block is refused: it would never age.
+    /// @dev The NAV at most MAX_NAV_AGE old and the pool price it maps to. A record dated more than
+    ///      CLOCK_TOLERANCE after the block is refused: it would not age.
     function _nav() private view returns (uint160 sqrtPriceX96, uint256 updatedAt, uint256 answer) {
         (, int256 reported, , uint256 updated, ) = navFeed.latestRoundData();
         if (reported <= 0 || updated == 0) revert NavUnavailable();
-        if (updated > block.timestamp) revert NavInFuture(updated);
+        if (updated > block.timestamp + CLOCK_TOLERANCE) revert NavInFuture(updated);
         if (block.timestamp > updated + MAX_NAV_AGE) revert NavTooOld(updated);
         if (uint256(reported) > type(uint128).max) revert NavOutOfRange();
         answer = uint256(reported);
@@ -777,12 +790,14 @@ contract GanymedeRwaLiquidityHook is IHooks, IUnlockCallback {
         (uint256 numerator, uint256 denominator) = assetIsCurrency0 ? (dollarsPerAsset, navUnit) : (navUnit, dollarsPerAsset);
         if (numerator / denominator >= 1 << 64) revert NavOutOfRange();
         uint256 root = _sqrt(FullMath.mulDiv(numerator, 1 << 192, denominator));
-        if (root <= TickMath.MIN_SQRT_PRICE || root >= TickMath.MAX_SQRT_PRICE) revert NavOutOfRange();
+        // Below 2^64 the price's root stays under MAX_SQRT_PRICE; only the lower bound can fail.
+        if (root <= TickMath.MIN_SQRT_PRICE) revert NavOutOfRange();
         sqrtPriceX96 = uint160(root);
     }
 
     function _fee(uint256 updatedAt) private view returns (uint24) {
-        return uint24(MIN_FEE + (uint256(MAX_FEE - MIN_FEE) * (block.timestamp - updatedAt)) / MAX_NAV_AGE);
+        uint256 age = block.timestamp > updatedAt ? block.timestamp - updatedAt : 0;
+        return uint24(MIN_FEE + (uint256(MAX_FEE - MIN_FEE) * age) / MAX_NAV_AGE);
     }
 
     /// @dev Value at the NAV in dollar-token units, rounded down.

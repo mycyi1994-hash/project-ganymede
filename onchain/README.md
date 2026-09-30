@@ -10,7 +10,7 @@ sources stay in `contracts/`.
 cd onchain
 npm install
 npm run build   # compile
-npm test        # 91 tests, no network needed
+npm test        # 92 tests, no network needed
 ```
 
 ## Keys
@@ -185,7 +185,7 @@ amount. It uses no key and broadcasts nothing. The run on 25 September 2026 is r
 
 `GanymedeRwaLiquidityHook` is a Uniswap v4 hook that runs a USTX/dUSD pool around the NAV and holds
 its liquidity for the providers who deposit into it; `GanymedeV4Router` swaps on it (rules in
-`../contracts/README.md`, design and a recorded run in `../docs/UNISWAP_V4_LIQUIDITY.md`; 22 tests in
+`../contracts/README.md`, design and a recorded run in `../docs/UNISWAP_V4_LIQUIDITY.md`; 23 tests in
 `test/GanymedeRwaLiquidityHook.test.ts`). The Solidity imports come from `@uniswap/v4-core` 1.0.2 in
 this package; `hardhat.config.ts` lets the repository-root build find them here. Uniswap has deployed
 v4 on X Layer mainnet but not on X Layer Testnet, so the tests and scripts deploy the PoolManager from
