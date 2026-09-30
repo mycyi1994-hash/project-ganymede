@@ -43,10 +43,10 @@ a market maker in a tokenized fund aims for.
 
 **Re-peg.** At each new NAV record, before the first swap that follows it (or when anyone calls
 `repeg()`), the hook takes both ranges out, fees included, turns the waiting deposits into shares,
-moves the pool's price to the new NAV and puts everything back around it. With the hook's liquidity out the pool is empty, and moving the price
-of an empty pool exchanges nothing: the same tokens go back in around the new price. The liquidity
-providers keep the value they had at the new NAV, less a few base units of rounding, instead of
-selling the difference to an arbitrageur.
+moves the pool's price to the new NAV and puts everything back around it. With the hook's liquidity
+out the pool is empty, and moving the price of an empty pool exchanges nothing: the same tokens go
+back in around the new price. The liquidity providers keep the value they had at the new NAV, less a
+few base units of rounding, instead of selling the difference to an arbitrageur.
 
 **Fee and limits.** Between records the pool trades on Uniswap's concentrated-liquidity curve. The
 fee is 0.30% with a fresh NAV and rises linearly to 1.00% at an hour, because an older NAV is a less
@@ -174,10 +174,10 @@ withdrew for what it was worth then plus its part of the last swap's fee.
 `npm run deploy:v4` (in `onchain/`) deploys on X Layer Testnet with `ADMIN_PRIVATE_KEY`: the pool
 manager, owned by the administrator, whose only power over it is to appoint who may switch on
 Uniswap's protocol fee (at most 0.1% of a swap); the hook; and the router. Each transaction carries
-its own nonce and gas limit. The script then seeds the pool from the
-administrator wallet (claim 10,000 dUSD, invest $5,000 at the fund, deposit the USTX with $5,000). It
-reads the wiring back at the seeding block and records the three addresses, the CREATE2 salt and the
-pool ID in `deployments/xlayer-testnet.json`. Deploying needs the user's approval. After deploying,
+its own nonce and gas limit. The script then seeds the pool from the administrator wallet (claim
+10,000 dUSD, invest $5,000 at the fund, deposit the USTX with $5,000), reads the wiring back at the
+seeding block and records the three addresses, the CREATE2 salt and the pool ID in
+`deployments/xlayer-testnet.json`. Deploying needs the user's approval. After deploying,
 `npm run verify:export` includes the hook and the router, and a keeper can call `repeg()` after each
 NAV record so traders do not pay for it.
 
@@ -203,6 +203,6 @@ NAV record so traders do not pay for it.
 - **Status.** Not deployed and not audited; one independent review round changed deposits to forward
   pricing and added the future-date check. The app does not show the pool yet; after a deployment it
   would read `totalAmounts`, `previewDeposit`, `estimateShares`, `pendingOf`, `claimableShares`,
-  `previewWithdraw` and the router's quotes. The pool
-  manager is Uniswap's BUSL-1.1 code, deployed here only on a testnet; the hook and router import
-  v4-core's MIT-licensed interfaces and libraries. Demo dollars and USTX have no value.
+  `previewWithdraw` and the router's quotes. The pool manager is Uniswap's BUSL-1.1 code, deployed
+  here only on a testnet; the hook and router import v4-core's MIT-licensed interfaces and
+  libraries. Demo dollars and USTX have no value.
