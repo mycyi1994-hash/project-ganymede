@@ -24,7 +24,7 @@ import hre from "hardhat";
 import { writeFileSync } from "node:fs";
 import { maxUint256, type Address, type Hash, type Hex } from "viem";
 import { deploymentPath, loadDeployment, railFor } from "./_deployment";
-import { CREATE2_PROXY, deployRwaLiquidity, navSqrtPriceX96, readSlot0 } from "./_v4";
+import { CREATE2_PROXY, deployRwaLiquidity, navSqrtPriceX96, poolStateSlot, readSlot0 } from "./_v4";
 
 const SEED_DOLLARS = 5_000_000_000n; // $5,000 of USTX, plus the same in demo dollars
 const ONE_SHARE = 1_000_000n;
@@ -163,6 +163,17 @@ async function main() {
   };
   writeFileSync(deploymentPath(rail), `${JSON.stringify(deployment, null, 2)}\n`);
   console.log(`\nwrote ${deploymentPath(rail)}`);
+  // The app shows the pool on Pools once it is pinned; onchain/test/AppV4Client.test.ts checks the pin against this record.
+  const pin = {
+    poolManager: deployed.poolManager.address.toLowerCase(),
+    hook: deployed.hook.address.toLowerCase(),
+    router: deployed.router.address.toLowerCase(),
+    asset: fundAddress.toLowerCase(),
+    dollar: dollarAddress.toLowerCase(),
+    assetIsCurrency0,
+    stateSlot: poolStateSlot(await hook.read.poolId()),
+  };
+  console.log(`\nPin the pool in lib/xstocks/v4-liquidity.ts:\n\nexport const V4_POOL_DEPLOYMENT: V4Deployment | null = ${JSON.stringify(pin, null, 2)};`);
 }
 
 async function retry<T>(read: () => Promise<T>, done: (value: T) => boolean): Promise<T> {

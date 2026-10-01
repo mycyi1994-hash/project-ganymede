@@ -20,6 +20,7 @@
       "../lib/xstocks/fund.ts": "cjs",
       "../lib/xstocks/lending.ts": "cjs",
       "../lib/xstocks/liquidity.ts": "cjs",
+      "../lib/xstocks/v4-liquidity.ts": "cjs",
       "../lib/xstocks/activity.ts": "cjs",
       "../lib/chains.ts": "cjs"
     }
@@ -33,6 +34,7 @@
     "../lib/xstocks/fund.ts",
     "../lib/xstocks/lending.ts",
     "../lib/xstocks/liquidity.ts",
+    "../lib/xstocks/v4-liquidity.ts",
     // hardhat-viem writes contract types here on `npm run build`.
     "./artifacts/**/*.d.ts"
   ]

@@ -1190,6 +1190,15 @@ html:has(.gmd-drawer[open]) { overflow: hidden; }
 .gmd-liquidity-panel .gmd-order-estimate { margin-top: 4px; }
 .gmd-liquidity-panel .gmd-facts > div { padding-block: 8px; }
 .gmd-liquidity-hashes { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 4px 12px; }
+.gmd-liquidity-waiting { display: flex; flex-direction: column; gap: 3px; margin-bottom: 14px; padding: 14px; border: 1px solid #ecdcbc; border-radius: 8px; background: #fbf6ec; }
+.gmd-liquidity-waiting.is-ready { border-color: #c4d7d3; background: #edf3f1; }
+.gmd-liquidity-waiting > span { font-size: 12px; color: #73521f; }
+.gmd-liquidity-waiting.is-ready > span { color: var(--gmd-accent); }
+.gmd-liquidity-waiting b { font-size: 16px; font-variant-numeric: tabular-nums; }
+.gmd-liquidity-waiting small { font-size: 12px; color: var(--gmd-copy); }
+.gmd-liquidity-waiting .gmd-position-actions { margin-top: 8px; }
+.gmd-pool-list tbody tr[aria-current] :is(th,td) { background: #f3f8f7; }
+.gmd-pool-list tbody tr[aria-current] th { box-shadow: inset 3px 0 0 var(--gmd-accent); padding-inline-start: 10px; }
 .gmd-liquidity-panel :is(.gmd-tx-steps,.gmd-liquidity-done,.gmd-inline-error):focus { outline: none; }
 .gmd-liquidity-panel :is(.gmd-tx-steps,.gmd-liquidity-done,.gmd-inline-error):focus-visible { outline: 2px solid var(--gmd-accent); outline-offset: 3px; }
 .gmd-pool-pair :is(b,small) { white-space: nowrap; }

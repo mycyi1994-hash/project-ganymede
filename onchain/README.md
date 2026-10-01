@@ -10,7 +10,7 @@ sources stay in `contracts/`.
 cd onchain
 npm install
 npm run build   # compile
-npm test        # 92 tests, no network needed
+npm test        # 96 tests, no network needed
 ```
 
 ## Keys

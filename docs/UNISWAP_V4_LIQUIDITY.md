@@ -187,6 +187,38 @@ seeding block and records the three addresses, the CREATE2 salt and the pool ID 
 `npm run verify:export` includes the hook and the router, and a keeper can call `repeg()` after each
 NAV record so traders do not pay for it.
 
+## In the app
+
+The Pools screen (`app/product-ui/Pools.tsx`) runs the live constant-product pool today and shows
+this pool beside it once `V4_POOL_DEPLOYMENT` in `lib/xstocks/v4-liquidity.ts` is pinned; until
+then the constant is `null` and nothing of the v4 pool appears. `npm run deploy:v4` prints the pin
+after it records the deployment, and `onchain/test/AppV4Client.test.ts` fails if the pin and the
+record disagree. With it, the pool list gains a row for this pool (its current fee, value at the NAV
+and the wallet's position), and choosing it shows:
+
+- the value held, the swap fee now, the NAV record and its age, the deposits waiting for the next
+  record, and where the liquidity sits (the main and one-sided ranges in dollars per USTX);
+- a panel that deposits USTX and demo dollars at the ratio of what the pool holds, shows a deposit
+  waiting for the next record with a countdown and a Cancel button, offers **Convert now** once a
+  newer record is out (one `repeg()` and a claim, so a depositor does not wait for the next trade),
+  claims converted LP tokens and withdraws at any time, with 1% minimums.
+
+`lib/xstocks/v4-liquidity.ts` reads the hook at one block (`totalAmounts`, `pendingOf`,
+`claimableShares`, `nav`, `currentFee`, both ranges, and the pool's slot0 through the pool manager's
+`extsload` at the state slot pinned with the deployment, since the app carries no keccak), quotes
+deposits with the hook's own `_sharesFor` arithmetic, reads results back from the hook's events and
+unwraps a hook's revert from the pool manager's `WrappedError`. `onchain/test/AppV4Client.test.ts`
+sends the app's own calldata to a local pool manager and hook: the first deposit, a later one that
+waits, a cancellation, a re-peg at a new record, the claim, withdrawals within four micros of the
+app's estimate, a stale record and a swap's wrapped revert.
+
+On 1 October 2026 the whole screen ran in a browser against a Hardhat fork of X Layer Testnet, with
+this pool deployed and seeded on the fork and pinned in a local build only: on the live pool, a
+dUSD-only deposit (five transactions), a withdrawal redeemed at the NAV, a withdrawal in both tokens
+and a paired deposit; on this pool, a deposit, a NAV record 1% higher, Convert now (19.779085 LP
+tokens at $99.8843), a withdrawal of half, and a second deposit cancelled. Portfolio then showed the
+live pool's position.
+
 ## What this does not cover
 
 - **The NAV's latency.** A record prices the xStocks a few minutes earlier, and the prices are public
@@ -211,8 +243,7 @@ NAV record so traders do not pay for it.
   block.
 - **Status.** Not deployed and not audited. Two independent review rounds changed deposits to
   forward pricing, added the future-date check and closed the last way for a deposit to become
-  liquidity just ahead of a trade it could see. The app does not show the pool yet; after a deployment it
-  would read `totalAmounts`, `previewDeposit`, `estimateShares`, `pendingOf`, `claimableShares`,
-  `previewWithdraw` and the router's quotes. The pool manager is Uniswap's BUSL-1.1 code, deployed
+  liquidity just ahead of a trade it could see. The app shows the pool on Pools once its deployment
+  is pinned (see "In the app"); it does not route the order panel's trades through it yet. The pool manager is Uniswap's BUSL-1.1 code, deployed
   here only on a testnet; the hook and router import v4-core's MIT-licensed interfaces and
   libraries. Demo dollars and USTX have no value.
