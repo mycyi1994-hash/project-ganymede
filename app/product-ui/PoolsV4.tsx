@@ -329,7 +329,7 @@ export function V4LiquidityPanel({ deployment, provider, chain, owner, reader, o
 export function V4PoolGuide() {
   return <section id="how-v4" className="gmd-terms" aria-labelledby="how-v4-title">
     <h2 id="how-v4-title">How this pool works</h2>
-    <p>The hook holds all of this pool’s liquidity for its depositors and keeps it around the NAV recorded on X Layer. Each new record moves the liquidity to the new NAV before anyone trades on it, so providers do not sell to traders who already know the price has changed.</p>
+    <p>The pool’s contract holds all of its liquidity for its depositors and keeps it around the NAV recorded on X Layer. Each new record moves the liquidity to the new NAV before anyone trades on it, so providers do not sell to traders who already know the price has changed.</p>
     <dl>
       <div><dt>Deposit</dt><dd>USTX and demo dollars at the ratio of what the pool holds. Your deposit waits for the pool to move to the next NAV record (at the next trade or deposit, or when you choose Convert now) and becomes LP tokens at that NAV, valued with everything in the pool. Until then you can cancel it.</dd></div>
       <div><dt>Fee</dt><dd>0.30% just after a NAV record, rising to 1.00% as the record ages over an hour. Without a record under an hour old, the pool stops trading.</dd></div>
