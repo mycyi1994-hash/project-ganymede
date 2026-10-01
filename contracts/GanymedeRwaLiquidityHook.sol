@@ -279,9 +279,10 @@ contract GanymedeRwaLiquidityHook is IHooks, IUnlockCallback {
     ///         first). Until then `cancelDeposit` returns it. A fresh record the pool has not re-pegged
     ///         to yet is applied first, so a deposit cannot become liquidity just before trades its
     ///         depositor can already see, and while the latest record is dated ahead of the chain's
-    ///         clock deposits revert until it can be. The first deposit instead takes both amounts in
-    ///         full, needs a fresh NAV, mints their value at the NAV in dollar-token units as shares
-    ///         at once and opens the ranges; `shares` is 0 for every later deposit.
+    ///         clock deposits revert until it can be. A maximum above 2^128 - 1 counts as that, so
+    ///         `type(uint256).max` lets the other token decide. The first deposit instead takes both
+    ///         amounts in full, needs a fresh NAV, mints their value at the NAV in dollar-token units
+    ///         as shares at once and opens the ranges; `shares` is 0 for every later deposit.
     function deposit(uint256 amount0Max, uint256 amount1Max, uint256 deadline)
         external
         nonReentrant
@@ -487,7 +488,7 @@ contract GanymedeRwaLiquidityHook is IHooks, IUnlockCallback {
         (uint256 held0, uint256 held1) = totalAmounts();
         uint256 heldValue = _value(held0, held1, answer);
         uint256 value = _value(amount0, amount1, answer);
-        return heldValue == 0 ? value : FullMath.mulDiv(value, supply, heldValue);
+        return FullMath.mulDiv(value, supply, heldValue == 0 ? 1 : heldValue);
     }
 
     /// @notice The shares `account` can claim now from a deposit a re-peg has converted.
@@ -578,6 +579,8 @@ contract GanymedeRwaLiquidityHook is IHooks, IUnlockCallback {
                 }
             }
         }
+        // A re-peg above minted the converted deposits' shares, and their tokens are now holdings.
+        supply = totalSupply;
         _collectFees();
         (uint256 held0, uint256 held1) = _holdings();
         (, amount0, amount1) = _sharesFor(amount0Max, amount1Max, held0, held1, supply);
@@ -828,6 +831,9 @@ contract GanymedeRwaLiquidityHook is IHooks, IUnlockCallback {
         pure
         returns (uint256 shares, uint256 amount0, uint256 amount1)
     {
+        // A deposit's amounts are kept as uint128 (`pendingOf`); a larger maximum lets the other token decide.
+        if (amount0Max > type(uint128).max) amount0Max = type(uint128).max;
+        if (amount1Max > type(uint128).max) amount1Max = type(uint128).max;
         shares = type(uint256).max;
         if (held0 > 0) shares = FullMath.mulDiv(amount0Max, supply, held0);
         if (held1 > 0) {

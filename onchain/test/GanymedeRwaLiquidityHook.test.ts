@@ -445,6 +445,45 @@ describe("GanymedeRwaLiquidityHook", () => {
     expect((await valueAt(NAV)) - lpValue).to.equal(gain);
   });
 
+  it("sizes a deposit that applies a record itself against the shares that record minted", async () => {
+    // Emptied down to its locked shares, the pool holds little next to a deposit waiting for the next
+    // record. A later deposit that applies that record itself must count the shares it minted, or it
+    // would be taken in coarse steps: a small one would revert and a larger one would take less.
+    const { hook, lp, lp2, other, keeper, prepare, seed, publish, pair } = await deploy();
+    await prepare(lp, 5_000n * USD);
+    await prepare(lp2, 5_000n * USD);
+    await prepare(other, 1_000n * USD);
+    await seed(lp);
+    await hook.write.withdraw([await hook.read.balanceOf([lp.account.address]), 0n, 0n, await deadline()], { account: lp.account });
+    expect(await hook.read.totalSupply()).to.equal(1_000n);
+    await seed(lp2, 45n * SHARE, 4_500n * USD);
+    await publish(NAV);
+    const offers = [pair(3n * SHARE / 100n, 3n * USD), pair(9n * SHARE, 900n * USD)];
+    const applying = [];
+    for (const offer of offers) {
+      applying.push((await hook.simulate.deposit([...offer, await deadline()], { account: other.account.address })).result);
+    }
+    expect(applying.every(([shares]) => shares === 0n)).to.equal(true);
+    await hook.write.repeg({ account: keeper.account });
+    for (const [index, offer] of offers.entries()) {
+      const [, amount0, amount1] = (await hook.simulate.deposit([...offer, await deadline()], { account: other.account.address })).result;
+      expect([applying[index][1], applying[index][2]]).to.deep.equal([amount0, amount1]);
+    }
+  });
+
+  it("lets an unbounded maximum follow the other token", async () => {
+    const { hook, lp, lp2, prepare, seed, pair, events } = await deploy();
+    await prepare(lp, 5_000n * USD);
+    await prepare(lp2, 5_000n * USD);
+    await seed(lp);
+    // Ten USTX need about $1,000, so USTX decides with $10,000 on offer, and with no limit at all.
+    const bounded = await hook.read.previewDeposit(pair(10n * SHARE, 10_000n * USD));
+    expect(await hook.read.previewDeposit(pair(10n * SHARE, maxUint256))).to.deep.equal(bounded);
+    const deposited = (await events(await hook.write.deposit([...pair(10n * SHARE, maxUint256), await deadline()], { account: lp2.account })))
+      .find(event => event.eventName === "Deposited")!.args as { amount0: bigint; amount1: bigint };
+    expect([deposited.amount0, deposited.amount1]).to.deep.equal([...bounded]);
+  });
+
   it("pays withdrawals their share of the ranges, fees and idle balances, with any NAV", async () => {
     const { hook, lp, lp2, trader, fund, dollar, split, prepare, seed, buy, sell, events } = await deploy();
     await prepare(lp, 5_000n * USD);

@@ -136,10 +136,13 @@ async function main() {
   const assetIsCurrency0 = BigInt(fundAddress) < BigInt(dollarAddress);
   let seed: { blockNumber: bigint; transactionHash: Hash };
   if ((await hook.read.totalSupply()) > 0n) {
-    // Seeded by a run that stopped before recording it: find that first deposit in the blocks after the deployment.
+    // Seeded by a run that stopped before recording it: find the administrator's deposit in the blocks
+    // after the deployment. Anyone may deposit first; the checks below confirm it was the seed.
     const deployedIn = (await publicClient.getTransactionReceipt({ hash: hookRecord.deploymentTransaction as Hash })).blockNumber;
-    const [first] = await publicClient.getContractEvents({ address: hook.address, abi: hook.abi, eventName: "Deposited", fromBlock: deployedIn, toBlock: deployedIn + 99n });
-    if (!first) throw new Error("The hook holds liquidity but its first deposit is not in the 100 blocks after its deployment; record seedTransaction by hand.");
+    const [first] = await publicClient.getContractEvents({
+      address: hook.address, abi: hook.abi, eventName: "Deposited", args: { account: adminAddress }, fromBlock: deployedIn, toBlock: deployedIn + 99n,
+    });
+    if (!first) throw new Error("The hook holds liquidity but no deposit from the administrator is in the 100 blocks after its deployment; check it and record seedTransaction by hand.");
     seed = { blockNumber: first.blockNumber, transactionHash: first.transactionHash };
     console.log(`\nalready seeded in ${seed.transactionHash}`);
   } else {

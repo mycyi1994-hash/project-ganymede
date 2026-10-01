@@ -261,7 +261,8 @@ export function v4DepositQuote(maxima: V4Amounts, pool: Pick<V4Pool, "supply" | 
   if (units <= 0n) return null;
   const amounts = { sharesMicros: ceilDiv(pool.sharesMicros * units, pool.supply), dollarsMicros: ceilDiv(pool.dollarsMicros * units, pool.supply) };
   const held = answer === null ? 0n : v4ValueMicros(pool, answer);
-  const lpEstimateMicros = answer === null ? null : held === 0n ? v4ValueMicros(amounts, answer) : v4ValueMicros(amounts, answer) * pool.supply / held;
+  // As the hook's conversion divides: by 1 when the holdings are worth nothing.
+  const lpEstimateMicros = answer === null ? null : v4ValueMicros(amounts, answer) * pool.supply / (held === 0n ? 1n : held);
   return { ...amounts, lpEstimateMicros };
 }
 

@@ -87,6 +87,9 @@ real fund, demo dollar, NAV registry and NAV feed contracts:
 - the first deposit mints its value at the NAV and centres the ranges on it; a later deposit takes its
   tokens at the holdings' ratio, waits without changing the ranges or what the shares own, and at the
   next record becomes shares worth its value at that NAV;
+- a deposit that applies a newer record itself is sized against the shares that record minted, as
+  after a separate `repeg()`, even with the pool emptied down to its locked shares; a maximum of
+  `type(uint256).max` lets the other token decide;
 - **a deposit made just before a $2,000 trade gets none of that trade's gain**: cancelled, it returns
   exactly; left to convert, it is priced after the trade, and its shares are worth what it put in;
   made after a record has landed, it re-pegs to that record first and waits for the next, so calling
@@ -119,7 +122,7 @@ The tests deploy through the same routine as the scripts (`deployRwaLiquidity` i
 `onchain/scripts/_v4.ts`). The existing contracts, deployed ones included, compile to the same
 bytecode as before.
 
-## The fork run on 30 September 2026
+## The fork run on 1 October 2026
 
 `npm run fork:v4` (in `onchain/`) forks X Layer Testnet into memory, deploys the pool manager, the
 hook (against the live USTX fund, dUSD and `GanymedeNavFeed`) and the router, and walks one cycle with
@@ -244,7 +247,9 @@ live pool's position.
   block.
 - **Status.** Not deployed and not audited. Two independent review rounds changed deposits to
   forward pricing, added the future-date check and closed the last way for a deposit to become
-  liquidity just ahead of a trade it could see. The app shows the pool on Pools once its deployment
+  liquidity just ahead of a trade it could see. A third made deposits wait while a record dated
+  ahead of the block is out (taken then, a deposit would convert at that record once its time came)
+  and sized a deposit that applies a record itself against the shares that record minted. The app shows the pool on Pools once its deployment
   is pinned (see "In the app"); it does not route the order panel's trades through it yet. The pool manager is Uniswap's BUSL-1.1 code, deployed
   here only on a testnet; the hook and router import v4-core's MIT-licensed interfaces and
   libraries. Demo dollars and USTX have no value.
