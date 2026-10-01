@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type Ref } from "react";
+import { useEffect, useRef, useState, type Ref } from "react";
 import { FUND_WALLET_CHAIN, POOL_ORDER_SECONDS, fundErrorMessage, readChainTime, simulateFundCall, waitForFundReceipt, type FundReceipt, type TransactionCall } from "@/lib/xstocks/fund";
 import { Icon } from "./Icons";
 import { useWalletAccount } from "./WalletAccount";
@@ -29,14 +29,17 @@ export async function orderDeadline() {
 /**
  * Sends a plan's transactions one after another from the wallet. Each call other than an approval
  * is dry-run first, so a revert shows its reason before the wallet opens. `progress` keeps the
- * newest block and the hashes even when a step fails.
+ * newest block and the hashes even when a step fails. Once `signal` aborts (the panel has gone),
+ * the wallet is not asked for another step.
  */
-export async function runPlan<K extends string>(plan: PlanStep<K>[], options: { provider: Provider; from: string; progress: PlanProgress; mark: (key: K, state: StepState, hash?: string) => void }) {
-  const { provider, from, progress, mark } = options;
+export async function runPlan<K extends string>(plan: PlanStep<K>[], options: { provider: Provider; from: string; progress: PlanProgress; mark: (key: K, state: StepState, hash?: string) => void; signal?: AbortSignal }) {
+  const { provider, from, progress, mark, signal } = options;
   for (const step of plan) {
+    signal?.throwIfAborted();
     const request = await step.request(progress);
     if (!request) { mark(step.key, "skipped"); continue; }
     if (!step.approval) await simulateFundCall(from, request, { minBlock: progress.block });
+    signal?.throwIfAborted();
     mark(step.key, "wallet");
     const hash = await sendFromWallet(provider, from, request);
     progress.lastHash = hash;
@@ -48,6 +51,17 @@ export async function runPlan<K extends string>(plan: PlanStep<K>[], options: { 
     step.read?.(receipt);
     mark(step.key, "done");
   }
+}
+
+/** A signal that aborts when the panel unmounts, for `runPlan`: a plan stops at the next step once its page has gone. */
+export function useUnmountSignal() {
+  const controller = useRef<AbortController | null>(null);
+  useEffect(() => {
+    const current = new AbortController();
+    controller.current = current;
+    return () => current.abort();
+  }, []);
+  return () => controller.current?.signal;
 }
 
 export function TxSteps<K extends string>({ steps, listRef }: { steps: TxStep<K>[]; listRef?: Ref<HTMLOListElement> }) {

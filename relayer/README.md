@@ -176,7 +176,10 @@ user's approval), setting `V4_HOOK_ADDRESS` makes each run also move that pool t
 a NAV record it has not used yet: it compares `nav()` with `peggedAt()`, runs
 `repeg()` as a call and sends it, so deposits waiting for the record become LP
 tokens at once instead of at the next swap, and no trader pays for the move.
-Unset, as now, the keeper leaves the pool alone.
+A re-peg takes about 300,000 to 530,000 gas, so one per five-minute record comes
+to roughly 0.002 to 0.003 test OKB a day at 0.02 gwei, from the same wallet as
+the arbitrage. Unset, as now, the keeper leaves the pool alone; a value that is
+not an address is logged on each run, and the arbitrage carries on.
 
 The keeper wallet is
 [`0xccf372068496d9bef0f7cf83d697183d358dec1b`](https://web3.okx.com/explorer/x-layer-testnet/address/0xccf372068496d9bef0f7cf83d697183d358dec1b).

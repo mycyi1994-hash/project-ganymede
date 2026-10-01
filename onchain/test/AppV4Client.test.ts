@@ -182,10 +182,11 @@ describe("App v4 pool client", () => {
     expect(v4ErrorMessage(swap)).to.match(/over an hour old/);
   });
 
-  it("pins the pool only once it is recorded, with the app's own tokens", () => {
+  it("pins the pool only once it is recorded and seeded, with the app's own tokens in the pool's order", () => {
     const record = JSON.parse(readFileSync(join(__dirname, "..", "deployments", "xlayer-testnet.json"), "utf8"));
     const hook = record.contracts.GanymedeRwaLiquidityHook;
-    if (!hook) {
+    // deploy:v4 records the contracts before it seeds the pool, and prints the pin once it has.
+    if (!hook?.seedTransaction) {
       expect(V4_POOL_DEPLOYMENT).to.equal(null);
       return;
     }
@@ -195,5 +196,7 @@ describe("App v4 pool client", () => {
     expect(V4_POOL_DEPLOYMENT!.router).to.equal(record.contracts.GanymedeV4Router.address.toLowerCase());
     expect(V4_POOL_DEPLOYMENT!.stateSlot).to.equal(poolStateSlot(hook.poolId));
     expect(isPinnedToFund(V4_POOL_DEPLOYMENT!)).to.equal(true);
+    // The lower address is currency0; a wrong flag would swap every USTX and dUSD amount the app reads and sends.
+    expect(V4_POOL_DEPLOYMENT!.assetIsCurrency0).to.equal(BigInt(V4_POOL_DEPLOYMENT!.asset) < BigInt(V4_POOL_DEPLOYMENT!.dollar));
   });
 });

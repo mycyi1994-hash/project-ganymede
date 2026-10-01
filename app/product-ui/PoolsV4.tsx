@@ -17,7 +17,7 @@ import { useMarket } from "./MarketProvider";
 import { plain } from "./Lending";
 import { useWalletAccount } from "./WalletAccount";
 import { TxLink, type Provider } from "./WalletInvest";
-import { TxSteps, WalletGate, orderDeadline, runPlan, type PlanProgress, type PlanStep, type StepState, type TxStep } from "./LiquidityParts";
+import { TxSteps, WalletGate, orderDeadline, runPlan, useUnmountSignal, type PlanProgress, type PlanStep, type StepState, type TxStep } from "./LiquidityParts";
 
 // The USTX/dUSD pool on Uniswap v4, shown on Pools once lib/xstocks/v4-liquidity.ts pins its
 // deployment. Its hook keeps the pool at the NAV recorded on X Layer: liquidity moves to each new
@@ -134,6 +134,7 @@ export function V4LiquidityPanel({ deployment, provider, chain, owner, reader, o
   const doneRef = useRef<HTMLDivElement>(null);
   const failureRef = useRef<HTMLParagraphElement>(null);
   const headingRef = useRef<HTMLHeadingElement>(null);
+  const unmounted = useUnmountSignal();
   useEffect(() => { onBusy(phase === "working"); }, [phase, onBusy]);
   useEffect(() => {
     if (phase === "working") stepsRef.current?.focus();
@@ -179,7 +180,7 @@ export function V4LiquidityPanel({ deployment, provider, chain, owner, reader, o
     setSteps(plan.map(step => ({ key: step.key, label: step.label, state: "idle" })));
     setPhase("working"); setFailure(null);
     try {
-      await runPlan(tracked, { provider, from: address, progress, mark });
+      await runPlan(tracked, { provider, from: address, progress, mark, signal: unmounted() });
       // One fill for the whole plan: the steps' events together.
       const fill = fills.reduce<V4Fill>((all, next) => ({
         deposited: next.deposited ?? all.deposited, cancelled: next.cancelled ?? all.cancelled, withdrawn: next.withdrawn ?? all.withdrawn, converted: next.converted ?? all.converted,

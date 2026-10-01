@@ -144,16 +144,22 @@ test("names the contract error a simulated trade reverts with", () => {
   assert.equal(revertReason(new Error("fetch failed")), undefined);
 });
 
-test("the Worker refuses to start without its key and addresses", () => {
+test("the Worker refuses to start without its key and addresses", (t) => {
   assert.throws(() => xlayerKeeperChain({}), /KEEPER_PRIVATE_KEY is not set/);
   const key = `0x${"1".repeat(64)}`;
   assert.throws(() => xlayerKeeperChain({ KEEPER_PRIVATE_KEY: key }), /ARBITRAGE_ADDRESS is not set/);
+  assert.throws(() => xlayerKeeperChain({ KEEPER_PRIVATE_KEY: key, ARBITRAGE_ADDRESS: "0x1234" }), /ARBITRAGE_ADDRESS is not an address/);
   assert.throws(() => xlayerKeeperChain({ KEEPER_PRIVATE_KEY: key, ARBITRAGE_ADDRESS: `0x${"a".repeat(40)}` }), /DOLLAR_ADDRESS is not set/);
-  // The v4 pool is left alone until its hook is configured, and a malformed address is refused.
+  // The v4 pool is left alone until its hook is configured. A malformed hook address is reported, and
+  // the arbitrage still runs: the v4 pool is optional.
   const env = { KEEPER_PRIVATE_KEY: key, ARBITRAGE_ADDRESS: `0x${"a".repeat(40)}`, DOLLAR_ADDRESS: `0x${"b".repeat(40)}` };
   assert.equal(xlayerKeeperChain(env).v4, null);
   assert.equal(typeof xlayerKeeperChain({ ...env, V4_HOOK_ADDRESS: `0x${"c".repeat(36)}28c0` }).v4.repeg, "function");
-  assert.throws(() => xlayerKeeperChain({ ...env, V4_HOOK_ADDRESS: "0x1234" }), /V4_HOOK_ADDRESS is not set/);
+  const errors = t.mock.method(console, "error", () => {});
+  const misconfigured = xlayerKeeperChain({ ...env, V4_HOOK_ADDRESS: "0x1234" });
+  assert.equal(misconfigured.v4, null);
+  assert.equal(typeof misconfigured.claim, "function");
+  assert.match(String(errors.mock.calls[0].arguments[0]), /V4_HOOK_ADDRESS is not an address/);
 });
 
 /** The v4 pool's side of the keeper, answering from `state`. */

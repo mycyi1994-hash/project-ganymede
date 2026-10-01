@@ -184,9 +184,12 @@ const DOLLAR_ABI = parseAbi([
   "function claim()",
 ]);
 
+const isAddress = (value: string | undefined): value is Address => Boolean(value && /^0x[0-9a-fA-F]{40}$/.test(value));
+
 function address(value: string | undefined, name: string): Address {
-  if (!value || !/^0x[0-9a-fA-F]{40}$/.test(value)) throw new Error(`${name} is not set.`);
-  return value as Address;
+  if (!value) throw new Error(`${name} is not set.`);
+  if (!isAddress(value)) throw new Error(`${name} is not an address.`);
+  return value;
 }
 
 /** The keeper's chain on X Layer Testnet, signing with KEEPER_PRIVATE_KEY. */
@@ -195,7 +198,9 @@ export function xlayerKeeperChain(env: KeeperEnv): KeeperChain {
   if (!key || !/^0x[0-9a-fA-F]{64}$/.test(key)) throw new Error("KEEPER_PRIVATE_KEY is not set.");
   const arbitrage = address(env.ARBITRAGE_ADDRESS, "ARBITRAGE_ADDRESS");
   const dollar = address(env.DOLLAR_ADDRESS, "DOLLAR_ADDRESS");
-  const hook = env.V4_HOOK_ADDRESS ? address(env.V4_HOOK_ADDRESS, "V4_HOOK_ADDRESS") : null;
+  // The v4 pool is optional: a malformed hook address is reported on each run without stopping the arbitrage.
+  const hook = isAddress(env.V4_HOOK_ADDRESS) ? env.V4_HOOK_ADDRESS : null;
+  if (env.V4_HOOK_ADDRESS && !hook) console.error("V4_HOOK_ADDRESS is not an address; the v4 pool is not re-pegged.");
   const account = privateKeyToAccount(key as Hex);
   const transport = http(env.SETTLEMENT_RPC_URL || xlayerTestnet.rpcUrls.default.http[0]);
   const publicClient = createPublicClient({ chain: xlayerTestnet, transport });

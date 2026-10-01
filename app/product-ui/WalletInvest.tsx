@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState, useSyncExternalStore, type ReactNode } from "react";
 import { formatUsdMicros, formatUsdRounded } from "@/lib/nav-display";
-import { shortTime } from "@/lib/product-market";
+import { shortTime, waitLabel } from "@/lib/product-market";
 import { parseUsd } from "@/lib/xstocks/wallet";
 import { DEMO_ORDER_EVENT, formatShares, parseShares } from "@/lib/demo/format";
 import {
@@ -85,13 +85,6 @@ function watchToken(provider: Provider, address: string, symbol: string) {
   void provider.request({ method: "wallet_watchAsset", params: { type: "ERC20", options: { address, symbol, decimals: 6 } } } as unknown as { method: string; params?: unknown[] }).catch(() => {});
 }
 
-function waitLabel(seconds: number, now: number) {
-  const left = Math.max(60, seconds - Math.floor(now / 1000));
-  const hours = Math.floor(left / 3600);
-  const minutes = Math.ceil((left % 3600) / 60);
-  return hours ? `${hours}h ${minutes}m` : `${minutes}m`;
-}
-
 export function TxLink({ hash, children = "OKX Explorer" }: { hash: string; children?: ReactNode }) {
   return <a className="gmd-inline-tx" href={fundExplorer.tx(hash)} target="_blank" rel="noreferrer">{children}<Icon name="external" size={12} /><span className="gmd-sr-only"> (opens in a new tab)</span></a>;
 }
@@ -162,6 +155,8 @@ export function WalletInvest({ tabs, onUseDemo }: { tabs: ReactNode; onUseDemo: 
   const approved = !account || !venue ? null : side === "buy" ? (venue === "fund" ? account.allowanceMicros : account.poolDollarAllowanceMicros) : venue === "pool" ? account.poolShareAllowanceMicros : null;
   const needsApproval = amountIn !== null && approved !== null && approved < amountIn;
   const claimable = account !== null && account.nextClaimAt * 1000 <= now;
+  // Until the read after a transaction lands, the claim it may have made is not shown yet.
+  const fresh = account !== null && account.block >= watermark;
   const choose = (next: Side) => { setSide(next); setAmount(next === "buy" ? "1,000" : ""); setVenueChoice(null); setPhase("form"); setFailure(null); };
   /** The price per share an order gets: the NAV at the fund, the average price after the fee and its impact in the pool. */
   const priceOf = (at: Venue, out: bigint) => at === "fund" ? nav ?? 0n : side === "buy" ? pricePerShare(amountIn ?? 0n, out) : pricePerShare(out, amountIn ?? 0n);
@@ -330,7 +325,7 @@ export function WalletInvest({ tabs, onUseDemo }: { tabs: ReactNode; onUseDemo: 
     </div>
     <div className="gmd-wallet-claim">{claim?.state === "wallet" ? <span role="status">Confirm in your wallet…</span>
       : claim?.state === "chain" ? <span role="status">Sending demo dollars on X Layer Testnet…</span>
-      : claimable ? <button type="button" className="gmd-small-button" onClick={() => void claimDollars()}>Get {formatUsdRounded(FUND_CLAIM_MICROS)} demo dollars</button>
+      : claimable ? <button type="button" className="gmd-small-button" disabled={!fresh} onClick={() => void claimDollars()}>Get {formatUsdRounded(FUND_CLAIM_MICROS)} demo dollars</button>
       : <span>More demo dollars in {waitLabel(account.nextClaimAt, now)}</span>}
       {claim?.state === "failed" && <p className="gmd-inline-error" role="alert">{claim.message}</p>}</div>
     {account.gasWei === 0n && <p className="gmd-wallet-gas" role="status"><Icon name="info" size={16} /><span>You need test OKB to pay network fees. <a href={FUND_DEPLOYMENT.faucetUrl} target="_blank" rel="noreferrer">Get test OKB<span className="gmd-sr-only"> (opens in a new tab)</span></a></span></p>}

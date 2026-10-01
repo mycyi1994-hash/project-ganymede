@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { formatUsdMicros, formatUsdRounded } from "@/lib/nav-display";
 import { DEMO_ORDER_EVENT, formatShares, formatSharesShort, parseShares } from "@/lib/demo/format";
+import { waitLabel } from "@/lib/product-market";
 import { parseUsd } from "@/lib/xstocks/wallet";
 import {
   FUND_CLAIM_MICROS, FUND_DEPLOYMENT, FUND_WALLET_CHAIN, POOL_FEE_BPS, dollarsFor, fundCalls, fundErrorMessage, fundExplorer, fundFill, poolCalls, waitForFundReceipt, withSlippage,
@@ -21,7 +22,7 @@ import { plain } from "./Lending";
 import { ActivityProvider, PoolActivitySection, useActivityDay } from "./MarketActivity";
 import { useWalletAccount } from "./WalletAccount";
 import { TxLink, sendFromWallet, useInjectedWallet, useWalletChain, type Provider } from "./WalletInvest";
-import { TxSteps, WalletGate, orderDeadline, runPlan, type PlanProgress, type PlanStep, type StepState, type TxStep } from "./LiquidityParts";
+import { TxSteps, WalletGate, orderDeadline, runPlan, useUnmountSignal, type PlanProgress, type PlanStep, type StepState, type TxStep } from "./LiquidityParts";
 import { V4_POOL_DEPLOYMENT, formatFeePips, v4ValueMicros } from "@/lib/xstocks/v4-liquidity";
 import { V4LiquidityPanel, V4PoolGuide, V4PoolOverview, useV4Pool, v4Position, type V4Reader } from "./PoolsV4";
 
@@ -268,13 +269,6 @@ type Done =
   | { tab: "add"; added: LiquidityFill; invested: { dollarsMicros: bigint; sharesMicros: bigint } | null; hashes: string[]; block: number }
   | { tab: "remove"; removed: LiquidityFill; redeemed: { sharesMicros: bigint; dollarsMicros: bigint } | null; hashes: string[]; block: number };
 
-export function waitLabel(seconds: number, now: number) {
-  const left = Math.max(60, seconds - Math.floor(now / 1000));
-  const hours = Math.floor(left / 3600);
-  const minutes = Math.ceil((left % 3600) / 60);
-  return hours ? `${hours}h ${minutes}m` : `${minutes}m`;
-}
-
 function LiquidityPanel({ provider, chain, owner, reader, onBusy }: { provider: Provider | null; chain: string | null; owner: string | null; reader: Reader; onBusy: (busy: boolean) => void }) {
   const { address } = useWalletAccount();
   const { day: activity } = useActivityDay();
@@ -296,6 +290,7 @@ function LiquidityPanel({ provider, chain, owner, reader, onBusy }: { provider: 
   const doneRef = useRef<HTMLDivElement>(null);
   const failureRef = useRef<HTMLParagraphElement>(null);
   const headingRef = useRef<HTMLHeadingElement>(null);
+  const unmounted = useUnmountSignal();
   useEffect(() => { onBusy(phase === "working"); }, [phase, onBusy]);
   useEffect(() => {
     if (phase === "working") stepsRef.current?.focus();
@@ -414,7 +409,9 @@ function LiquidityPanel({ provider, chain, owner, reader, onBusy }: { provider: 
       // The USTX the investment bought: known once it is mined, the estimate until then.
       const received = () => result.invested?.sharesMicros ?? parts.sharesMicros;
       if (needs.dollars) plan.push({ key: "approveDollars", label: "Approve demo dollars for the pool", approval: true, request: async () => poolCalls.approveDollars(parts.dollarsMicros) });
-      if (needs.shares) plan.push({ key: "approveShares", label: "Approve USTX for the pool", approval: true, request: async () => wallet.poolShareAllowanceMicros >= received() ? null : poolCalls.approveShares(received()) });
+      // The NAV can move between the quote and the investment: whether USTX needs approving is
+      // known only once it is mined, so this step is always planned and skipped when not needed.
+      plan.push({ key: "approveShares", label: "Approve USTX for the pool", approval: true, request: async () => wallet.poolShareAllowanceMicros >= received() ? null : poolCalls.approveShares(received()) });
       addStep(received, parts.dollarsMicros, () => {
         const expected = quoteAddLiquidity(received(), parts.dollarsMicros, state);
         return { shares: withSlippage(expected?.sharesMicros ?? 0n), dollars: withSlippage(expected?.dollarsMicros ?? 0n) };
@@ -446,7 +443,7 @@ function LiquidityPanel({ provider, chain, owner, reader, onBusy }: { provider: 
     setSteps(plan.map(step => ({ key: step.key, label: step.label, state: "idle" })));
     setPhase("working"); setFailure(null);
     try {
-      await runPlan(plan, { provider, from, progress, mark });
+      await runPlan(plan, { provider, from, progress, mark, signal: unmounted() });
       const { hashes, block } = progress;
       const finished: Done | null = result.added ? { tab: "add", added: result.added, invested: result.invested, hashes, block }
         : result.removed ? { tab: "remove", removed: result.removed, redeemed: result.redeemed, hashes, block } : null;
@@ -524,7 +521,7 @@ function LiquidityPanel({ provider, chain, owner, reader, onBusy }: { provider: 
     </div>
     <div className="gmd-wallet-claim">{claim?.state === "wallet" ? <span role="status">Confirm in your wallet…</span>
       : claim?.state === "chain" ? <span role="status">Sending demo dollars on X Layer Testnet…</span>
-      : claimable ? <button type="button" className="gmd-small-button" onClick={() => void claimDollars()}>Get {formatUsdRounded(FUND_CLAIM_MICROS)} demo dollars</button>
+      : claimable ? <button type="button" className="gmd-small-button" disabled={!fresh} onClick={() => void claimDollars()}>Get {formatUsdRounded(FUND_CLAIM_MICROS)} demo dollars</button>
       : <span>More demo dollars in {waitLabel(account.nextClaimAt, now)}</span>}
       {claim?.state === "failed" && <p className="gmd-inline-error" role="alert">{claim.message}</p>}</div>
     {account.gasWei === 0n && <p className="gmd-wallet-gas" role="status"><Icon name="info" size={16} /><span>You need test OKB to pay network fees. <a href={FUND_DEPLOYMENT.faucetUrl} target="_blank" rel="noreferrer">Get test OKB<span className="gmd-sr-only"> (opens in a new tab)</span></a></span></p>}
