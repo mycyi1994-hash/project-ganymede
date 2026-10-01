@@ -10,7 +10,7 @@ with the square of the NAV's move and is the main cost of providing liquidity to
 NAV instead, and is the vault of the liquidity providers who fund it. It is written for any ERC-20
 asset with a price feed in Chainlink's `AggregatorV3Interface`; on X Layer Testnet that is USTX with
 `GanymedeNavFeed`. It is tested on a local v4 pool manager and on a fork of X Layer Testnet, and it
-is not deployed.
+runs on X Layer Testnet (see "Deployment on X Layer Testnet" below).
 
 ## How it works
 
@@ -193,10 +193,10 @@ NAV record so traders do not pay for it.
 
 ## In the app
 
-The Pools screen (`app/product-ui/Pools.tsx`) runs the live constant-product pool today and shows
-this pool beside it once `V4_POOL_DEPLOYMENT` in `lib/xstocks/v4-liquidity.ts` is pinned; until
-then the constant is `null` and nothing of the v4 pool appears. `npm run deploy:v4` prints the pin
-after it records the deployment, and `onchain/test/AppV4Client.test.ts` fails if the pin and the
+The Pools screen (`app/product-ui/Pools.tsx`) runs the live constant-product pool and shows this
+pool beside it from `V4_POOL_DEPLOYMENT` in `lib/xstocks/v4-liquidity.ts`, pinned to the testnet
+deployment; with the constant `null`, nothing of the v4 pool appears. `npm run deploy:v4` prints the
+pin after it records the deployment, and `onchain/test/AppV4Client.test.ts` fails if the pin and the
 record disagree. With it, the pool list gains a row for this pool (its current fee, value at the NAV
 and the wallet's position), and choosing it shows:
 
@@ -223,6 +223,25 @@ and a paired deposit; on this pool, a deposit, a NAV record 1% higher, Convert n
 tokens at $99.8843), a withdrawal of half, and a second deposit cancelled. Portfolio then showed the
 live pool's position.
 
+## Deployment on X Layer Testnet
+
+On 1 October 2026, with the user's approval, `npm run deploy:v4` deployed the contracts from the
+administrator `0x107633a3aa88c81d4c47d01992e089573e2e87c9` (after `npm run fork:v4` ran the same
+routine on a fork) and seeded the pool at the NAV of $97.835757: it claimed 10,000 dUSD, invested
+$5,000 at the fund and deposited the USTX it issued with $5,000.
+
+| Contract | Address | Transaction |
+| --- | --- | --- |
+| Uniswap v4 PoolManager (owner: administrator) | `0xe83eee508ce92832488dd9f574ad329a1203641c` | `0x0d28b64ef87bcb5c5abe5d928cef585623368f302986a0dab89b2c96972ad82e` |
+| `GanymedeRwaLiquidityHook` (CREATE2, salt `0xcf`) | `0x96a78af00ef351f294f2ccc05adf09b119f968c0` | `0xb630d206b2f76216db5e8dc7f7c98286b6e07a51730c57e28319ee8f9d4b4259` |
+| `GanymedeV4Router` | `0xbd899115e3c6926d109a5bd39bf12646fae3862b` | `0x0d1fd4e57ec587bd880330d792600b577d97919454f1abaf8722e22f73d8dfa9` |
+| First deposit (seed) | | `0xf4887d4563a65076ce2bec6356722e716563beb17f198e31c150c1da61750096` |
+
+Pool id `0x3da5321a25b931eab270ee3b86490e10648ea54f25b2f4011679b4ddc74c498a`; USTX is currency0. The
+script read back the hook's wiring and the pool price at the seeding block, and the record is in
+`onchain/deployments/xlayer-testnet.json`. `V4_POOL_DEPLOYMENT` in `lib/xstocks/v4-liquidity.ts` pins
+it, and `V4_HOOK_ADDRESS` in `relayer/wrangler.keeper.jsonc` has the keeper re-peg it.
+
 ## What this does not cover
 
 - **The NAV's latency.** A record prices the xStocks a few minutes earlier, and the prices are public
@@ -245,11 +264,11 @@ live pool's position.
   `effectiveAt`; a record dated far ahead would stop these swaps and, since each record must be later
   than the last, block the records after it. A registry for mainnet should refuse times past its
   block.
-- **Status.** Not deployed and not audited. Two independent review rounds changed deposits to
+- **Status.** Deployed on X Layer Testnet only, and not audited. Two independent review rounds changed deposits to
   forward pricing, added the future-date check and closed the last way for a deposit to become
   liquidity just ahead of a trade it could see. A third made deposits wait while a record dated
   ahead of the block is out (taken then, a deposit would convert at that record once its time came)
-  and sized a deposit that applies a record itself against the shares that record minted. The app shows the pool on Pools once its deployment
-  is pinned (see "In the app"); it does not route the order panel's trades through it yet. The pool manager is Uniswap's BUSL-1.1 code, deployed
+  and sized a deposit that applies a record itself against the shares that record minted. The app shows the pool on Pools from its pinned
+  deployment (see "In the app"); it does not route the order panel's trades through it yet. The pool manager is Uniswap's BUSL-1.1 code, deployed
   here only on a testnet; the hook and router import v4-core's MIT-licensed interfaces and
   libraries. Demo dollars and USTX have no value.

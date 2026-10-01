@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import test from "node:test";
 import { FUND_DEPLOYMENT, FUND_SELECTORS, fundRpc } from "../lib/xstocks/fund.ts";
 import {
@@ -18,8 +19,14 @@ const D = {
 const FLIPPED = { ...D, assetIsCurrency0: false };
 const Q96 = 1n << 96n;
 
-test("the pool is not deployed: nothing is pinned until the deployment is recorded", () => {
-  assert.equal(V4_POOL_DEPLOYMENT, null);
+test("the pool is pinned to the seeded deployment recorded on X Layer Testnet", () => {
+  const { contracts } = JSON.parse(readFileSync(new URL("../onchain/deployments/xlayer-testnet.json", import.meta.url), "utf8"));
+  assert.ok(contracts.GanymedeRwaLiquidityHook.seedTransaction, "the recorded pool is seeded");
+  assert.equal(V4_POOL_DEPLOYMENT.hook, contracts.GanymedeRwaLiquidityHook.address.toLowerCase());
+  assert.equal(V4_POOL_DEPLOYMENT.poolManager, contracts.UniswapV4PoolManager.address.toLowerCase());
+  assert.equal(V4_POOL_DEPLOYMENT.router, contracts.GanymedeV4Router.address.toLowerCase());
+  assert.equal(V4_POOL_DEPLOYMENT.assetIsCurrency0, BigInt(V4_POOL_DEPLOYMENT.asset) < BigInt(V4_POOL_DEPLOYMENT.dollar));
+  assert.equal(isPinnedToFund(V4_POOL_DEPLOYMENT), true);
   assert.equal(isPinnedToFund(D), true);
   assert.equal(isPinnedToFund({ ...D, dollar: ALICE }), false);
 });

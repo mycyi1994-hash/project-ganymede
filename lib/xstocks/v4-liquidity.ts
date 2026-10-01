@@ -7,10 +7,11 @@ import {
 // the pool's liquidity for depositors, in ranges it moves to each NAV record, charges a swap fee
 // that rises from 0.30% to 1.00% as the record ages, and issues its own LP token. A deposit waits
 // for the next NAV record, which turns it into LP tokens at that NAV; until then it can be
-// cancelled. Withdrawals pay out at once, with any NAV. It runs only on a fork for now:
-// V4_POOL_DEPLOYMENT stays null until `npm run deploy:v4` (which needs the user's approval) records
-// it, and the app shows the pool only once it is pinned here. Selectors are pinned and tied to the
-// compiled hook in onchain/test/AppFundClient.test.ts. Demo dollars and USTX have no value.
+// cancelled. Withdrawals pay out at once, with any NAV. It runs on X Layer Testnet, deployed and
+// seeded by `npm run deploy:v4` with the user's approval; V4_POOL_DEPLOYMENT pins that recorded
+// deployment, and onchain/test/AppV4Client.test.ts checks the pin against the record. Selectors are
+// pinned and tied to the compiled hook in onchain/test/AppFundClient.test.ts. Demo dollars and USTX
+// have no value.
 
 export type V4Deployment = {
   poolManager: string;
@@ -24,8 +25,16 @@ export type V4Deployment = {
   stateSlot: string;
 };
 
-/** Null until the pool is deployed on X Layer Testnet and recorded in onchain/deployments/xlayer-testnet.json. */
-export const V4_POOL_DEPLOYMENT: V4Deployment | null = null;
+/** The pool on X Layer Testnet, as recorded in onchain/deployments/xlayer-testnet.json. */
+export const V4_POOL_DEPLOYMENT: V4Deployment | null = {
+  poolManager: "0xe83eee508ce92832488dd9f574ad329a1203641c",
+  hook: "0x96a78af00ef351f294f2ccc05adf09b119f968c0",
+  router: "0xbd899115e3c6926d109a5bd39bf12646fae3862b",
+  asset: "0x77eaeba1366bde7818da12d3cbdbea0a2ee97596",
+  dollar: "0xf07535080f74e8b0f571e58dfa600f47e72ea9bf",
+  assetIsCurrency0: true,
+  stateSlot: "0x7549bdeca0ad849329463831768b1ef35511842b1c9ad3f6594c62fe94dce016",
+};
 
 export const V4_SELECTORS = {
   deposit: "0x00aeef8a",

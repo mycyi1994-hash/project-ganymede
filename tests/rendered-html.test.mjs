@@ -104,8 +104,9 @@ test("Pools offers the live pool's liquidity from a wallet, with its figures rea
   // The NAV calculator is plain arithmetic and starts at +10%.
   assert.match(html, /\$1,050\.00/);
   assert.match(html, /\$1,048\.81/);
-  // The Uniswap v4 pool is not shown until its deployment is pinned.
-  assert.doesNotMatch(html, /Uniswap v4|USTX-V4LP/);
+  // The pinned Uniswap v4 pool is listed beside the live pool; its figures also wait for the chain.
+  assert.match(html, /Uniswap v4 · held at the NAV/);
+  assert.match(html, /0\.30–1\.00%/);
   assert.match(html, /<title>Pools · Ganymede<\/title>/);
   assert.equal(html.match(/You are on X Layer Testnet/g).length, 1, "one testnet notice");
 });
@@ -230,6 +231,7 @@ test("issuer, developer and embed pages render for partners", async () => {
   assert.match(developers, /Provide liquidity/);
   assert.match(developers, /\/api\/v1\/ustx\/pools/);
   assert.match(developers, /npm run fork:v4/);
+  assert.match(developers, /address\/0x96a78af00ef351f294f2ccc05adf09b119f968c0/);
   assert.match(developers, /0xae2f54ae3d0370295de18510d56de92afb8843c7/);
   assert.match(developers, /0x286f5e7ffdbc30db12665d7a3854217d7cd05cc1/);
   assert.match(developers, /address\/0xccf372068496d9bef0f7cf83d697183d358dec1b/);
