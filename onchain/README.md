@@ -189,7 +189,8 @@ its liquidity for the providers who deposit into it; `GanymedeV4Router` swaps on
 `test/GanymedeRwaLiquidityHook.test.ts`). The Solidity imports come from `@uniswap/v4-core` 1.0.2 in
 this package; `hardhat.config.ts` lets the repository-root build find them here. Uniswap has deployed
 v4 on X Layer mainnet but not on X Layer Testnet, so the tests and scripts deploy the PoolManager from
-that package as Uniswap built it. Nothing here is deployed. Run it against the live contracts:
+that package as Uniswap built it. It is deployed on X Layer Testnet (addresses in
+`deployments/xlayer-testnet.json`). Run it against the live contracts on a fork:
 
 ```bash
 npm run fork:v4

@@ -44,10 +44,12 @@ other administrator action needs the user's approval.
 `GanymedeBasketVault` (in-kind creation and redemption) runs only on a fork (`npm run fork:vault` in
 `onchain/`); deploying it anywhere needs the user's approval. `GanymedeRwaLiquidityHook` (a Uniswap
 v4 hook that runs a USTX/dUSD pool around the NAV and holds its liquidity for depositors) and
-`GanymedeV4Router` run only on a fork (`npm run fork:v4`); deploying them (`npm run deploy:v4`, which
-also deploys Uniswap's PoolManager on X Layer Testnet) needs the user's approval. Pools shows that
-pool only once `V4_POOL_DEPLOYMENT` in `lib/xstocks/v4-liquidity.ts` is pinned to the recorded deployment,
-and the keeper moves it to each NAV record once its `V4_HOOK_ADDRESS` is set. Real money stays out of scope: no mainnet deployment of these contracts, no real deposits, withdrawals, custody or payment destinations, and
+`GanymedeV4Router` are live on X Layer Testnet with Uniswap's PoolManager (hook
+`0x96a78af00ef351f294f2ccc05adf09b119f968c0`), deployed and seeded by `npm run deploy:v4` with the
+user's approval; `npm run fork:v4` rehearses it on a fork. Pools shows that pool from
+`V4_POOL_DEPLOYMENT` in `lib/xstocks/v4-liquidity.ts`, pinned to the recorded deployment, and the
+keeper moves it to each NAV record through its `V4_HOOK_ADDRESS`. Redeploying them or any
+administrator action on the PoolManager needs the user's approval. Real money stays out of scope: no mainnet deployment of these contracts, no real deposits, withdrawals, custody or payment destinations, and
 no value for dUSD or USTX. Never create or name an address that would receive
 real funds, and keep the demo, testnet and simulation labels.
 `lib/product-contract.ts` keeps `canSubscribe`, `canRedeem`, `settlementAsset`
