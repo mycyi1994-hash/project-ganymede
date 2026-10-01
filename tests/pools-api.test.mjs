@@ -85,6 +85,8 @@ test("the pools API serves the pool's state, fee APR and last day to any origin,
   assert.equal(pool.feeApr.toBlock, HEAD);
   assert.equal(pool.feeApr.percent, "2.60");
   assert.equal(Date.parse(pool.feeApr.to) - Date.parse(pool.feeApr.from), 7 * 86_400_000);
+  // An LP token at $100 a share: $20 a week ago, $20.01 now; the same tokens held are still $20.
+  assert.deepEqual([pool.feeApr.lpTokenValueFromMicros, pool.feeApr.lpTokenValueToMicros, pool.feeApr.heldValueToMicros], ["20000000", "20010000", "20000000"]);
   assert.deepEqual(pool.last24h, { trades: 1, volumeMicros: "100000000", feesMicros: "300000", complete: true, since: pool.last24h.since, toBlock: ACTIVITY_FIRST_BLOCK + 20 });
   assert.match(body.environment, /no value/);
   assert.equal((await OPTIONS()).status, 204);

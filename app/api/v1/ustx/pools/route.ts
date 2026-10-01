@@ -54,6 +54,8 @@ export async function GET() {
       feeApr: growth && {
         percent: percent(growth.aprWad), wad: growth.aprWad.toString(), growthWad: growth.growthWad.toString(),
         fromBlock: growth.fromBlock, toBlock: growth.toBlock, from: new Date(growth.fromTime * 1000).toISOString(), to: new Date(growth.toTime * 1000).toISOString(),
+        lpTokenValueFromMicros: growth.lpValueFromMicros?.toString() ?? null, lpTokenValueToMicros: growth.lpValueToMicros?.toString() ?? null,
+        heldValueToMicros: growth.heldValueToMicros?.toString() ?? null,
       },
       last24h: day,
       openedAt: POOL_LAUNCHED_AT,
@@ -82,7 +84,7 @@ export async function GET() {
       network: FUND_DEPLOYMENT.name,
       chainId: FUND_DEPLOYMENT.chainId,
       pools,
-      rule: "Read from X Layer Testnet when called. Amounts are micros (6 decimals). valueMicros counts USTX at the fund's current NAV and dUSD at face value. feeApr is the growth of √(USTX × dUSD) per LP token between fromBlock and toBlock (the last seven days, or since the pool opened), which only the 0.3% fee raises, annualised without compounding; null when it cannot be read. last24h counts the pool's trades in the market activity index, an arbitrage's included, with the fee they paid in demo dollars; null before the index is built. A v4 pool appears once it is deployed: feePips is its swap fee now in hundredths of a basis point, and waiting holds deposits that become LP tokens at the next NAV record.",
+      rule: "Read from X Layer Testnet when called. Amounts are micros (6 decimals). valueMicros counts USTX at the fund's current NAV and dUSD at face value. feeApr is the growth of √(USTX × dUSD) per LP token between fromBlock and toBlock (the last seven days, or since the pool opened), which only the 0.3% fee raises, annualised without compounding; null when it cannot be read. Over the same blocks, lpTokenValueFromMicros and lpTokenValueToMicros value one LP token's part of the reserves at the NAV of each block, and heldValueToMicros values the same USTX and dUSD held outside the pool at the later NAV. last24h counts the pool's trades in the market activity index, an arbitrage's included, with the fee they paid in demo dollars; null before the index is built. A v4 pool appears once it is deployed: feePips is its swap fee now in hundredths of a basis point, and waiting holds deposits that become LP tokens at the next NAV record.",
       environment: "X Layer Testnet. Demo dollars and USTX have no value; not an offer.",
     }, 200, "public, max-age=60");
   } catch (error) {

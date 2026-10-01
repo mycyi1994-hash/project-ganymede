@@ -10,7 +10,7 @@ import {
   type PoolMarket,
 } from "@/lib/xstocks/fund";
 import {
-  POOL_LAUNCHED_AT, formatSharePpm, formatYield, liquidityCalls, liquidityErrorMessage, liquidityFill, liquidityPosition, lpTokenValueMicros, minimumDollarsOnly,
+  POOL_LAUNCHED_AT, changeWad, formatSharePpm, formatYield, liquidityCalls, liquidityErrorMessage, liquidityFill, liquidityPosition, lpTokenValueMicros, minimumDollarsOnly,
   pairedDollars, pairedShares, poolValueMicros, quoteAddLiquidity, quoteRemoveLiquidity, readLiquidity, readPoolYield, splitDollarsOnly,
   type LiquidityAccount, type LiquidityFill, type PoolLiquidity, type PoolYield,
 } from "@/lib/xstocks/liquidity";
@@ -81,6 +81,21 @@ function usePoolYield() {
     return () => { cancelled = true; window.clearInterval(timer); };
   }, []);
   return state;
+}
+
+/** "7 days", or "since 25 Sept" while the pool is younger. */
+function windowLabel(growth: PoolYield) {
+  return Date.parse(POOL_LAUNCHED_AT) / 1000 >= growth.fromTime - 60 ? `since ${new Date(POOL_LAUNCHED_AT).toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "UTC" })}` : `${Math.round((growth.toTime - growth.fromTime) / 86_400)} days`;
+}
+
+const signedYield = (wad: bigint) => `${wad > 0n ? "+" : ""}${formatYield(wad)}`;
+
+/** An LP token's value change at the NAV over the window, against holding the same tokens outside the pool. */
+function performance(growth: PoolYield | null): string {
+  const pooled = growth ? changeWad(growth.lpValueFromMicros, growth.lpValueToMicros) : null;
+  const held = growth ? changeWad(growth.lpValueFromMicros, growth.heldValueToMicros) : null;
+  if (pooled === null || held === null) return "—";
+  return `${signedYield(pooled)}, against ${signedYield(held)} holding the same tokens`;
 }
 
 /** The fee APR's window, in words: the last seven days, or since the first deposit. */
@@ -194,6 +209,7 @@ function PoolOverview({ snapshot, failure, retry, growth }: { snapshot: Snapshot
       <div><dt>LP tokens issued</dt><dd>{pool ? `${formatSharesShort(pool.supply, 4)} USTX-LP` : "—"}</dd></div>
       <div><dt>Pricing</dt><dd>Constant product, x × y = k</dd></div>
       <div><dt>Fee</dt><dd>{FEE_PERCENT} of each trade, to providers</dd></div>
+      <div><dt>LP token, {growth.value ? windowLabel(growth.value) : "7 days"}</dt><dd>{performance(growth.value)}</dd></div>
       <div><dt>Opened</dt><dd>{day(POOL_LAUNCHED_AT)}</dd></div>
       <div><dt>Pool contract</dt><dd><a className="gmd-inline-tx" href={fundExplorer.address(FUND_DEPLOYMENT.pool)} target="_blank" rel="noreferrer">X Layer Testnet<Icon name="external" size={12} /><span className="gmd-sr-only"> (opens in a new tab)</span></a></dd></div>
     </dl>

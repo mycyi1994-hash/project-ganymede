@@ -215,6 +215,13 @@ export type PoolYield = {
   growthWad: bigint;
   /** That growth over a year, simple: growth × year ÷ window. */
   aprWad: bigint;
+  /**
+   * One LP token's part of the reserves valued at the NAV, at the start and at the end; and the same
+   * USTX and demo dollars held outside the pool, at the end's NAV. Null where a NAV was not usable.
+   */
+  lpValueFromMicros: bigint | null;
+  lpValueToMicros: bigint | null;
+  heldValueToMicros: bigint | null;
 };
 
 /**
@@ -234,15 +241,16 @@ export function poolYield(from: PoolState, to: PoolState, seconds: number): Pick
   return { growthWad, aprWad: growthWad * YEAR_SECONDS / BigInt(seconds) };
 }
 
-async function readPoolAt(rpc: Rpc, block: number): Promise<{ state: PoolState; time: number }> {
+async function readPoolAt(rpc: Rpc, block: number): Promise<{ state: PoolState; time: number; navMicros: bigint | null }> {
   const tag = hexBlock(block);
-  const [[shares, dollars], supply, header] = await Promise.all([
+  const [[shares, dollars], supply, header, nav] = await Promise.all([
     call(rpc, pool, POOL_SELECTORS.getReserves, tag).then(value => words(value, 2)),
     call(rpc, pool, LIQUIDITY_SELECTORS.totalSupply, tag).then(value => words(value, 1)[0]),
     rpc("eth_getBlockByNumber", [tag, false]) as Promise<{ number?: unknown; timestamp?: unknown } | null>,
+    readNav(rpc, tag),
   ]);
   if (!header || Number(quantity(header.number)) !== block) throw new Error("X Layer Testnet returned an invalid block.");
-  return { state: { sharesMicros: shares, dollarsMicros: dollars, supply }, time: Number(quantity(header.timestamp)) };
+  return { state: { sharesMicros: shares, dollarsMicros: dollars, supply }, time: Number(quantity(header.timestamp)), navMicros: nav.navMicros };
 }
 
 /**
@@ -256,8 +264,16 @@ export async function readPoolYield(options: { rpc?: Rpc; windowSeconds?: number
   if (fromBlock >= toBlock) return null;
   const [from, to] = await atBlock(() => Promise.all([readPoolAt(rpc, fromBlock), readPoolAt(rpc, toBlock)]));
   const growth = poolYield(from.state, to.state, to.time - from.time);
-  return growth && { fromBlock, toBlock, fromTime: from.time, toTime: to.time, ...growth };
+  return growth && {
+    fromBlock, toBlock, fromTime: from.time, toTime: to.time, ...growth,
+    lpValueFromMicros: from.navMicros !== null ? lpTokenValueMicros(from.state, from.navMicros) : null,
+    lpValueToMicros: to.navMicros !== null ? lpTokenValueMicros(to.state, to.navMicros) : null,
+    heldValueToMicros: to.navMicros !== null ? lpTokenValueMicros(from.state, to.navMicros) : null,
+  };
 }
+
+/** Change from `from` to `to` as an 18-decimal fraction; null without both. */
+export const changeWad = (from: bigint | null, to: bigint | null) => from === null || to === null || from === 0n ? null : (to - from) * WAD / from;
 
 /** The 0.3% fee on a trade into the pool, in demo dollars: on the dollars paid in, or on the USTX paid in valued at what it sold for. */
 export const buyFeeMicros = (dollarsInMicros: bigint) => dollarsInMicros * POOL_FEE_BPS / BPS;

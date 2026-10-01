@@ -282,6 +282,7 @@
 .gmd-order-review > strong { display: block; margin-block: 6px 3px; font-size: 38px; font-family: "Instrument Sans",Arial,sans-serif; }
 .gmd-order-review > dl { margin-block: 24px 10px; border-top: 1px solid var(--gmd-line); padding-top: 15px; }
 .gmd-app .gmd-text-button { width: 100%; color: var(--gmd-copy); text-align: center; margin-top: 10px; min-height: 40px; text-decoration: underline; text-underline-offset: 3px; font-size: 14px; }
+.gmd-app a.gmd-text-button { display: flex; align-items: center; justify-content: center; }
 .gmd-portfolio-summary { padding: 32px; display: grid; grid-template-columns: 1.15fr 1.4fr; align-items: center; gap: 40px; background: #fff; border: 1px solid var(--gmd-line); border-radius: 12px; }
 .gmd-portfolio-summary p { font-size: 13px; margin-top: 12px; }
 .gmd-portfolio-summary dl { display: grid; grid-template-columns: 1fr 1.2fr .5fr; gap: 20px; }

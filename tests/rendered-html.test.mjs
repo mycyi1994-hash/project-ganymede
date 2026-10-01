@@ -67,6 +67,7 @@ test("product pages offer clearly labelled demo investing next to the verificati
   assert.match(product, /Borrow against USTX/);
   assert.match(product, /Borrow up to/);
   assert.match(product, /href="#borrow"/);
+  assert.match(product, /href="\/pools"/, "the USTX page links to its liquidity pools");
   assert.match(product, /You are on X Layer Testnet/);
   assert.match(product, /no real money moves/);
   assert.match(product, /aria-label="Pay with"/);

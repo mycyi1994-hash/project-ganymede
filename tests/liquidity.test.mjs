@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { FUND_DEPLOYMENT, FUND_SELECTORS, POOL_SELECTORS, fundRpc } from "../lib/xstocks/fund.ts";
 import {
-  LIQUIDITY_EVENTS, LIQUIDITY_SELECTORS, POOL_LAUNCH_BLOCK, POOL_MINIMUM_LIQUIDITY, buyFeeMicros, formatSharePpm, formatYield, invariantPerLp, liquidityCalls, liquidityErrorMessage,
+  LIQUIDITY_EVENTS, LIQUIDITY_SELECTORS, POOL_LAUNCH_BLOCK, POOL_MINIMUM_LIQUIDITY, buyFeeMicros, changeWad, formatSharePpm, formatYield, invariantPerLp, liquidityCalls, liquidityErrorMessage,
   liquidityFill, liquidityPosition, lpTokenValueMicros, minimumDollarsOnly, pairedDollars, pairedShares, poolValueMicros, poolYield, quoteAddLiquidity, quoteRemoveLiquidity,
   readLiquidity, readPoolYield, sellFeeMicros, splitDollarsOnly, sqrt,
 } from "../lib/xstocks/liquidity.ts";
@@ -152,6 +152,12 @@ test("the fee APR compares the pool a week ago, or at its first deposit, with no
   const growth = await readPoolYield({ rpc: young.rpc });
   assert.deepEqual([growth.fromBlock, growth.toBlock, growth.toTime - growth.fromTime], [POOL_LAUNCH_BLOCK, head, 6 * 86_400]);
   assert.equal(formatYield(growth.aprWad), "6.62%");
+  // At an unchanged $100 NAV an LP token gained what the fees and the pool's drift gave it; holding the same tokens gained nothing.
+  assert.equal(growth.lpValueFromMicros, lpTokenValueMicros(launch, 100n * USD));
+  assert.equal(growth.lpValueToMicros, lpTokenValueMicros(LIVE, 100n * USD));
+  assert.equal(growth.heldValueToMicros, growth.lpValueFromMicros);
+  assert.equal(changeWad(growth.lpValueFromMicros, growth.heldValueToMicros), 0n);
+  assert.equal(changeWad(null, 1n), null);
   const tags = young.calls.filter((call) => call.method === "eth_call").map((call) => call.params[1]);
   assert.deepEqual([...new Set(tags)].sort(), [hex(POOL_LAUNCH_BLOCK), hex(head)].sort());
   // Later, the last seven days.

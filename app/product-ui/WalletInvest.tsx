@@ -290,6 +290,7 @@ export function WalletInvest({ tabs, onUseDemo }: { tabs: ReactNode; onUseDemo: 
       </div>}
       {bought && <button type="button" className="gmd-text-button" onClick={() => watchToken(provider, FUND_DEPLOYMENT.fund, "USTX")}>Show USTX in my wallet</button>}
       <Link prefetch={false} className="gmd-button" href="/portfolio">View portfolio <Icon name="arrow" size={16} /></Link>
+      {bought && <Link prefetch={false} className="gmd-text-button" href="/pools#provide">Earn the pool’s fees with your USTX</Link>}
       <button type="button" className="gmd-text-button" onClick={() => { setFilled(null); setPhase("form"); }}>Place another order</button>
     </div></>;
   }
