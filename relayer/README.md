@@ -171,6 +171,13 @@ quotes again after either; a trade that is no longer profitable when it lands
 reverts in the contract. The wallet holds only testnet OKB for gas and no-value
 demo dollars, and logs never carry the RPC URL.
 
+Once the Uniswap v4 pool is deployed (`npm run deploy:v4` in `onchain/`, with the
+user's approval), setting `V4_HOOK_ADDRESS` makes each run also move that pool to
+a NAV record it has not used yet: it compares `nav()` with `peggedAt()`, runs
+`repeg()` as a call and sends it, so deposits waiting for the record become LP
+tokens at once instead of at the next swap, and no trader pays for the move.
+Unset, as now, the keeper leaves the pool alone.
+
 The keeper wallet is
 [`0xccf372068496d9bef0f7cf83d697183d358dec1b`](https://web3.okx.com/explorer/x-layer-testnet/address/0xccf372068496d9bef0f7cf83d697183d358dec1b).
 After a sale left the pool 6.02% below the NAV, its next run

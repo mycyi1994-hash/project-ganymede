@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { ContractFunctionExecutionError, ContractFunctionRevertedError, parseAbi } from "viem";
-import { MIN_PROFIT_MICROS, revertReason, runKeeper, xlayerKeeperChain } from "../src/keeper.ts";
+import { MIN_PROFIT_MICROS, revertReason, runKeeper, runRepeg, xlayerKeeperChain } from "../src/keeper.ts";
 
 const USD = 1_000_000n;
 const MAX = 2n ** 256n - 1n;
@@ -149,4 +149,43 @@ test("the Worker refuses to start without its key and addresses", () => {
   const key = `0x${"1".repeat(64)}`;
   assert.throws(() => xlayerKeeperChain({ KEEPER_PRIVATE_KEY: key }), /ARBITRAGE_ADDRESS is not set/);
   assert.throws(() => xlayerKeeperChain({ KEEPER_PRIVATE_KEY: key, ARBITRAGE_ADDRESS: `0x${"a".repeat(40)}` }), /DOLLAR_ADDRESS is not set/);
+  // The v4 pool is left alone until its hook is configured, and a malformed address is refused.
+  const env = { KEEPER_PRIVATE_KEY: key, ARBITRAGE_ADDRESS: `0x${"a".repeat(40)}`, DOLLAR_ADDRESS: `0x${"b".repeat(40)}` };
+  assert.equal(xlayerKeeperChain(env).v4, null);
+  assert.equal(typeof xlayerKeeperChain({ ...env, V4_HOOK_ADDRESS: `0x${"c".repeat(36)}28c0` }).v4.repeg, "function");
+  assert.throws(() => xlayerKeeperChain({ ...env, V4_HOOK_ADDRESS: "0x1234" }), /V4_HOOK_ADDRESS is not set/);
+});
+
+/** The v4 pool's side of the keeper, answering from `state`. */
+function fakeHook(state) {
+  const calls = [];
+  return {
+    calls,
+    chain: {
+      pegState: async () => ({ navUpdatedAt: state.navUpdatedAt ?? null, peggedAt: state.peggedAt ?? 0n }),
+      simulateRepeg: async () => { calls.push(["simulate"]); return state.simulate ?? { repegged: true }; },
+      repeg: async () => { calls.push(["repeg"]); return { hash: `0x${"9".repeat(64)}`, success: state.revert !== true }; },
+    },
+  };
+}
+
+test("moves the v4 pool to a NAV record it has not used, and only then", async () => {
+  const moved = fakeHook({ navUpdatedAt: 1_790_000_300n, peggedAt: 1_790_000_000n });
+  assert.deepEqual(await runRepeg(moved.chain), { action: "repeg", navUpdatedAt: "1790000300", hash: `0x${"9".repeat(64)}`, success: true });
+  assert.deepEqual(moved.calls, [["simulate"], ["repeg"]]);
+  // At the latest record, or without a usable NAV, nothing is sent.
+  for (const state of [{ navUpdatedAt: 1_790_000_000n, peggedAt: 1_790_000_000n }, { navUpdatedAt: null, peggedAt: 1_790_000_000n }]) {
+    const idle = fakeHook(state);
+    const outcome = await runRepeg(idle.chain);
+    assert.equal(outcome.action, "none");
+    assert.deepEqual(idle.calls, []);
+  }
+  // Someone moved it first, or the call would revert: not sent.
+  const first = fakeHook({ navUpdatedAt: 2n, peggedAt: 1n, simulate: { repegged: false } });
+  assert.deepEqual(await runRepeg(first.chain), { action: "none", reason: "the v4 pool is at the latest NAV record" });
+  const failing = fakeHook({ navUpdatedAt: 2n, peggedAt: 1n, simulate: { revert: "Reentrancy()" } });
+  assert.deepEqual(await runRepeg(failing.chain), { action: "none", reason: "the re-peg would revert: Reentrancy()" });
+  assert.deepEqual(failing.calls, [["simulate"]]);
+  // A re-peg that reverts on chain is reported as such.
+  assert.equal((await runRepeg(fakeHook({ navUpdatedAt: 2n, peggedAt: 1n, revert: true }).chain)).success, false);
 });
