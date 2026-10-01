@@ -217,6 +217,9 @@ test("issuer, developer and embed pages render for partners", async () => {
   assert.match(developers, /A keeper checks the pool every five minutes and sends that trade when closing the gap earns at least a cent/);
   assert.match(developers, /quotes both the fund and the pool for each order and routes it to the better price/);
   assert.match(developers, /Use USTX as collateral/);
+  assert.match(developers, /Provide liquidity/);
+  assert.match(developers, /\/api\/v1\/ustx\/pools/);
+  assert.match(developers, /npm run fork:v4/);
   assert.match(developers, /0xae2f54ae3d0370295de18510d56de92afb8843c7/);
   assert.match(developers, /0x286f5e7ffdbc30db12665d7a3854217d7cd05cc1/);
   assert.match(developers, /address\/0xccf372068496d9bef0f7cf83d697183d358dec1b/);

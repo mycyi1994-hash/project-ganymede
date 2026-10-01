@@ -12,7 +12,7 @@ material out of those screens: the technical checks, the tamper experiment and
 the evidence download (re-checked by `npm run verify:evidence`) live on
 `/developers`, which with `/issuers`, the `/embed/ustx` badge (and `/embed/basket` for a basket
 defined by a file under `public/baskets/`, such as the MAG3 demo in its own registry) and the public
-`GET /api/v1/ustx` (with `GET /api/v1/ustx/activity`) forms the partner surface linked from the footer. The
+`GET /api/v1/ustx` (with `GET /api/v1/ustx/activity` and `GET /api/v1/ustx/pools`) forms the partner surface linked from the footer. The
 GMDCORE test ledger page (`/activity`) and the paper Lab are earlier work and
 stay out of the navigation. Production is the `ganymede-xlayer` Worker; the
 settlement relayer is `ganymede-settlement-relayer`, and the arbitrage keeper is
