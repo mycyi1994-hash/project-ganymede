@@ -130,52 +130,52 @@ local test accounts. It uses no key and broadcasts nothing.
 
 ```text
 Uniswap's PoolManager on X Layer mainnet (0x360e68faccca8ca495c1b759fd9eee466db9fb32) runs the same code as the one deployed below, apart from its own address
-forked X Layer Testnet at block 42392603 (in memory only)
+forked X Layer Testnet at block 42393808 (in memory only)
 
-live USTX NAV $98.546189 from 0x292c56c5290cc7b73e3ee33c2c2688eb3e04c3c8, recorded 181 s before the fork's latest block
+live USTX NAV $98.588184 from 0x292c56c5290cc7b73e3ee33c2c2688eb3e04c3c8, recorded 142 s before the fork's latest block
 
 deploying on the fork...
   deploy PoolManager         0x9dc93854096a120623c90ac429fa9d340d6c3132fd24908ee32f9b14e924bc67  gas 5243607
-  hook address 0xF0CCe52f639e513AB16cF9428B851Df2841368C0 (salt 0x000000000000000000000000000000000000000000000000000000000000893e)
-  deploy hook (CREATE2)      0x53a119e82692cbd6d5af19867b2eb275a034dcd4b619f7d74a4ee853dfb62848  gas 5537231
-  deploy GanymedeV4Router    0x218bc9b17b33723227038a704e3e3e9cf30f970361628fa6fc2f07b6fc245a98  gas 1031183
-pool 0x9f07455b9a0a5a97c32866b8bb2e2a8953e10d09889f7d1d0b9e5fde51cd4740: USTX is currency0, opened at $98.5462
+  hook address 0x73Ff416063CD69EEd92c4c1068E16742801Ba8C0 (salt 0x0000000000000000000000000000000000000000000000000000000000000584)
+  deploy hook (CREATE2)      0x5153a2479df2a91a07b7f026bb4d7416ebf0bcb4fe725c7c738b29da24541cd3  gas 5548493
+  deploy GanymedeV4Router    0xfaaf01b12014bdc1b607339b2777f511afb5e1248261773c0551928ddad09489  gas 1031183
+pool 0xe08bd102ebd58d2465234820c4e5073c89c605cd5b2071a4564fb6e63ca4a473: USTX is currency0, opened at $98.5882
 
-provider bought 50.737629 USTX for $5,000 at the fund and deposited it with $5,000: 9999.998976 LP shares
-  base range $96.5221 to $100.5615 around the NAV; holdings worth $9,999.999778 at the NAV
+provider bought 50.716016 USTX for $5,000 at the fund and deposited it with $5,000: 9999.998917 LP shares
+  base range $96.6186 to $100.6621 around the NAV; holdings worth $9,999.999816 at the NAV
 
-trader bought 10.091714 USTX for $1,000 ($99.091195 each, fee 0.3484%); pool price now $98.9457
-trader sold half of it back; pool price $98.7466
-second provider deposited 16.606206 USTX and $2,000.00 at the pool's ratio; it waits for the next NAV record
+trader bought 10.087855 USTX for $1,000 ($99.129101 each, fee 0.3404%); pool price now $98.9956
+trader sold half of it back; pool price $98.7923
+second provider deposited 16.599323 USTX and $2,000.00 at the pool's ratio; it waits for the next NAV record
 
-publisher (impersonated) records a NAV 1% higher: $99.53165
-  live constant-product pool price $98.642714, -0.89% from the new NAV
-  an arbitrage bought its USTX below the NAV and redeemed it at the fund for $0.044485; its providers ($9,998.068701 at the new NAV) lost $0.044485
-  hooked pool: the next swap moved it to the new NAV before trading; price after the $10 swap $99.5349
-  the first provider's shares at the new NAV: $10,050.7515 before, $10,050.773759 after (with their part of the $10 swap's fee)
-  the waiting deposit, worth $3,652.843083 at the new NAV, became 3634.39758 shares
+publisher (impersonated) records a NAV 1% higher: $99.574065
+  live constant-product pool price $98.642714, -0.93% from the new NAV
+  an arbitrage bought its USTX below the NAV and redeemed it at the fund for $0.051161; its providers ($10,000.208575 at the new NAV) lost $0.051161
+  hooked pool: the next swap moved it to the new NAV before trading; price after the $10 swap $99.5774
+  the first provider's shares at the new NAV: $10,050.639803 before, $10,050.662112 after (with their part of the $10 swap's fee)
+  the waiting deposit, worth $3,652.862067 at the new NAV, became 3634.456837 shares
 
-provider withdrew 45.618299 USTX and $5,510.30919: $10,050.773759 at the new NAV (holding the deposit instead: $10,049.999931)
-second provider claimed its shares and withdrew 16.579505 USTX and $2,002.665643: $3,652.851131 at the new NAV
+provider withdrew 45.598648 USTX and $5,510.219373: $10,050.662112 at the new NAV (holding the deposit instead: $10,049.999873)
+second provider claimed its shares and withdrew 16.572633 USTX and $2,002.665663: $3,652.870098 at the new NAV
 
 gas used
   deploy PoolManager   5,243,607
-  deploy hook          5,537,231
+  deploy hook          5,548,493
   deploy router        1,031,183
-  first deposit        599,427
-  swap                 221,144
-  swap                 163,427
-  later deposit        457,256
-  swap that re-pegs    645,217
-  withdraw             329,136
-  claim and withdraw   241,319
+  first deposit        600,728
+  swap                 185,386
+  swap                 163,471
+  later deposit        416,065
+  swap that re-pegs    667,881
+  withdraw             329,340
+  claim and withdraw   241,511
 
 Nothing was broadcast; the fork is discarded when this process exits.
 ```
 
-The live constant-product pool sat 0.10% above the old NAV, inside its 0.3% fee, so a 1% record
+The live constant-product pool sat 0.06% above the old NAV, inside its 0.3% fee, so a 1% record
 opened only a small arbitrage there; the tests' 5% record shows the difference more plainly. The
-first provider in the hooked pool ended $0.77 ahead of holding the deposit, from the trader's fees.
+first provider in the hooked pool ended $0.66 ahead of holding the deposit, from the trader's fees.
 The second provider's deposit waited through the trades and became shares at the new NAV, which it
 withdrew for what it was worth then plus its part of the last swap's fee.
 
