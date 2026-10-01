@@ -3,7 +3,7 @@ import test from "node:test";
 import { FUND_DEPLOYMENT, FUND_SELECTORS, fundRpc } from "../lib/xstocks/fund.ts";
 import {
   V4_ERRORS, V4_EVENTS, V4_POOL_DEPLOYMENT, V4_SELECTORS, byCurrency, byToken, formatFeePips, isPinnedToFund, readV4Pool, tickToUsd, v4Calls, v4DepositQuote, v4ErrorMessage,
-  v4Fill, v4PairedDollars, v4PairedShares, v4PriceMicros, v4ValueMicros, v4WithdrawEstimate,
+  v4Fill, v4PairedDollars, v4PairedShares, v4PriceMicros, v4RepegDue, v4ValueMicros, v4WithdrawEstimate,
 } from "../lib/xstocks/v4-liquidity.ts";
 
 const word = (value) => (BigInt(value) & ((1n << 256n) - 1n)).toString(16).padStart(64, "0");
@@ -85,8 +85,8 @@ test("deposits are quoted with the hook's arithmetic: the holdings' ratio, each 
   assert.equal(v4WithdrawEstimate(1n, { ...pool, sharesMicros: 5n, dollarsMicros: 5n }), null, "too few LP tokens to pay anything out");
 });
 
-/** X Layer Testnet answering for the hook, the pool manager and the tokens; the NAV can be stale. */
-function chain({ stale = false } = {}) {
+/** X Layer Testnet answering for the hook, the pool manager and the tokens; the NAV can be stale, and the pool already moved to it. */
+function chain({ stale = false, repegged = false } = {}) {
   const calls = [];
   const fetcher = async (_url, init) => {
     const body = JSON.parse(init.body);
@@ -115,6 +115,7 @@ function chain({ stale = false } = {}) {
           case V4_SELECTORS.peggedAt: return answer(`0x${word(1_790_000_000n)}`);
           case V4_SELECTORS.nav: return stale ? revert(`0xfad298ff${word(1_790_000_000n)}`) : answer(`0x${word(100_00000000n)}${word(1_790_000_000n)}${word(10n * Q96)}`);
           case V4_SELECTORS.currentFee: return stale ? revert(`0xfad298ff${word(1_790_000_000n)}`) : answer(`0x${word(3_350n)}`);
+          case V4_SELECTORS.repeg: return stale ? revert(`0xfad298ff${word(1_790_000_000n)}`) : answer(`0x${word(repegged ? 0n : 1n)}`);
           case V4_SELECTORS.baseRange: return answer(`0x${word(45_850n)}${word(46_260n)}${word(123n)}`);
           case V4_SELECTORS.limitRange: return answer(`0x${word(-45_750n)}${word(-45_450n)}${word(45n)}`);
           case V4_SELECTORS.balanceOf: return answer(`0x${word(owner === ALICE.slice(2).padStart(40, "0") ? 7n * USD : 0n)}`);
@@ -150,6 +151,16 @@ test("the pool and a wallet are read at one block, by token rather than by curre
   assert.equal(stale.account, null);
   assert.equal(stale.pool.feePips, null);
   assert.match(stale.pool.nav.reason, /over an hour old/);
+});
+
+test("Convert now asks the hook, from the wallet and at the page's block or later, whether a newer record is still to apply", async () => {
+  const due = chain();
+  assert.equal(await v4RepegDue(D, ALICE, { rpc: due.rpc, minBlock: 80 }), true);
+  assert.deepEqual(due.calls.find((call) => call.method === "eth_call").params, [{ from: ALICE, to: D.hook, data: V4_SELECTORS.repeg }, hex(80)]);
+  // A trade, a deposit or the keeper moved the pool first: only the claim is left to send.
+  assert.equal(await v4RepegDue(D, ALICE, { rpc: chain({ repegged: true }).rpc }), false);
+  // A record the hook cannot use is a reason to show, not a transaction to send.
+  await assert.rejects(v4RepegDue(D, ALICE, { rpc: chain({ stale: true }).rpc }), (error) => /over an hour old/.test(v4ErrorMessage(error)));
 });
 
 test("a deposit, a conversion, a claim and a withdrawal are read back from the hook's events", () => {

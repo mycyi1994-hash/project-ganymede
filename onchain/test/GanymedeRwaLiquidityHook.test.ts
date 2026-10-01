@@ -639,8 +639,9 @@ describe("GanymedeRwaLiquidityHook", () => {
   });
 
   it("refuses a NAV dated more than a minute after the block, which would not age", async () => {
-    const { hook, lp, trader, keeper, registry, relayer, prepare, seed, buy, publish, swapFee } = await deploy();
+    const { hook, lp, lp2, trader, keeper, registry, relayer, prepare, seed, buy, publish, swapFee } = await deploy();
     await prepare(lp, 5_000n * USD);
+    await prepare(lp2, 1_000n * USD);
     await prepare(trader, 1_000n * USD);
     await seed(lp);
     // Clocks differ by a little: a record up to a minute ahead of its block is fresh, at the lowest fee.
@@ -656,6 +657,9 @@ describe("GanymedeRwaLiquidityHook", () => {
     await expectRevert(hook.read.nav(), "NavInFuture(uint256)");
     await expectRevert(buy(trader, 100n * USD), "NavInFuture(uint256)");
     await expectRevert(hook.write.repeg({ account: keeper.account }), "NavInFuture(uint256)");
+    // That record is already out: a deposit taken now would convert at it once the clock caught up,
+    // a record its depositor could see. Deposits wait until it can be applied.
+    await expectRevert(seed(lp2, SHARE, 100n * USD), "NavInFuture(uint256)");
     // Liquidity providers can still leave.
     const shares = await hook.read.balanceOf([lp.account.address]);
     await hook.write.withdraw([shares, 0n, 0n, await deadline()], { account: lp.account });

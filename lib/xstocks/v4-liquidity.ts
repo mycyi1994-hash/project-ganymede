@@ -1,5 +1,5 @@
 import {
-  FUND_DEPLOYMENT, FUND_SELECTORS, addressWord, atBlock, call, fundErrorMessage, fundRpc, hexBlock, isRevert, quantity, readBlock, revertData, word, words,
+  FUND_DEPLOYMENT, FUND_SELECTORS, addressWord, atBlock, call, fundErrorMessage, fundRpc, hexBlock, isRevert, quantity, readBlock, revertData, simulateFundCall, word, words,
   type FundReceipt, type Rpc, type TransactionCall,
 } from "./fund";
 
@@ -228,6 +228,15 @@ export function v4Calls(deployment: V4Deployment) {
       return { to: deployment.hook, data: `${V4_SELECTORS.withdraw}${word(lpMicros)}${word(amount0)}${word(amount1)}${word(BigInt(deadline))}` };
     },
   };
+}
+
+/**
+ * Whether `repeg()` would move the pool to a newer NAV record now: a dry run from `from` at a block
+ * no older than `minBlock`. False once a trade, a deposit or the keeper has moved it; throws the
+ * hook's reason when the record cannot be used.
+ */
+export async function v4RepegDue(deployment: V4Deployment, from: string, options: { rpc?: Rpc; minBlock?: number } = {}): Promise<boolean> {
+  return words(await simulateFundCall(from, v4Calls(deployment).repeg(), options), 1)[0] !== 0n;
 }
 
 /**

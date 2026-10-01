@@ -11,8 +11,11 @@ import { TxLink, sendFromWallet, switchToTestnet, type Provider } from "./Wallet
 
 export type StepState = "idle" | "wallet" | "chain" | "done" | "skipped";
 export type TxStep<K extends string> = { key: K; label: string; state: StepState; hash?: string };
-/** One transaction of a plan: the call (null when it turns out not to be needed), and what to read from its receipt. */
-export type PlanStep<K extends string> = { key: K; label: string; approval: boolean; request: () => Promise<TransactionCall | null>; read?: (receipt: FundReceipt) => void };
+/**
+ * One transaction of a plan: the call (null when it turns out not to be needed), worked out when its
+ * turn comes, with the plan's progress so far; and what to read from its receipt.
+ */
+export type PlanStep<K extends string> = { key: K; label: string; approval: boolean; request: (progress: PlanProgress) => Promise<TransactionCall | null>; read?: (receipt: FundReceipt) => void };
 /** How far a plan got: the newest block it saw, the transactions that went through and the last one sent. */
 export type PlanProgress = { block: number; hashes: string[]; lastHash: string | null };
 
@@ -31,7 +34,7 @@ export async function orderDeadline() {
 export async function runPlan<K extends string>(plan: PlanStep<K>[], options: { provider: Provider; from: string; progress: PlanProgress; mark: (key: K, state: StepState, hash?: string) => void }) {
   const { provider, from, progress, mark } = options;
   for (const step of plan) {
-    const request = await step.request();
+    const request = await step.request(progress);
     if (!request) { mark(step.key, "skipped"); continue; }
     if (!step.approval) await simulateFundCall(from, request, { minBlock: progress.block });
     mark(step.key, "wallet");

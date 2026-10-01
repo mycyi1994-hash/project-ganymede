@@ -202,11 +202,20 @@ export function xlayerKeeperChain(env: KeeperEnv): KeeperChain {
   const walletClient = createWalletClient({ chain: xlayerTestnet, transport, account });
 
   // Writes in one run take consecutive nonces and wait for each receipt, so a node of the
-  // load-balanced RPC that lags the last receipt cannot hand out a used nonce.
+  // load-balanced RPC that lags the last receipt cannot hand out a used nonce. A write that fails
+  // may or may not have reached the network, so the next one asks the network again rather than
+  // skip a nonce and wait behind a gap.
   let nonce: number | undefined;
   async function send(write: (nonce: number) => Promise<Hex>): Promise<Sent> {
-    nonce ??= await publicClient.getTransactionCount({ address: account.address, blockTag: "pending" });
-    const hash = await write(nonce++);
+    const current = nonce ?? await publicClient.getTransactionCount({ address: account.address, blockTag: "pending" });
+    let hash: Hex;
+    try {
+      hash = await write(current);
+    } catch (error) {
+      nonce = undefined;
+      throw error;
+    }
+    nonce = current + 1;
     const receipt = await publicClient.waitForTransactionReceipt({ hash, timeout: 60_000 });
     return { hash, success: receipt.status === "success" };
   }

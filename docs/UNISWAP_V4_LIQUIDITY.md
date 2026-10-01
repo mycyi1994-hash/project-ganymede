@@ -55,7 +55,8 @@ fee is 0.30% with a fresh NAV and rises linearly to 1.00% at an hour, because an
 certain price. Past an hour swaps stop, as the fund's orders and the lending market's loans do, until
 a new record arrives. A record may carry a time up to a minute past its block, the clock tolerance
 Ganymede's evidence checks allow, and counts as fresh; one dated further ahead is refused, since it
-would not age. No swap may leave the price more than 500 ticks (about 5%) from the NAV. The hook has no owner, no pause and
+would not age, and deposits wait for it too: taken while it is out, a deposit would convert at it once
+the clock caught up, at a record its depositor could already see. No swap may leave the price more than 500 ticks (about 5%) from the NAV. The hook has no owner, no pause and
 nothing to configure.
 
 **Around it.** `contracts/GanymedeV4Router.sol` swaps on a v4 pool where no Uniswap router serves it:
@@ -94,7 +95,7 @@ real fund, demo dollar, NAV registry and NAV feed contracts:
   with a stale NAV;
 - the fee is 0.30% plus the NAV's age (0.65% at half an hour, 1.00% at an hour) and swaps stop after
   an hour; a record 45 seconds ahead of its block trades at 0.30%, one 30 days ahead stops swaps
-  while withdrawals continue; a buy and a sell back leave the providers about 0.3% of each leg
+  and deposits while withdrawals continue; a buy and a sell back leave the providers about 0.3% of each leg
   richer;
 - **with the NAV recorded 5% higher, an arbitrageur takes $2.689195 from $10,000 in the
   constant-product pool, exactly what its providers lose, while the hooked pool re-pegs with a zero
@@ -234,7 +235,7 @@ live pool's position.
   base unit short ([the in-kind vault record](IN_KIND_VAULT.md)); a pool of xStocks would hold
   `GanymedeBasketVault` shares, which are standard, rather than the xStocks themselves.
 - **When it stops.** Swaps stop while the NAV is over an hour old, dated after the block or maps
-  outside the tick range, and a paused USTX stops swaps, deposits and withdrawals until it is
+  outside the tick range (deposits too while it is dated after the block), and a paused USTX stops swaps, deposits and withdrawals until it is
   unpaused. A deposit becomes shares only at a NAV record published after it, so while records stall
   it waits (it can be cancelled). The first swap after a record pays about 480,000 more gas for the
   re-peg unless someone calls `repeg()` first. `GanymedeNavRegistry` itself accepts any later

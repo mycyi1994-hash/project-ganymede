@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { ContractFunctionExecutionError, ContractFunctionRevertedError, parseAbi } from "viem";
+import { ContractFunctionExecutionError, ContractFunctionRevertedError, keccak256, parseAbi, parseTransaction } from "viem";
 import { MIN_PROFIT_MICROS, revertReason, runKeeper, runRepeg, xlayerKeeperChain } from "../src/keeper.ts";
 
 const USD = 1_000_000n;
@@ -188,4 +188,47 @@ test("moves the v4 pool to a NAV record it has not used, and only then", async (
   assert.deepEqual(failing.calls, [["simulate"]]);
   // A re-peg that reverts on chain is reported as such.
   assert.equal((await runRepeg(fakeHook({ navUpdatedAt: 2n, peggedAt: 1n, revert: true }).chain)).success, false);
+});
+
+test("a write that fails before it is mined leaves no nonce gap for the next one", async (t) => {
+  const sent = [];
+  let counts = 0;
+  let failNext = true;
+  // X Layer Testnet's JSON-RPC: the account's next nonce is 7; the first broadcast is lost.
+  t.mock.method(globalThis, "fetch", async (_url, init) => {
+    const body = JSON.parse(init.body);
+    const answer = (result) => Response.json({ jsonrpc: "2.0", id: body.id, result });
+    switch (body.method) {
+      case "eth_chainId": return answer("0x7a0");
+      case "eth_getTransactionCount": counts += 1; return answer("0x7");
+      case "eth_getBlockByNumber": return answer({ number: "0x10", hash: `0x${"1".repeat(64)}`, timestamp: "0x1", baseFeePerGas: "0x1", transactions: [] });
+      case "eth_maxPriorityFeePerGas": case "eth_gasPrice": return answer("0x1");
+      case "eth_blockNumber": return answer("0x10");
+      case "eth_sendRawTransaction": {
+        if (failNext) { failNext = false; return Response.json({ jsonrpc: "2.0", id: body.id, error: { code: -32000, message: "connection reset" } }); }
+        sent.push(parseTransaction(body.params[0]));
+        return answer(keccak256(body.params[0]));
+      }
+      case "eth_getTransactionReceipt": return answer({
+        transactionHash: body.params[0], blockNumber: "0x10", blockHash: `0x${"1".repeat(64)}`, status: "0x1", logs: [], cumulativeGasUsed: "0x1", gasUsed: "0x1",
+        effectiveGasPrice: "0x1", from: "0x0000000000000000000000000000000000000001", to: null, contractAddress: null, transactionIndex: "0x0", type: "0x2", logsBloom: `0x${"0".repeat(512)}`,
+      });
+      default: throw new Error(`unexpected ${body.method}`);
+    }
+  });
+  const chain = xlayerKeeperChain({
+    KEEPER_PRIVATE_KEY: `0x${"1".repeat(64)}`, ARBITRAGE_ADDRESS: `0x${"a".repeat(40)}`, DOLLAR_ADDRESS: `0x${"b".repeat(40)}`, V4_HOOK_ADDRESS: `0x${"c".repeat(36)}28c0`,
+    SETTLEMENT_RPC_URL: "https://rpc.example/key",
+  });
+  await assert.rejects(chain.claim());
+  // The re-peg after a failed arbitrage takes nonce 7 again, asked of the network, not 8.
+  const repegged = await chain.v4.repeg();
+  assert.equal(repegged.success, true);
+  assert.equal(sent.length, 1);
+  assert.equal(sent[0].nonce, 7);
+  assert.equal(counts, 2, "the nonce is asked for again after the failure");
+  // The next write in the run takes the following nonce without asking.
+  await chain.approve();
+  assert.deepEqual(sent.map((transaction) => transaction.nonce), [7, 8]);
+  assert.equal(counts, 2);
 });

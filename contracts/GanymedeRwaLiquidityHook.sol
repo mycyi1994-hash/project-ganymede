@@ -278,9 +278,10 @@ contract GanymedeRwaLiquidityHook is IHooks, IUnlockCallback {
     ///         that NAV, and `claimShares` pays them out (`withdraw` and the next `deposit` claim
     ///         first). Until then `cancelDeposit` returns it. A fresh record the pool has not re-pegged
     ///         to yet is applied first, so a deposit cannot become liquidity just before trades its
-    ///         depositor can already see. The first deposit instead takes both amounts in full, needs a
-    ///         fresh NAV, mints their value at the NAV in dollar-token units as shares at once and
-    ///         opens the ranges; `shares` is 0 for every later deposit.
+    ///         depositor can already see, and while the latest record is dated ahead of the chain's
+    ///         clock deposits revert until it can be. The first deposit instead takes both amounts in
+    ///         full, needs a fresh NAV, mints their value at the NAV in dollar-token units as shares
+    ///         at once and opens the ranges; `shares` is 0 for every later deposit.
     function deposit(uint256 amount0Max, uint256 amount1Max, uint256 deadline)
         external
         nonReentrant
@@ -562,13 +563,21 @@ contract GanymedeRwaLiquidityHook is IHooks, IUnlockCallback {
             return (shares, amount0, amount1);
         }
         // A fresh record not applied yet would convert the deposit at the next swap, the one its
-        // depositor may be waiting for; apply it now, so the deposit waits for a later record.
+        // depositor may be waiting for; apply it now, so the deposit waits for a later record. A
+        // record dated ahead of the chain's clock is already out too and would convert it once the
+        // clock catches up, so the deposit waits until that record can be applied.
         try this.nav() returns (uint256 answer, uint256 updatedAt, uint160 sqrtPriceX96) {
             if (updatedAt != peggedAt) {
                 _repeg(sqrtPriceX96, updatedAt, answer);
                 _claim(account);
             }
-        } catch {}
+        } catch (bytes memory reason) {
+            if (bytes4(reason) == NavInFuture.selector) {
+                assembly ("memory-safe") {
+                    revert(add(reason, 0x20), mload(reason))
+                }
+            }
+        }
         _collectFees();
         (uint256 held0, uint256 held1) = _holdings();
         (, amount0, amount1) = _sharesFor(amount0Max, amount1Max, held0, held1, supply);

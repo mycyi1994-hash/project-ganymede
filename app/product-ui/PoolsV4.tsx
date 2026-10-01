@@ -9,7 +9,7 @@ import { parseUsd } from "@/lib/xstocks/wallet";
 import { fundExplorer, withSlippage, type FundReceipt } from "@/lib/xstocks/fund";
 import { formatSharePpm } from "@/lib/xstocks/liquidity";
 import {
-  formatFeePips, readV4Pool, tickToUsd, v4Calls, v4DepositQuote, v4ErrorMessage, v4Fill, v4PairedDollars, v4PairedShares, v4ValueMicros, v4WithdrawEstimate,
+  formatFeePips, readV4Pool, tickToUsd, v4Calls, v4DepositQuote, v4ErrorMessage, v4Fill, v4PairedDollars, v4PairedShares, v4RepegDue, v4ValueMicros, v4WithdrawEstimate,
   type V4Account, type V4Amounts, type V4Deployment, type V4Fill, type V4Pool,
 } from "@/lib/xstocks/v4-liquidity";
 import { Icon, Skeleton } from "./Icons";
@@ -262,8 +262,8 @@ export function V4LiquidityPanel({ deployment, provider, chain, owner, reader, o
         {fresh && newerRecord(pool) && <button type="button" className="gmd-small-button" onClick={() => void execute("convert", [
           {
             key: "repeg", label: "Move the pool to the new NAV", approval: false,
-            // A trade may have moved the pool since this page last read it: then only the claim is left.
-            request: async () => newerRecord((await readV4Pool(deployment, null)).pool) ? calls.repeg() : null,
+            // A trade, a deposit or the keeper may have moved the pool since this page read it: then only the claim is left.
+            request: async ({ block }) => await v4RepegDue(deployment, address, { minBlock: block }) ? calls.repeg() : null,
           },
           { key: "claim", label: "Claim your LP tokens", approval: false, request: async () => calls.claimShares(address) },
         ])}>Convert now</button>}
