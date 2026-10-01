@@ -119,29 +119,31 @@ export function PoolsScreen() {
   const showV4 = V4_POOL_DEPLOYMENT !== null && selected === "v4";
   return <ActivityProvider>
     <div className="gmd-page-heading"><div><h1>Pools</h1><p>Provide liquidity to USTX on X Layer and earn the fee on every trade.</p></div><span className="gmd-badge">X Layer Testnet</span></div>
-    <PoolList snapshot={reader.snapshot} owner={owner} growth={growth.value} v4={V4_POOL_DEPLOYMENT ? v4 : null} selected={selected} onSelect={setSelected} />
+    <PoolList snapshot={reader.snapshot} failure={reader.failure} owner={owner} growth={growth} v4={V4_POOL_DEPLOYMENT ? v4 : null} selected={selected} onSelect={setSelected} busy={busy} />
+    {/* The panel comes first, as it shows on a phone; on a wide screen it sits beside the pool. */}
     <div className="gmd-detail-layout gmd-pools-layout">
       {showV4 && V4_POOL_DEPLOYMENT ? <>
+        <div className="gmd-detail-aside" id="provide"><V4LiquidityPanel deployment={V4_POOL_DEPLOYMENT} provider={provider} chain={chain} owner={owner} reader={v4} onBusy={setBusy} /></div>
         <div className="gmd-detail-content">
           <V4PoolOverview deployment={V4_POOL_DEPLOYMENT} reader={v4} />
           <V4PoolGuide />
         </div>
-        <div className="gmd-detail-aside" id="provide"><V4LiquidityPanel deployment={V4_POOL_DEPLOYMENT} provider={provider} chain={chain} owner={owner} reader={v4} onBusy={setBusy} /></div>
       </> : <>
+        <div className="gmd-detail-aside" id="provide"><LiquidityPanel provider={provider} chain={chain} owner={owner} reader={reader} onBusy={setBusy} /></div>
         <div className="gmd-detail-content">
           <PoolOverview snapshot={reader.snapshot} failure={reader.failure} retry={reader.retry} growth={growth} />
           <PoolActivitySection />
           <PoolGuide growth={growth.value} />
         </div>
-        <div className="gmd-detail-aside" id="provide"><LiquidityPanel provider={provider} chain={chain} owner={owner} reader={reader} onBusy={setBusy} /></div>
       </>}
     </div>
   </ActivityProvider>;
 }
 
 /** Every pool, in one table: a liquidity provider's first choice. Choosing one shows it below. */
-function PoolList({ snapshot, owner, growth, v4, selected, onSelect }: {
-  snapshot: Snapshot | null; owner: string | null; growth: PoolYield | null; v4: V4Reader | null; selected: "live" | "v4"; onSelect: (pool: "live" | "v4") => void;
+function PoolList({ snapshot, failure, owner, growth, v4, selected, onSelect, busy }: {
+  snapshot: Snapshot | null; failure: string | null; owner: string | null; growth: { value: PoolYield | null; loaded: boolean }; v4: V4Reader | null;
+  selected: "live" | "v4"; onSelect: (pool: "live" | "v4") => void; busy: boolean;
 }) {
   const pool = snapshot?.pool ?? null;
   const nav = pool?.nav.navMicros ?? null;
@@ -150,27 +152,30 @@ function PoolList({ snapshot, owner, growth, v4, selected, onSelect }: {
   const v4Pool = v4?.snapshot?.pool ?? null;
   const v4Account = v4?.snapshot && v4.snapshot.owner === owner ? v4.snapshot.account : null;
   const v4Mine = v4Pool && v4Account ? v4Position(v4Pool, v4Account) : null;
-  const choose = (next: "live" | "v4") => () => onSelect(next);
+  // While a deposit or withdrawal is under way, its panel stays on screen.
+  const choose = (next: "live" | "v4") => (event: { preventDefault(): void }) => { if (busy) event.preventDefault(); else onSelect(next); };
+  const link = (next: "live" | "v4", children: ReactNode, className: string) => <a className={className} href="#provide" aria-disabled={busy || undefined} onClick={choose(next)}>{children}</a>;
+  const loading = (width: number, unavailable: boolean) => unavailable ? "—" : <Skeleton width={width} />;
   return <section className="gmd-pool-list" aria-labelledby="pool-list-title">
     <h2 id="pool-list-title" className="gmd-sr-only">All pools</h2>
     <div className="gmd-data-table-scroll"><table className="gmd-table">
       <thead><tr><th scope="col">Pool</th><th scope="col">Fee</th><th scope="col">Total value</th><th scope="col">Fee APR</th><th scope="col">Your liquidity</th><th scope="col"><span className="gmd-sr-only">Action</span></th></tr></thead>
       <tbody>
         <tr aria-current={v4 && selected === "live" ? "true" : undefined}>
-          <th scope="row"><span className="gmd-pool-pair"><span className="gmd-pair-mark" aria-hidden="true"><i>U</i><i>$</i></span><span><b>USTX / dUSD</b><small>Constant product · live</small></span></span></th>
+          <th scope="row">{link("live", <><span className="gmd-pair-mark" aria-hidden="true"><i>U</i><i>$</i></span><span><b>USTX / dUSD</b><small>Constant product · live</small></span></>, "gmd-pool-pair")}</th>
           <td>{FEE_PERCENT}</td>
-          <td>{pool && nav !== null ? formatUsdRounded(poolValueMicros(pool, nav)) : <Skeleton width={70} />}</td>
-          <td>{growth ? formatYield(growth.aprWad) : "—"}</td>
-          <td>{!owner ? "—" : !account || !mine ? <Skeleton width={56} /> : account.lpMicros === 0n ? "None" : mine.valueMicros !== null ? formatUsdRounded(mine.valueMicros) : `${formatSharesShort(account.lpMicros, 4)} USTX-LP`}</td>
-          <td><a className="gmd-small-button" href="#provide" onClick={choose("live")}>{account && account.lpMicros > 0n ? "Manage" : "Add liquidity"}</a></td>
+          <td>{pool ? nav !== null ? formatUsdRounded(poolValueMicros(pool, nav)) : "—" : loading(70, Boolean(failure))}</td>
+          <td>{growth.value ? formatYield(growth.value.aprWad) : loading(44, growth.loaded)}</td>
+          <td>{!owner ? "—" : !account || !mine ? loading(56, Boolean(failure)) : account.lpMicros === 0n ? "None" : mine.valueMicros !== null ? formatUsdRounded(mine.valueMicros) : `${formatSharesShort(account.lpMicros, 4)} USTX-LP`}</td>
+          <td>{link("live", account && account.lpMicros > 0n ? "Manage" : "Add liquidity", "gmd-small-button")}</td>
         </tr>
         {v4 && <tr aria-current={selected === "v4" ? "true" : undefined}>
-          <th scope="row"><span className="gmd-pool-pair"><span className="gmd-pair-mark" aria-hidden="true"><i>U</i><i>$</i></span><span><b>USTX / dUSD</b><small>Uniswap v4 · held at the NAV</small></span></span></th>
+          <th scope="row">{link("v4", <><span className="gmd-pair-mark" aria-hidden="true"><i>U</i><i>$</i></span><span><b>USTX / dUSD</b><small>Uniswap v4 · held at the NAV</small></span></>, "gmd-pool-pair")}</th>
           <td>{v4Pool?.feePips != null ? formatFeePips(v4Pool.feePips) : "0.30–1.00%"}</td>
-          <td>{v4Pool && v4Pool.nav.answer !== null ? formatUsdRounded(v4ValueMicros(v4Pool, v4Pool.nav.answer)) : v4.failure ? "—" : <Skeleton width={70} />}</td>
+          <td>{v4Pool ? v4Pool.nav.answer !== null ? formatUsdRounded(v4ValueMicros(v4Pool, v4Pool.nav.answer)) : "—" : loading(70, Boolean(v4.failure))}</td>
           <td>New</td>
-          <td>{!owner ? "—" : !v4Mine ? <Skeleton width={56} /> : v4Mine.lp === 0n ? (v4Account?.waiting ? "Waiting" : "None") : v4Mine.valueMicros !== null ? formatUsdRounded(v4Mine.valueMicros) : `${formatSharesShort(v4Mine.lp, 4)} USTX-V4LP`}</td>
-          <td><a className="gmd-small-button" href="#provide" onClick={choose("v4")}>{v4Mine && v4Mine.lp > 0n ? "Manage" : "Add liquidity"}</a></td>
+          <td>{!owner ? "—" : !v4Mine ? loading(56, Boolean(v4.failure)) : v4Mine.lp === 0n ? (v4Account?.waiting ? "Waiting" : "None") : v4Mine.valueMicros !== null ? formatUsdRounded(v4Mine.valueMicros) : `${formatSharesShort(v4Mine.lp, 4)} USTX-V4LP`}</td>
+          <td>{link("v4", v4Mine && v4Mine.lp > 0n ? "Manage" : "Add liquidity", "gmd-small-button")}</td>
         </tr>}
       </tbody>
     </table></div>
@@ -207,7 +212,7 @@ function PoolOverview({ snapshot, failure, retry, growth }: { snapshot: Snapshot
       <div><dt>NAV per share</dt><dd>{nav !== null ? formatUsdMicros(nav, 4) : pool?.nav.navMicros === null ? "Waiting for the next record" : "—"}</dd></div>
       <div><dt>Value per LP token</dt><dd>{pool && nav !== null && pool.supply > 0n ? `${formatUsdMicros(lpTokenValueMicros(pool, nav), 4)} at the NAV` : "—"}</dd></div>
       <div><dt>LP tokens issued</dt><dd>{pool ? `${formatSharesShort(pool.supply, 4)} USTX-LP` : "—"}</dd></div>
-      <div><dt>Pricing</dt><dd>Constant product, x × y = k</dd></div>
+      <div><dt>Pricing</dt><dd>Constant product: the reserves’ ratio sets the price</dd></div>
       <div><dt>Fee</dt><dd>{FEE_PERCENT} of each trade, to providers</dd></div>
       <div><dt>LP token, {growth.value ? windowLabel(growth.value) : "7 days"}</dt><dd>{performance(growth.value)}</dd></div>
       <div><dt>Opened</dt><dd>{day(POOL_LAUNCHED_AT)}</dd></div>
@@ -220,12 +225,12 @@ function PoolOverview({ snapshot, failure, retry, growth }: { snapshot: Snapshot
 function PoolGuide({ growth }: { growth: PoolYield | null }) {
   return <section id="how" className="gmd-terms" aria-labelledby="how-title">
     <h2 id="how-title">How providing liquidity works</h2>
-    <p>The pool holds USTX and demo dollars. Every trade pays {FEE_PERCENT} into it, so each LP token claims a little more of both over time. When the pool’s price drifts from the NAV by more than the fee, the arbitrage keeper trades it back through the fund.</p>
+    <p>The pool holds USTX and demo dollars. Every trade pays {FEE_PERCENT} into it, and the fee stays in the pool for its providers. When the pool’s price drifts from the NAV by more than the fee, the arbitrage keeper trades it back through the fund.</p>
     <dl>
       <div><dt>Deposit</dt><dd>USTX and demo dollars at the pool’s ratio. Or demo dollars alone: part is invested at the fund at the NAV, with no fee, and the USTX goes in with the rest.</dd></div>
       <div><dt>LP token</dt><dd>USTX-LP, issued by the pool contract to your wallet. It is your share of everything the pool holds.</dd></div>
-      <div><dt>Withdraw</dt><dd>At any time, for your share of both tokens, rounded down. You can also have the USTX redeemed at the fund at the NAV.</dd></div>
-      <div><dt>Price risk</dt><dd>As the NAV moves, arbitrage trades with the pool, so a provider ends with more of whichever token fell. Against simply holding both, that costs a little; the fees are what make up for it.</dd></div>
+      <div><dt>Withdraw</dt><dd>At any time, for your share of both tokens, rounded down. While the NAV record is under an hour old, you can also have the USTX redeemed at the fund at the NAV.</dd></div>
+      <div><dt>Price risk</dt><dd>As the NAV moves, arbitrage trades with the pool, so a provider ends with more of whichever token fell. Against simply holding both, that costs a little, and only the fees can make up for it.</dd></div>
       <div><dt>Network</dt><dd>X Layer Testnet. Demo dollars and USTX have no value, and network fees are paid in test OKB.</dd></div>
     </dl>
     <PriceMove growth={growth} />
@@ -234,7 +239,7 @@ function PoolGuide({ growth }: { growth: PoolYield | null }) {
 
 const MOVES = [-30, -20, -10, -5, 0, 5, 10, 20, 30, 50];
 
-/** A $1,000 deposit at the NAV after the NAV moves and arbitrage brings the pool back to it: √r against (1 + r) / 2. */
+/** A deposit worth $1,000 at the NAV after the NAV moves and arbitrage brings the pool back to it: √r against (1 + r) / 2. */
 function PriceMove({ growth }: { growth: PoolYield | null }) {
   const [move, setMove] = useState(10);
   const ratio = 1 + move / 100;
@@ -244,7 +249,7 @@ function PriceMove({ growth }: { growth: PoolYield | null }) {
   const money = (value: number) => `$${value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   const gap = pooled - held;
   return <div className="gmd-price-move">
-    <div className="gmd-price-move-head"><h3>If the NAV moves</h3><p>A $1,000 deposit made at the NAV, half USTX and half demo dollars, once arbitrage has brought the pool to the new NAV.</p></div>
+    <div className="gmd-price-move-head"><h3>If the NAV moves</h3><p>A deposit worth $1,000 in demo dollars at the NAV, half of it in USTX, once arbitrage has brought the pool to the new NAV.</p></div>
     <div className="gmd-order-presets" role="group" aria-label="NAV move">{MOVES.map(value => <button type="button" key={value} aria-pressed={move === value} onClick={() => setMove(value)}>{value > 0 ? "+" : value < 0 ? "−" : ""}{Math.abs(value)}%</button>)}</div>
     <dl className="gmd-facts" aria-live="polite">
       <div><dt>Holding both tokens</dt><dd>{money(held)}</dd></div>
@@ -284,12 +289,13 @@ function LiquidityPanel({ provider, chain, owner, reader, onBusy }: { provider: 
   const [receive, setReceive] = useState<"both" | "dollars">("both");
   const [phase, setPhase] = useState<"form" | "working" | "done">("form");
   const [steps, setSteps] = useState<TxStep<StepKey>[]>([]);
-  const [failure, setFailure] = useState<string | null>(null);
+  const [failure, setFailure] = useState<{ message: string; hash: string | null } | null>(null);
   const [done, setDone] = useState<Done | null>(null);
   const [claim, setClaim] = useState<{ state: "wallet" | "chain" | "failed"; message?: string } | null>(null);
   const stepsRef = useRef<HTMLOListElement>(null);
   const doneRef = useRef<HTMLDivElement>(null);
   const failureRef = useRef<HTMLParagraphElement>(null);
+  const headingRef = useRef<HTMLHeadingElement>(null);
   useEffect(() => { onBusy(phase === "working"); }, [phase, onBusy]);
   useEffect(() => {
     if (phase === "working") stepsRef.current?.focus();
@@ -379,14 +385,14 @@ function LiquidityPanel({ provider, chain, owner, reader, onBusy }: { provider: 
     const from = address;
     const state = pool;
     const wallet = account;
-    const progress: PlanProgress = { block: Math.max(reader.watermark, state.block), hashes: [] };
+    const progress: PlanProgress = { block: Math.max(reader.watermark, state.block), hashes: [], lastHash: null };
     // What each step left behind, read from its receipt.
     const result: { invested: { dollarsMicros: bigint; sharesMicros: bigint } | null; added: LiquidityFill | null; removed: LiquidityFill | null; redeemed: { sharesMicros: bigint; dollarsMicros: bigint } | null } = { invested: null, added: null, removed: null, redeemed: null };
     const plan: PlanStep<StepKey>[] = [];
     const addStep = (shares: () => bigint, dollars: bigint, minimums: () => { shares: bigint; dollars: bigint }) => plan.push({
       key: "add", label: "Add liquidity", approval: false,
       request: async () => { const least = minimums(); return liquidityCalls.add(shares(), dollars, least.shares, least.dollars, await orderDeadline()); },
-      read: receipt => { const fill = liquidityFill(receipt); if (fill?.side !== "add") throw new Error("The deposit did not go through on X Layer Testnet. See it on the OKX explorer."); result.added = fill; },
+      read: receipt => { const fill = liquidityFill(receipt); if (fill?.side !== "add") throw new Error("The deposit did not go through on X Layer Testnet."); result.added = fill; },
     });
     if (tab === "add" && mode === "pair" && pairQuote) {
       const fixed = pairQuote;
@@ -401,7 +407,7 @@ function LiquidityPanel({ provider, chain, owner, reader, onBusy }: { provider: 
         request: async () => fundCalls.invest(parts.investMicros, withSlippage(parts.sharesMicros)),
         read: receipt => {
           const fill = fundFill(receipt);
-          if (fill?.side !== "invest") throw new Error("The investment did not go through on X Layer Testnet. See it on the OKX explorer.");
+          if (fill?.side !== "invest") throw new Error("The investment did not go through on X Layer Testnet.");
           result.invested = { dollarsMicros: fill.dollarsMicros, sharesMicros: fill.sharesMicros };
         },
       });
@@ -420,7 +426,7 @@ function LiquidityPanel({ provider, chain, owner, reader, onBusy }: { provider: 
       plan.push({
         key: "remove", label: "Withdraw liquidity", approval: false,
         request: async () => liquidityCalls.remove(amount, withSlippage(out.sharesMicros), withSlippage(out.dollarsMicros), await orderDeadline()),
-        read: receipt => { const fill = liquidityFill(receipt); if (fill?.side !== "remove") throw new Error("The withdrawal did not go through on X Layer Testnet. See it on the OKX explorer."); result.removed = fill; },
+        read: receipt => { const fill = liquidityFill(receipt); if (fill?.side !== "remove") throw new Error("The withdrawal did not go through on X Layer Testnet."); result.removed = fill; },
       });
       if (receive === "dollars" && navAtForm !== null) plan.push({
         key: "redeem", label: "Redeem USTX at the NAV", approval: false,
@@ -430,7 +436,7 @@ function LiquidityPanel({ provider, chain, owner, reader, onBusy }: { provider: 
         },
         read: receipt => {
           const fill = fundFill(receipt);
-          if (fill?.side !== "redeem") throw new Error("The redemption did not go through on X Layer Testnet. See it on the OKX explorer.");
+          if (fill?.side !== "redeem") throw new Error("The redemption did not go through on X Layer Testnet.");
           result.redeemed = { sharesMicros: fill.sharesMicros, dollarsMicros: fill.dollarsMicros };
         },
       });
@@ -444,7 +450,7 @@ function LiquidityPanel({ provider, chain, owner, reader, onBusy }: { provider: 
       const { hashes, block } = progress;
       const finished: Done | null = result.added ? { tab: "add", added: result.added, invested: result.invested, hashes, block }
         : result.removed ? { tab: "remove", removed: result.removed, redeemed: result.redeemed, hashes, block } : null;
-      if (!finished) throw new Error("The transaction did not go through on X Layer Testnet. See it on the OKX explorer.");
+      if (!finished) throw new Error("The transaction did not go through on X Layer Testnet.");
       setDone(finished);
       setPhase("done");
       if (tab === "add") { setPair(current => ({ ...current, text: "" })); setDollarsText(""); } else setRemoveText("");
@@ -453,7 +459,11 @@ function LiquidityPanel({ provider, chain, owner, reader, onBusy }: { provider: 
       const partial = result.invested && !result.added ? `Your investment went through: ${ustx(result.invested.sharesMicros)} are in your wallet, ready to deposit with demo dollars. `
         : result.removed && !result.redeemed && receive === "dollars" ? `Your liquidity was withdrawn: ${ustx(result.removed.sharesMicros)} and ${usd(result.removed.dollarsMicros)} are in your wallet. You can redeem the USTX on the USTX page. `
         : "";
-      setFailure(`${partial}${liquidityErrorMessage(error)}`);
+      setFailure({ message: `${partial}${liquidityErrorMessage(error)}`, hash: progress.lastHash });
+      // So that trying again does not repeat the step that went through: the bought USTX waits in the
+      // pair form, and a withdrawal that came out is not withdrawn again.
+      if (result.invested && !result.added) { setMode("pair"); setPair({ anchor: "shares", text: plain(result.invested.sharesMicros) }); setDollarsText(""); }
+      if (result.removed) setRemoveText("");
       setPhase("form");
     } finally {
       reader.raise(progress.block);
@@ -461,7 +471,7 @@ function LiquidityPanel({ provider, chain, owner, reader, onBusy }: { provider: 
     }
   }
 
-  const head = <div className="gmd-order-heading"><h2 id="provide-title">{phase === "done" ? (done?.tab === "remove" ? "Liquidity withdrawn" : "Liquidity added") : phase === "working" ? "Confirm in your wallet" : "Provide liquidity"}</h2><Icon name="pool" /></div>;
+  const head = <div className="gmd-order-heading"><h2 id="provide-title" ref={headingRef} tabIndex={-1}>{phase === "done" ? (done?.tab === "remove" ? "Liquidity withdrawn" : "Liquidity added") : phase === "working" ? "Confirm in your wallet" : "Provide liquidity"}</h2><Icon name="pool" /></div>;
   const tabs = <div className="gmd-segmented gmd-pay-with" role="group" aria-label="Liquidity action">
     <button type="button" aria-pressed={tab === "add"} onClick={() => choose("add")}>Add</button>
     <button type="button" aria-pressed={tab === "remove"} onClick={() => choose("remove")}>Withdraw</button>
@@ -494,7 +504,7 @@ function LiquidityPanel({ provider, chain, owner, reader, onBusy }: { provider: 
         <div><dt>{done.hashes.length === 1 ? "Transaction" : "Transactions"}</dt><dd className="gmd-liquidity-hashes">{done.hashes.map((hash, index) => <TxLink key={hash} hash={hash}>{done.hashes.length === 1 ? "OKX Explorer" : `Step ${index + 1}`}</TxLink>)}</dd></div>
       </dl>
       <Link prefetch={false} className="gmd-button" href="/portfolio">View portfolio <Icon name="arrow" size={16} /></Link>
-      <button type="button" className="gmd-text-button" onClick={() => { setDone(null); setPhase("form"); }}>Done</button>
+      <button type="button" className="gmd-text-button" onClick={() => { setDone(null); setPhase("form"); requestAnimationFrame(() => headingRef.current?.focus()); }}>Done</button>
     </div>);
   }
 
@@ -506,7 +516,7 @@ function LiquidityPanel({ provider, chain, owner, reader, onBusy }: { provider: 
     {account.lpMicros > 0n && position && <div className="gmd-liquidity-position">
       <span>Your liquidity</span>
       <strong>{position.valueMicros !== null ? formatUsdRounded(position.valueMicros) : `${formatShares(account.lpMicros)} USTX-LP`}</strong>
-      <small>{formatSharePpm(position.sharePpm, true)} of the pool · {formatSharesShort(position.sharesMicros, 4)} USTX and {formatUsdRounded(position.dollarsMicros)}{feeShare !== null && feeShare > 0n ? ` · about ${formatUsdMicros(feeShare, feeShare < 10_000n ? 4 : 2)} in fees over 24h` : ""}</small>
+      <small>{formatSharePpm(position.sharePpm, true)} of the pool · {formatSharesShort(position.sharesMicros, 4)} USTX and {formatUsdRounded(position.dollarsMicros)}{feeShare !== null && feeShare > 0n ? ` · at your share, the last 24 hours’ fees came to about ${formatUsdMicros(feeShare, feeShare < 10_000n ? 4 : 2)}` : ""}</small>
     </div>}
     <div className="gmd-wallet-balances">
       <div><span>Demo dollars</span><b>{usd(account.dollarsMicros)}</b><small>dUSD, no value</small></div>
@@ -526,19 +536,19 @@ function LiquidityPanel({ provider, chain, owner, reader, onBusy }: { provider: 
       {mode === "pair" ? <div className="gmd-liquidity-inputs">
         <div className="gmd-order-input">
           <label htmlFor="liquidity-shares">USTX</label>
-          <div><input id="liquidity-shares" inputMode="decimal" autoComplete="off" placeholder="0" value={pair.anchor === "shares" ? pair.text : sharesDesired !== null ? plain(sharesDesired) : ""} onChange={event => { setPair({ anchor: "shares", text: event.target.value }); setFailure(null); }} aria-invalid={Boolean(pair.text) && Boolean(problem)} aria-describedby="liquidity-help" /><span>USTX</span></div>
+          <div><input id="liquidity-shares" inputMode="decimal" autoComplete="off" placeholder="0" value={pair.anchor === "shares" ? pair.text : sharesDesired !== null ? plain(sharesDesired) : ""} onChange={event => { setPair({ anchor: "shares", text: event.target.value }); setFailure(null); }} aria-invalid={fresh && Boolean(pair.text) && Boolean(problem)} aria-describedby="liquidity-help" /><span>USTX</span></div>
           <p>In your wallet: {formatShares(account.sharesMicros)}</p>
         </div>
         <div className="gmd-order-input">
           <label htmlFor="liquidity-dollars">Demo dollars</label>
-          <div><input id="liquidity-dollars" inputMode="decimal" autoComplete="off" placeholder="0" value={pair.anchor === "dollars" ? pair.text : dollarsDesired !== null ? plain(dollarsDesired) : ""} onChange={event => { setPair({ anchor: "dollars", text: event.target.value }); setFailure(null); }} aria-invalid={Boolean(pair.text) && Boolean(problem)} aria-describedby="liquidity-help" /><span>dUSD</span></div>
+          <div><input id="liquidity-dollars" inputMode="decimal" autoComplete="off" placeholder="0" value={pair.anchor === "dollars" ? pair.text : dollarsDesired !== null ? plain(dollarsDesired) : ""} onChange={event => { setPair({ anchor: "dollars", text: event.target.value }); setFailure(null); }} aria-invalid={fresh && Boolean(pair.text) && Boolean(problem)} aria-describedby="liquidity-help" /><span>dUSD</span></div>
           <p>In your wallet: {usd(account.dollarsMicros)}</p>
         </div>
-        <p id="liquidity-help" className="gmd-liquidity-help">{pair.text && problem ? problem : "Type either amount; the other follows the pool’s ratio."} {fresh && <button type="button" className="gmd-lending-max" onClick={maxPair}>Max</button>}</p>
+        <p className="gmd-liquidity-help"><span id="liquidity-help">{pair.text && problem ? problem : "Type either amount; the other follows the pool’s ratio."}</span> {fresh && <button type="button" className="gmd-lending-max" onClick={maxPair}>Max</button>}</p>
       </div> : <div className="gmd-order-input">
         <label htmlFor="liquidity-dollars-only">Demo dollars to deposit</label>
-        <div><input id="liquidity-dollars-only" inputMode="decimal" autoComplete="off" placeholder="0" value={dollarsText} onChange={event => { setDollarsText(event.target.value); setFailure(null); }} aria-invalid={Boolean(dollarsText) && Boolean(problem)} aria-describedby="liquidity-only-help" /><span>dUSD</span></div>
-        <p id="liquidity-only-help">{dollarsText && problem ? problem : `In your wallet: ${usd(account.dollarsMicros)}`}{fresh && account.dollarsMicros > 0n && <> · <button type="button" className="gmd-lending-max" onClick={() => setDollarsText(plain(account.dollarsMicros))}>Max</button></>}</p>
+        <div><input id="liquidity-dollars-only" inputMode="decimal" autoComplete="off" placeholder="0" value={dollarsText} onChange={event => { setDollarsText(event.target.value); setFailure(null); }} aria-invalid={fresh && Boolean(dollarsText) && Boolean(problem)} aria-describedby="liquidity-only-help" /><span>dUSD</span></div>
+        <p><span id="liquidity-only-help">{dollarsText && problem ? problem : `In your wallet: ${usd(account.dollarsMicros)}`}</span>{fresh && account.dollarsMicros > 0n && <> · <button type="button" className="gmd-lending-max" onClick={() => setDollarsText(plain(account.dollarsMicros))}>Max</button></>}</p>
       </div>}
       <div className="gmd-order-estimate"><span>LP tokens you receive</span><strong>{quote ? formatShares(quote.liquidity) : "—"} <small>USTX-LP</small></strong></div>
       <dl className="gmd-facts">
@@ -554,7 +564,7 @@ function LiquidityPanel({ provider, chain, owner, reader, onBusy }: { provider: 
     </> : <>
       <div className="gmd-order-input">
         <label htmlFor="liquidity-remove">LP tokens to withdraw</label>
-        <div><input id="liquidity-remove" inputMode="decimal" autoComplete="off" placeholder="0" value={removeText} onChange={event => { setRemoveText(event.target.value); setFailure(null); }} aria-invalid={Boolean(removeText) && Boolean(problem)} aria-describedby="liquidity-remove-help" /><span>USTX-LP</span></div>
+        <div><input id="liquidity-remove" inputMode="decimal" autoComplete="off" placeholder="0" value={removeText} onChange={event => { setRemoveText(event.target.value); setFailure(null); }} aria-invalid={fresh && Boolean(removeText) && Boolean(problem)} aria-describedby="liquidity-remove-help" /><span>USTX-LP</span></div>
         <p id="liquidity-remove-help">{removeText && problem ? problem : `Yours: ${formatShares(account.lpMicros)} USTX-LP`}</p>
       </div>
       <div className="gmd-order-presets" role="group" aria-label="Part of your liquidity">{([25n, 50n, 75n, 100n] as const).map(percent => {
@@ -569,15 +579,17 @@ function LiquidityPanel({ provider, chain, owner, reader, onBusy }: { provider: 
       <dl className="gmd-facts">
         {removal && receive === "dollars" && <div><dt>USTX redeemed at the NAV</dt><dd>{ustx(removal.sharesMicros)}</dd></div>}
         <div><dt>Value at the NAV</dt><dd>{removal && nav !== null ? formatUsdRounded(removal.dollarsMicros + dollarsFor(removal.sharesMicros, nav)) : "—"}</dd></div>
-        <div><dt>Minimum accepted</dt><dd>{removal ? `${ustx(withSlippage(removal.sharesMicros))} and ${usd(withSlippage(removal.dollarsMicros))}` : "—"}</dd></div>
+        <div><dt>{receive === "dollars" ? "Minimum from the pool" : "Minimum accepted"}</dt><dd>{removal ? `${ustx(withSlippage(removal.sharesMicros))} and ${usd(withSlippage(removal.dollarsMicros))}` : "—"}</dd></div>
+        {receive === "dollars" && <div><dt>Minimum for the USTX</dt><dd>{removal && nav !== null ? `99% of its value at the NAV, ${usd(withSlippage(dollarsFor(removal.sharesMicros, nav)))} now` : "—"}</dd></div>}
         <div><dt>Wallet confirmations</dt><dd>{removal ? confirmations : "—"}</dd></div>
       </dl>
     </>}
-    {failure && <p ref={failureRef} tabIndex={-1} className="gmd-inline-error" role="alert">{failure}</p>}
+    {failure && <p ref={failureRef} tabIndex={-1} className="gmd-inline-error" role="alert">{failure.message}{failure.hash && <> <TxLink hash={failure.hash}>See the last transaction</TxLink></>}</p>}
     <button type="button" className="gmd-button" disabled={Boolean(problem) || (tab === "add" ? !quote : !removal)} onClick={() => void run()}>{tab === "add" ? "Add liquidity" : "Withdraw"} <Icon name="arrow" size={17} /></button>
     <p className="gmd-caption">{tab === "add"
       ? mode === "dollars" ? "Part of your demo dollars is invested at the fund at the NAV, then deposited with the rest. If the pool’s price moves more than 1% first, the deposit does not go through and the USTX stays in your wallet."
         : "Deposits go in at the pool’s ratio. If it moves more than 1% before the transaction is mined, or 10 minutes pass, nothing is deposited."
-      : "You receive your share of both tokens. If the pool moves more than 1% before the transaction is mined, nothing is withdrawn."} Demo dollars and USTX have no value.</p>
+      : receive === "dollars" ? "You receive your share of both tokens, then the fund redeems the USTX at the NAV. If the pool moves more than 1% first, nothing is withdrawn; if the NAV moves more than 1% before the redemption, the USTX stays in your wallet."
+        : "You receive your share of both tokens. If the pool moves more than 1% before the transaction is mined, nothing is withdrawn."} Demo dollars and USTX have no value.</p>
   </>);
 }

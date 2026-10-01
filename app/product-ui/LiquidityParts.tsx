@@ -13,10 +13,10 @@ export type StepState = "idle" | "wallet" | "chain" | "done" | "skipped";
 export type TxStep<K extends string> = { key: K; label: string; state: StepState; hash?: string };
 /** One transaction of a plan: the call (null when it turns out not to be needed), and what to read from its receipt. */
 export type PlanStep<K extends string> = { key: K; label: string; approval: boolean; request: () => Promise<TransactionCall | null>; read?: (receipt: FundReceipt) => void };
-/** How far a plan got: the newest block it saw and the transactions it sent. */
-export type PlanProgress = { block: number; hashes: string[] };
+/** How far a plan got: the newest block it saw, the transactions that went through and the last one sent. */
+export type PlanProgress = { block: number; hashes: string[]; lastHash: string | null };
 
-const STEP_STATE: Record<StepState, string> = { idle: "Next", wallet: "Confirm in your wallet", chain: "Confirming on X Layer Testnet…", done: "Done", skipped: "Already approved" };
+const STEP_STATE: Record<StepState, string> = { idle: "Next", wallet: "Confirm in your wallet", chain: "Confirming on X Layer Testnet…", done: "Done", skipped: "Not needed" };
 
 /** A pool order's deadline: ten minutes from the chain's clock or this device's, whichever is later. */
 export async function orderDeadline() {
@@ -36,9 +36,10 @@ export async function runPlan<K extends string>(plan: PlanStep<K>[], options: { 
     if (!step.approval) await simulateFundCall(from, request, { minBlock: progress.block });
     mark(step.key, "wallet");
     const hash = await sendFromWallet(provider, from, request);
+    progress.lastHash = hash;
     mark(step.key, "chain", hash);
     const receipt = await waitForFundReceipt(hash);
-    if (receipt.status !== "success") throw new Error(step.approval ? "The approval failed on X Layer Testnet." : "The transaction did not go through on X Layer Testnet. See it on the OKX explorer.");
+    if (receipt.status !== "success") throw new Error(step.approval ? "The approval failed on X Layer Testnet." : "The transaction did not go through on X Layer Testnet.");
     progress.block = Math.max(progress.block, receipt.block);
     progress.hashes.push(hash);
     step.read?.(receipt);

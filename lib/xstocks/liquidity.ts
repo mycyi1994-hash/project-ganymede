@@ -36,7 +36,8 @@ export const POOL_YIELD_WINDOW_SECONDS = 7 * 86_400;
 /** The pool's errors where a liquidity provider needs other words than a trader. */
 export const LIQUIDITY_ERRORS: Record<string, string> = {
   "0x2c5211c6": "That amount is too small for the pool. Try a larger one.",
-  "0x8199f5f3": "The pool’s price moved before this was confirmed. Review it again.",
+  // The pool's and the fund's: the price or the NAV moved more than the 1% allowed.
+  "0x8199f5f3": "The price moved before this was confirmed. Review it again.",
   "0xf4d678b8": "Your balance is too low for this.",
 };
 

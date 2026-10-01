@@ -97,7 +97,16 @@ test("Pools offers the live pool's liquidity from a wallet, with its figures rea
   assert.match(html, /You are on X Layer Testnet\. Balances are demo funds with no real value\./);
   assert.match(html, /Demo dollars and USTX have no value/);
   // Figures come from the chain in the browser: nothing is invented on the server.
-  assert.doesNotMatch(html, /Example account|\$12,454|Try to break it|npm run/);
+  assert.doesNotMatch(html, /Example account|\$12,454|Try to break it|npm run|viem|parseAbi|addLiquidity\(|Built on X Layer and OKX/);
+  const grid = html.match(/<div class="gmd-fund-grid" aria-busy="true">([\s\S]*?)<\/div>/)?.[1];
+  assert.ok(grid, "the pool's figures wait for the chain");
+  assert.doesNotMatch(grid, /\$\d/, "no amount before the chain is read");
+  // The NAV calculator is plain arithmetic and starts at +10%.
+  assert.match(html, /\$1,050\.00/);
+  assert.match(html, /\$1,048\.81/);
+  // The Uniswap v4 pool is not shown until its deployment is pinned.
+  assert.doesNotMatch(html, /Uniswap v4|USTX-V4LP/);
+  assert.match(html, /<title>Pools · Ganymede<\/title>/);
   assert.equal(html.match(/You are on X Layer Testnet/g).length, 1, "one testnet notice");
 });
 

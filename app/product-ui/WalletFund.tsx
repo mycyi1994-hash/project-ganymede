@@ -61,7 +61,7 @@ export function WalletFundPosition({ address }: { address: string }) {
       : <>
         <div className="gmd-position-table">
           <div className="gmd-position-row is-head"><span>Basket</span><span>Shares</span><span>Value</span><span>Demo dollars</span><span>Actions</span></div>
-          {owned === 0n ? <p className="gmd-empty-note">This wallet holds no USTX yet{account.dollarsMicros > 0n ? `, and has ${formatUsdMicros(account.dollarsMicros, 2)} in demo dollars to invest` : ""}.</p> : shares > 0n && <div className="gmd-position-row">
+          {owned === 0n ? <p className="gmd-empty-note">This wallet holds no USTX yet{account.dollarsMicros > 0n ? `, and has ${formatUsdMicros(account.dollarsMicros, 2)} in demo dollars to invest` : ""}.</p> : (shares > 0n || account.dollarsMicros > 0n) && <div className="gmd-position-row">
             <div className="gmd-position-name"><span className="gmd-mini-monogram">G</span><div><b>US Tech Basket</b><small>USTX · in your wallet</small></div></div>
             <div><span className="gmd-mobile-label">Shares</span><b>{formatShares(shares)}</b><small>{nav !== null ? `${formatUsdMicros(nav, 4)} / share` : ""}</small></div>
             <div><span className="gmd-mobile-label">Value</span><b>{value === null ? "—" : formatUsdRounded(value)}</b><small>{account.nav.navMicros !== null ? `NAV of ${shortTime(account.nav.effectiveAt)}` : account.nav.reason}</small></div>
@@ -78,7 +78,7 @@ export function WalletFundPosition({ address }: { address: string }) {
           {pooled && <div className="gmd-position-row">
             <div className="gmd-position-name"><span className="gmd-mini-monogram">G</span><div><b>USTX / dUSD pool</b><small>{formatShares(lp)} USTX-LP · {formatSharePpm(pooled.sharePpm, true)} of the pool</small></div></div>
             <div><span className="gmd-mobile-label">Shares</span><b>{formatShares(pooled.sharesMicros)}</b><small>USTX in the pool</small></div>
-            <div><span className="gmd-mobile-label">Value</span><b>{pooled.valueMicros === null ? "—" : formatUsdRounded(pooled.valueMicros)}</b><small>{pooled.valueMicros !== null ? "Both tokens, USTX at the NAV" : ""}</small></div>
+            <div><span className="gmd-mobile-label">Value</span><b>{nav === null ? "—" : formatUsdRounded(dollarsFor(pooled.sharesMicros, nav))}</b><small>{nav !== null ? "The USTX, at the NAV" : ""}</small></div>
             <div><span className="gmd-mobile-label">Demo dollars</span><b>{formatUsdMicros(pooled.dollarsMicros, 2)}</b><small>dUSD in the pool</small></div>
             <div className="gmd-position-actions"><Link className="gmd-small-button" prefetch={false} href="/pools#provide">Manage</Link></div>
           </div>}

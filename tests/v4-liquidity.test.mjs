@@ -82,6 +82,7 @@ test("deposits are quoted with the hook's arithmetic: the holdings' ratio, each 
   // Withdrawals: their part of what is held, rounded down.
   assert.deepEqual(v4WithdrawEstimate(1_000n * USD, pool), { sharesMicros: 5_010_000n, dollarsMicros: 498n * USD });
   assert.equal(v4WithdrawEstimate(pool.supply + 1n, pool), null);
+  assert.equal(v4WithdrawEstimate(1n, { ...pool, sharesMicros: 5n, dollarsMicros: 5n }), null, "too few LP tokens to pay anything out");
 });
 
 /** X Layer Testnet answering for the hook, the pool manager and the tokens; the NAV can be stale. */

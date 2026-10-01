@@ -1157,7 +1157,13 @@ html:has(.gmd-drawer[open]) { overflow: hidden; }
 .gmd-pair-mark i:last-child { margin-inline-start: -9px; background: #f1ece2; color: #73521f; }
 .gmd-pools-layout { margin-top: 2px; }
 .gmd-pools-layout .gmd-detail-content > .gmd-fund:first-child { margin-top: 30px; }
-.gmd-pools-layout .gmd-detail-aside { margin-top: 30px; }
+/* The panel comes first in the page; on a wide screen it sits in the right-hand column, scrolling within the window. */
+.gmd-pools-layout > .gmd-detail-aside { grid-column: 2; grid-row: 1; margin-top: 30px; max-height: calc(100dvh - 48px); overflow-y: auto; overscroll-behavior: contain; }
+.gmd-pools-layout > .gmd-detail-content { grid-column: 1; grid-row: 1; }
+a.gmd-pool-pair { color: inherit; }
+a.gmd-pool-pair:hover b { text-decoration: underline; text-underline-offset: 3px; }
+.gmd-pool-list a[aria-disabled] { cursor: not-allowed; opacity: .6; }
+.gmd-liquidity-panel .gmd-order-heading h2:focus:not(:focus-visible) { outline: none; }
 .gmd-pool-mix { margin-top: 24px; }
 .gmd-pool-mix-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
 .gmd-app .gmd-pool-mix-head h3 { font-size: 16px; }
@@ -1204,8 +1210,7 @@ html:has(.gmd-drawer[open]) { overflow: hidden; }
 .gmd-liquidity-panel :is(.gmd-tx-steps,.gmd-liquidity-done,.gmd-inline-error):focus-visible { outline: 2px solid var(--gmd-accent); outline-offset: 3px; }
 .gmd-pool-pair :is(b,small) { white-space: nowrap; }
 @media (max-width: 930px) {
-  /* Stacked, the panel follows the pool list, whose button points to it. */
-  .gmd-pools-layout .gmd-detail-aside { order: -1; }
+  .gmd-pools-layout > .gmd-detail-aside { max-height: none; overflow-y: visible; }
   .gmd-pools-layout .gmd-detail-content > .gmd-fund:first-child { margin-top: 24px; }
 }
 .gmd-liquidity-panel .gmd-order-input > div span { white-space: nowrap; }

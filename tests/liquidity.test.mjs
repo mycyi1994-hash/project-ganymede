@@ -188,7 +188,7 @@ test("fees, yields and shares read as a provider would need them", () => {
   assert.equal(formatSharePpm(1_000_000n), "100.0000%");
   assert.equal(formatSharePpm(0n, true), "under 0.0001%");
   assert.equal(formatSharePpm(0n), "0.0000%");
-  assert.match(liquidityErrorMessage({ data: "0x8199f5f3" }), /pool’s price moved/);
+  assert.match(liquidityErrorMessage({ data: "0x8199f5f3" }), /The price moved before this was confirmed/);
   assert.match(liquidityErrorMessage({ data: "0x2c5211c6" }), /too small for the pool/);
   // Errors the pool shares with the fund keep the fund's words; wallet errors stay the same.
   assert.match(liquidityErrorMessage({ data: "0x203d82d8" }), /expired/);

@@ -267,7 +267,9 @@ export const v4PairedShares = (dollarsMicros: bigint, pool: V4Amounts) => pool.d
  */
 export function v4WithdrawEstimate(lpMicros: bigint, pool: Pick<V4Pool, "supply" | "sharesMicros" | "dollarsMicros">): V4Amounts | null {
   if (lpMicros <= 0n || pool.supply === 0n || lpMicros > pool.supply) return null;
-  return { sharesMicros: lpMicros * pool.sharesMicros / pool.supply, dollarsMicros: lpMicros * pool.dollarsMicros / pool.supply };
+  const amounts = { sharesMicros: lpMicros * pool.sharesMicros / pool.supply, dollarsMicros: lpMicros * pool.dollarsMicros / pool.supply };
+  // The hook would burn LP tokens that pay out nothing; the app does not send that.
+  return amounts.sharesMicros === 0n && amounts.dollarsMicros === 0n ? null : amounts;
 }
 
 export type V4Fill = {

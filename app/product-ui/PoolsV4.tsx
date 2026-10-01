@@ -95,8 +95,8 @@ export function V4PoolOverview({ deployment, reader }: { deployment: V4Deploymen
     <div className="gmd-fund-grid" aria-busy={!pool && !reader.failure}>
       <article><span>Total value locked</span><strong>{tvl !== null ? formatUsdRounded(tvl) : pool ? "—" : wait(96)}</strong><small>{pool ? `${formatSharesShort(pool.sharesMicros, 4)} USTX and ${formatUsdRounded(pool.dollarsMicros)} dUSD, USTX at the NAV` : wait("80%")}</small></article>
       <article><span>Swap fee now</span><strong>{pool ? pool.feePips !== null ? formatFeePips(pool.feePips) : "Paused" : wait(64)}</strong><small>0.30% after each NAV record, rising to 1.00% over its hour</small></article>
-      <article><span>NAV record</span><strong>{pool ? pool.nav.answer !== null ? formatUsdMicros(pool.nav.navMicros, 2) : "Stale" : wait(80)}</strong><small>{!pool ? wait("70%") : pool.nav.answer === null ? pool.nav.reason : `${age !== null ? `${Math.floor(age / 60)} min old` : "Recorded"}${newerRecord(pool) ? " · the next trade moves the pool to it" : " · the pool is centred on it"}`}</small></article>
-      <article><span>Deposits waiting</span><strong>{waiting !== null ? formatUsdRounded(waiting) : pool ? "—" : wait(64)}</strong><small>Become LP tokens at the next NAV record</small></article>
+      <article><span>NAV record</span><strong>{pool ? pool.nav.answer !== null ? formatUsdMicros(pool.nav.navMicros, 2) : "Unavailable" : wait(80)}</strong><small>{!pool ? wait("70%") : pool.nav.answer === null ? pool.nav.reason : `${age !== null ? `${Math.floor(age / 60)} min old` : "Recorded"}${newerRecord(pool) ? " · the next trade moves the pool to it" : " · the pool is centred on it"}`}</small></article>
+      <article><span>Deposits waiting</span><strong>{waiting !== null ? formatUsdRounded(waiting) : pool ? "—" : wait(64)}</strong><small>Become LP tokens when the pool moves to the next NAV record</small></article>
     </div>
     {pool && pool.base.liquidity > 0n && <div className="gmd-pool-mix">
       <div className="gmd-pool-mix-head"><h3>Where the liquidity sits</h3><span>Pool price {formatUsdMicros(pool.priceMicros, 2)}{gap !== null ? ` · ${Math.abs(gap) < 0.005 ? "at the NAV" : `${Math.abs(gap).toFixed(2)}% ${gap > 0 ? "above" : "below"} the NAV`}` : ""}</span></div>
@@ -109,9 +109,8 @@ export function V4PoolOverview({ deployment, reader }: { deployment: V4Deploymen
       <div><dt>Value per LP token</dt><dd>{pool && answer !== null && pool.supply > 0n ? `${formatUsdMicros(v4ValueMicros(pool, answer) * ONE / pool.supply, 4)} at the NAV` : "—"}</dd></div>
       <div><dt>LP tokens issued</dt><dd>{pool ? `${formatSharesShort(pool.supply, 4)} USTX-V4LP` : "—"}</dd></div>
       <div><dt>Centred on</dt><dd>{pool && pool.peggedAt > 0 ? `The record of ${shortTime(new Date(pool.peggedAt * 1000).toISOString())}` : "—"}</dd></div>
-      <div><dt>Deposits</dt><dd>Become LP tokens at the next NAV record</dd></div>
-      <div><dt>Hook contract</dt><dd><a className="gmd-inline-tx" href={fundExplorer.address(deployment.hook)} target="_blank" rel="noreferrer">X Layer Testnet<Icon name="external" size={12} /><span className="gmd-sr-only"> (opens in a new tab)</span></a></dd></div>
-      <div><dt>Pool manager</dt><dd><a className="gmd-inline-tx" href={fundExplorer.address(deployment.poolManager)} target="_blank" rel="noreferrer">Uniswap v4<Icon name="external" size={12} /><span className="gmd-sr-only"> (opens in a new tab)</span></a></dd></div>
+      <div><dt>Deposits</dt><dd>Become LP tokens when the pool moves to the next NAV record</dd></div>
+      <div><dt>Pool contract</dt><dd><a className="gmd-inline-tx" href={fundExplorer.address(deployment.hook)} target="_blank" rel="noreferrer">X Layer Testnet<Icon name="external" size={12} /><span className="gmd-sr-only"> (opens in a new tab)</span></a></dd></div>
     </dl>
   </section>;
 }
@@ -129,11 +128,12 @@ export function V4LiquidityPanel({ deployment, provider, chain, owner, reader, o
   const [removeText, setRemoveText] = useState("");
   const [phase, setPhase] = useState<"form" | "working" | "done">("form");
   const [steps, setSteps] = useState<TxStep<StepKey>[]>([]);
-  const [failure, setFailure] = useState<string | null>(null);
+  const [failure, setFailure] = useState<{ message: string; hash: string | null } | null>(null);
   const [done, setDone] = useState<Done | null>(null);
   const stepsRef = useRef<HTMLOListElement>(null);
   const doneRef = useRef<HTMLDivElement>(null);
   const failureRef = useRef<HTMLParagraphElement>(null);
+  const headingRef = useRef<HTMLHeadingElement>(null);
   useEffect(() => { onBusy(phase === "working"); }, [phase, onBusy]);
   useEffect(() => {
     if (phase === "working") stepsRef.current?.focus();
@@ -159,7 +159,7 @@ export function V4LiquidityPanel({ deployment, provider, chain, owner, reader, o
   const problem = !account || !pool ? null
     : !fresh ? "Updating your balances…"
     : tab === "add" ? (
-      pool.supply === 0n ? "The pool opens with its first deposit."
+      pool.supply === 0n ? "The pool has not opened yet."
       : anchorAmount === null || anchorAmount === 0n ? "Enter an amount of USTX or demo dollars."
       : !maxima || !quote ? "That amount is too small for the pool."
       : maxima.sharesMicros > account.sharesMicros ? (account.sharesMicros === 0n ? "This wallet holds no USTX. Buy some on the USTX page first." : "That needs more USTX than this wallet holds.")
@@ -172,7 +172,7 @@ export function V4LiquidityPanel({ deployment, provider, chain, owner, reader, o
   /** Runs `plan` and shows its steps; on success, what it did. */
   async function execute(kind: Done["kind"], plan: PlanStep<StepKey>[]) {
     if (!provider || !account || !pool) return;
-    const progress: PlanProgress = { block: Math.max(reader.watermark, pool.block), hashes: [] };
+    const progress: PlanProgress = { block: Math.max(reader.watermark, pool.block), hashes: [], lastHash: null };
     const fills: V4Fill[] = [];
     const tracked = plan.map(step => ({ ...step, read: (receipt: FundReceipt) => { fills.push(v4Fill(receipt, deployment, address)); step.read?.(receipt); } }));
     const mark = (key: StepKey, next: StepState, hash?: string) => setSteps(current => current.map(step => step.key === key ? { ...step, state: next, hash: hash ?? step.hash } : step));
@@ -190,7 +190,7 @@ export function V4LiquidityPanel({ deployment, provider, chain, owner, reader, o
       if (kind === "deposit") setPair(current => ({ ...current, text: "" }));
       if (kind === "withdraw") setRemoveText("");
     } catch (error) {
-      setFailure(v4ErrorMessage(error));
+      setFailure({ message: v4ErrorMessage(error), hash: progress.lastHash });
       setPhase("form");
     } finally {
       reader.raise(progress.block);
@@ -214,7 +214,7 @@ export function V4LiquidityPanel({ deployment, provider, chain, owner, reader, o
     void execute("withdraw", [{ key: "withdraw", label: "Withdraw liquidity", approval: false, request: async () => calls.withdraw(amount, minima, await orderDeadline()) }]);
   }
 
-  const head = <div className="gmd-order-heading"><h2 id="provide-v4-title">{phase === "done" && done ? HEADINGS[done.kind] : phase === "working" ? "Confirm in your wallet" : "Provide liquidity"}</h2><Icon name="pool" /></div>;
+  const head = <div className="gmd-order-heading"><h2 id="provide-v4-title" ref={headingRef} tabIndex={-1}>{phase === "done" && done ? HEADINGS[done.kind] : phase === "working" ? "Confirm in your wallet" : "Provide liquidity"}</h2><Icon name="pool" /></div>;
   const shell = (body: ReactNode) => <aside className="gmd-order-panel gmd-liquidity-panel" aria-labelledby="provide-v4-title">{head}{body}</aside>;
   if (!provider || !owner) return shell(<WalletGate provider={provider} chain={chain} purpose="Provide liquidity" />);
   if (!account || !pool) return shell(reader.failure && !account
@@ -231,15 +231,15 @@ export function V4LiquidityPanel({ deployment, provider, chain, owner, reader, o
         {fill.deposited && fill.mintedLpMicros === 0n && <div><dt>LP tokens</dt><dd>At the next NAV record{dueIn(pool, now)}</dd></div>}
         {fill.mintedLpMicros > 0n && <div><dt>LP tokens received</dt><dd>{formatShares(fill.mintedLpMicros)} USTX-V4LP</dd></div>}
         {fill.cancelled && <div><dt>Returned to your wallet</dt><dd>{both(fill.cancelled)}</dd></div>}
-        {fill.converted && <div><dt>Converted at the NAV</dt><dd>{formatUsdMicros(fill.converted.navAnswer / 100n, 4)}</dd></div>}
+        {done.kind === "convert" && fill.converted && <div><dt>Converted at the NAV</dt><dd>{formatUsdMicros(fill.converted.navAnswer / 100n, 4)}</dd></div>}
         {fill.claimedLpMicros !== null && fill.claimedLpMicros > 0n && <div><dt>LP tokens claimed</dt><dd>{formatShares(fill.claimedLpMicros)} USTX-V4LP</dd></div>}
         {fill.withdrawn && <div><dt>Withdrawn</dt><dd>{both(fill.withdrawn)}</dd></div>}
         <div><dt>Your liquidity</dt><dd>{updated && position ? position.valueMicros !== null ? formatUsdRounded(position.valueMicros) : `${formatShares(position.lp)} USTX-V4LP` : "Updating…"}</dd></div>
         <div><dt>{done.hashes.length === 1 ? "Transaction" : "Transactions"}</dt><dd className="gmd-liquidity-hashes">{done.hashes.map((hash, index) => <TxLink key={hash} hash={hash}>{done.hashes.length === 1 ? "OKX Explorer" : `Step ${index + 1}`}</TxLink>)}</dd></div>
       </dl>
-      {done.kind === "deposit" && <p className="gmd-caption">Your deposit becomes LP tokens at the first NAV record after it, valued with everything in the pool at that NAV. Until then you can cancel it here.</p>}
+      {done.kind === "deposit" && <p className="gmd-caption">Your deposit becomes LP tokens when the pool moves to the next NAV record (at the next trade or deposit, or when you choose Convert now), valued with everything in the pool at that NAV. Until then you can cancel it here.</p>}
       <Link prefetch={false} className="gmd-button" href="/portfolio">View portfolio <Icon name="arrow" size={16} /></Link>
-      <button type="button" className="gmd-text-button" onClick={() => { setDone(null); setPhase("form"); }}>Done</button>
+      <button type="button" className="gmd-text-button" onClick={() => { setDone(null); setPhase("form"); requestAnimationFrame(() => headingRef.current?.focus()); }}>Done</button>
     </div>);
   }
 
@@ -254,23 +254,27 @@ export function V4LiquidityPanel({ deployment, provider, chain, owner, reader, o
       <strong>{position.valueMicros !== null ? formatUsdRounded(position.valueMicros) : `${formatShares(position.lp)} USTX-V4LP`}</strong>
       <small>{formatSharePpm(position.sharePpm, true)} of the pool{position.amounts ? ` · ${formatSharesShort(position.amounts.sharesMicros, 4)} USTX and ${formatUsdRounded(position.amounts.dollarsMicros)}` : ""}</small>
     </div>}
-    {account.waiting && <div className="gmd-liquidity-waiting" role="status">
+    {account.waiting && <div className="gmd-liquidity-waiting">
       <span>Waiting for the next NAV record</span>
       <b>{both(account.waiting)}</b>
-      <small>{newerRecord(pool) ? "A new NAV record is out: convert your deposit at it now, or cancel." : `It becomes LP tokens at the next NAV record${dueIn(pool, now)}. Until then, you can cancel.`}</small>
+      <small>{newerRecord(pool) ? "A new NAV record is out: convert your deposit at it now, or cancel." : `It becomes LP tokens when the pool moves to the next NAV record${dueIn(pool, now)}. Until then, you can cancel.`}</small>
       <div className="gmd-position-actions">
-        {newerRecord(pool) && <button type="button" className="gmd-small-button" onClick={() => void execute("convert", [
-          { key: "repeg", label: "Move the pool to the new NAV", approval: false, request: async () => calls.repeg() },
+        {fresh && newerRecord(pool) && <button type="button" className="gmd-small-button" onClick={() => void execute("convert", [
+          {
+            key: "repeg", label: "Move the pool to the new NAV", approval: false,
+            // A trade may have moved the pool since this page last read it: then only the claim is left.
+            request: async () => newerRecord((await readV4Pool(deployment, null)).pool) ? calls.repeg() : null,
+          },
           { key: "claim", label: "Claim your LP tokens", approval: false, request: async () => calls.claimShares(address) },
         ])}>Convert now</button>}
-        <button type="button" className="gmd-small-button" onClick={() => void execute("cancel", [{ key: "cancel", label: "Cancel the deposit", approval: false, request: async () => calls.cancelDeposit() }])}>Cancel deposit</button>
+        {fresh && <button type="button" className="gmd-small-button" onClick={() => void execute("cancel", [{ key: "cancel", label: "Cancel the deposit", approval: false, request: async () => calls.cancelDeposit() }])}>Cancel deposit</button>}
       </div>
     </div>}
-    {account.claimableLpMicros > 0n && <div className="gmd-liquidity-waiting is-ready" role="status">
+    {account.claimableLpMicros > 0n && <div className="gmd-liquidity-waiting is-ready">
       <span>Converted at a NAV record</span>
       <b>{formatShares(account.claimableLpMicros)} USTX-V4LP to claim</b>
       <small>Withdrawing or depositing claims them too.</small>
-      <div className="gmd-position-actions"><button type="button" className="gmd-small-button" onClick={() => void execute("claim", [{ key: "claim", label: "Claim your LP tokens", approval: false, request: async () => calls.claimShares(address) }])}>Claim</button></div>
+      {fresh && <div className="gmd-position-actions"><button type="button" className="gmd-small-button" onClick={() => void execute("claim", [{ key: "claim", label: "Claim your LP tokens", approval: false, request: async () => calls.claimShares(address) }])}>Claim</button></div>}
     </div>}
     <div className="gmd-wallet-balances">
       <div><span>Demo dollars</span><b>{usd(account.dollarsMicros)}</b><small>dUSD, no value</small></div>
@@ -280,12 +284,12 @@ export function V4LiquidityPanel({ deployment, provider, chain, owner, reader, o
       <div className="gmd-liquidity-inputs">
         <div className="gmd-order-input">
           <label htmlFor="v4-shares">USTX</label>
-          <div><input id="v4-shares" inputMode="decimal" autoComplete="off" placeholder="0" value={pair.anchor === "shares" ? pair.text : maxima ? plain(maxima.sharesMicros) : ""} onChange={event => { setPair({ anchor: "shares", text: event.target.value }); setFailure(null); }} aria-invalid={Boolean(pair.text) && Boolean(problem)} aria-describedby="v4-help" /><span>USTX</span></div>
+          <div><input id="v4-shares" inputMode="decimal" autoComplete="off" placeholder="0" value={pair.anchor === "shares" ? pair.text : maxima ? plain(maxima.sharesMicros) : ""} onChange={event => { setPair({ anchor: "shares", text: event.target.value }); setFailure(null); }} aria-invalid={fresh && Boolean(pair.text) && Boolean(problem)} aria-describedby="v4-help" /><span>USTX</span></div>
           <p>In your wallet: {formatShares(account.sharesMicros)}</p>
         </div>
         <div className="gmd-order-input">
           <label htmlFor="v4-dollars">Demo dollars</label>
-          <div><input id="v4-dollars" inputMode="decimal" autoComplete="off" placeholder="0" value={pair.anchor === "dollars" ? pair.text : maxima ? plain(maxima.dollarsMicros) : ""} onChange={event => { setPair({ anchor: "dollars", text: event.target.value }); setFailure(null); }} aria-invalid={Boolean(pair.text) && Boolean(problem)} aria-describedby="v4-help" /><span>dUSD</span></div>
+          <div><input id="v4-dollars" inputMode="decimal" autoComplete="off" placeholder="0" value={pair.anchor === "dollars" ? pair.text : maxima ? plain(maxima.dollarsMicros) : ""} onChange={event => { setPair({ anchor: "dollars", text: event.target.value }); setFailure(null); }} aria-invalid={fresh && Boolean(pair.text) && Boolean(problem)} aria-describedby="v4-help" /><span>dUSD</span></div>
           <p>In your wallet: {usd(account.dollarsMicros)}</p>
         </div>
         <p id="v4-help" className="gmd-liquidity-help">{pair.text && problem ? problem : "Type either amount; the other follows what the pool holds."}</p>
@@ -294,13 +298,13 @@ export function V4LiquidityPanel({ deployment, provider, chain, owner, reader, o
       <dl className="gmd-facts">
         {quote && <div><dt>You deposit</dt><dd>{both(quote)}</dd></div>}
         <div><dt>Value at the NAV</dt><dd>{quote && pool.nav.answer !== null ? formatUsdRounded(v4ValueMicros(quote, pool.nav.answer)) : "—"}</dd></div>
-        <div><dt>Becomes LP tokens</dt><dd>At the next NAV record</dd></div>
+        <div><dt>Becomes LP tokens</dt><dd>When the pool moves to the next NAV record</dd></div>
         <div><dt>Wallet confirmations</dt><dd>{maxima ? 1 + Number(account.assetAllowanceMicros < maxima.sharesMicros) + Number(account.dollarAllowanceMicros < maxima.dollarsMicros) : "—"}</dd></div>
       </dl>
     </> : <>
       <div className="gmd-order-input">
         <label htmlFor="v4-remove">LP tokens to withdraw</label>
-        <div><input id="v4-remove" inputMode="decimal" autoComplete="off" placeholder="0" value={removeText} onChange={event => { setRemoveText(event.target.value); setFailure(null); }} aria-invalid={Boolean(removeText) && Boolean(problem)} aria-describedby="v4-remove-help" /><span>USTX-V4LP</span></div>
+        <div><input id="v4-remove" inputMode="decimal" autoComplete="off" placeholder="0" value={removeText} onChange={event => { setRemoveText(event.target.value); setFailure(null); }} aria-invalid={fresh && Boolean(removeText) && Boolean(problem)} aria-describedby="v4-remove-help" /><span>USTX-V4LP</span></div>
         <p id="v4-remove-help">{removeText && problem ? problem : `Yours: ${formatShares(withdrawable)} USTX-V4LP${account.claimableLpMicros > 0n ? ", claimed as you withdraw" : ""}`}</p>
       </div>
       <div className="gmd-order-presets" role="group" aria-label="Part of your liquidity">{([25n, 50n, 75n, 100n] as const).map(percent => {
@@ -313,10 +317,10 @@ export function V4LiquidityPanel({ deployment, provider, chain, owner, reader, o
         <div><dt>Minimum accepted</dt><dd>{estimate ? both({ sharesMicros: withSlippage(estimate.sharesMicros), dollarsMicros: withSlippage(estimate.dollarsMicros) }) : "—"}</dd></div>
       </dl>
     </>}
-    {failure && <p ref={failureRef} tabIndex={-1} className="gmd-inline-error" role="alert">{failure}</p>}
+    {failure && <p ref={failureRef} tabIndex={-1} className="gmd-inline-error" role="alert">{failure.message}{failure.hash && <> <TxLink hash={failure.hash}>See the last transaction</TxLink></>}</p>}
     <button type="button" className="gmd-button" disabled={Boolean(problem) || (tab === "add" ? !quote : !estimate)} onClick={tab === "add" ? deposit : withdraw}>{tab === "add" ? "Deposit" : "Withdraw"} <Icon name="arrow" size={17} /></button>
     <p className="gmd-caption">{tab === "add"
-      ? "Deposits go in at the ratio of what the pool holds and become LP tokens at the next NAV record, valued with everything in the pool at that NAV. Until then you can cancel."
+      ? "Deposits go in at the ratio of what the pool holds and become LP tokens when the pool moves to the next NAV record, valued with everything in the pool at that NAV. Until then you can cancel."
       : "You receive your share of both tokens at once, whatever the NAV record's age. If the pool moves more than 1% before the transaction is mined, nothing is withdrawn."} Demo dollars and USTX have no value.</p>
   </>);
 }
@@ -327,7 +331,7 @@ export function V4PoolGuide() {
     <h2 id="how-v4-title">How this pool works</h2>
     <p>The hook holds all of this pool’s liquidity for its depositors and keeps it around the NAV recorded on X Layer. Each new record moves the liquidity to the new NAV before anyone trades on it, so providers do not sell to traders who already know the price has changed.</p>
     <dl>
-      <div><dt>Deposit</dt><dd>USTX and demo dollars at the ratio of what the pool holds. Your deposit waits for the next NAV record and becomes LP tokens at that NAV, valued with everything in the pool. Until then you can cancel it.</dd></div>
+      <div><dt>Deposit</dt><dd>USTX and demo dollars at the ratio of what the pool holds. Your deposit waits for the pool to move to the next NAV record (at the next trade or deposit, or when you choose Convert now) and becomes LP tokens at that NAV, valued with everything in the pool. Until then you can cancel it.</dd></div>
       <div><dt>Fee</dt><dd>0.30% just after a NAV record, rising to 1.00% as the record ages over an hour. Without a record under an hour old, the pool stops trading.</dd></div>
       <div><dt>Liquidity</dt><dd>A main range about 2% either side of the NAV, and a one-sided range with what the main range cannot use.</dd></div>
       <div><dt>Withdraw</dt><dd>At any time, for your share of both tokens, whatever the record’s age.</dd></div>
