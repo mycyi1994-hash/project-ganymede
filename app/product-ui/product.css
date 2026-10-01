@@ -1140,3 +1140,69 @@ html:has(.gmd-drawer[open]) { overflow: hidden; }
 .gmd-app .gmd-pool-check .gmd-section-heading { margin-bottom: 12px; }
 .gmd-app .gmd-pool-summary { font-size: 15px; margin: 4px 0 8px; max-width: 70ch; }
 .gmd-app .gmd-pool-summary .gmd-text-button { width: auto; margin: 0 0 0 6px; min-height: 0; }
+
+/* Pools: the pool list, the USTX/dUSD pool and the liquidity panel */
+.gmd-pool-list { background: #fff; border: 1px solid var(--gmd-line); border-radius: 10px; padding: 8px 24px 4px; }
+.gmd-pool-list .gmd-data-table-scroll { margin-top: 0; }
+.gmd-pool-list .gmd-table td:last-child { width: 1%; white-space: nowrap; }
+.gmd-pool-list .gmd-table tbody th { font-weight: 400; }
+.gmd-pool-pair { display: inline-flex; align-items: center; gap: 12px; }
+.gmd-pool-pair > span:last-child { display: flex; flex-direction: column; }
+.gmd-pool-pair b { font-size: 15px; }
+.gmd-pool-pair small { font-size: 12px; color: var(--gmd-copy); }
+.gmd-pair-mark { display: inline-flex; flex-shrink: 0; }
+.gmd-pair-mark i { width: 28px; height: 28px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-style: normal; font-family: "Instrument Sans",Arial,sans-serif; font-size: 13px; font-weight: 600; border: 2px solid #fff; }
+.gmd-pair-mark i:first-child { background: #e3eeec; color: var(--gmd-accent); }
+.gmd-pair-mark i:last-child { margin-inline-start: -9px; background: #f1ece2; color: #73521f; }
+.gmd-pools-layout { margin-top: 2px; }
+.gmd-pools-layout .gmd-detail-content > .gmd-fund:first-child { margin-top: 30px; }
+.gmd-pools-layout .gmd-detail-aside { margin-top: 30px; }
+.gmd-pool-mix { margin-top: 24px; }
+.gmd-pool-mix-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+.gmd-app .gmd-pool-mix-head h3 { font-size: 16px; }
+.gmd-pool-mix-head span { font-size: 13px; color: var(--gmd-copy); }
+.gmd-pool-mix-bar { display: flex; gap: 2px; height: 10px; margin-top: 10px; border-radius: 5px; overflow: hidden; }
+.gmd-pool-mix-bar i { display: block; min-width: 2px; }
+.gmd-pool-mix-bar i:first-child { background: var(--gmd-accent); }
+.gmd-pool-mix-bar i:last-child { flex: 1; background: #cfb374; }
+.gmd-pool-mix-legend { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px 16px; margin-top: 8px; font-size: 13px; color: var(--gmd-copy); }
+.gmd-pool-mix-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.gmd-pool-mix-legend i { width: 8px; height: 8px; border-radius: 2px; background: var(--gmd-accent); }
+.gmd-pool-mix-legend span:last-child i { background: #cfb374; }
+.gmd-price-move { margin-top: 26px; padding: 20px; border: 1px solid var(--gmd-line); border-radius: 8px; background: #fff; }
+.gmd-app .gmd-price-move-head h3 { font-size: 17px; }
+.gmd-price-move-head p { margin-top: 4px; font-size: 14px; }
+.gmd-price-move .gmd-order-presets { flex-wrap: wrap; margin-block: 14px 8px; }
+.gmd-price-move .gmd-order-presets button { flex: 1 0 52px; }
+.gmd-price-move .gmd-facts > div { border-bottom: 1px solid #edf1f2; }
+.gmd-price-move > .gmd-caption { margin-top: 10px; }
+.gmd-liquidity-position { display: flex; flex-direction: column; gap: 2px; margin-bottom: 14px; padding: 14px; border-radius: 8px; background: #edf3f1; }
+.gmd-liquidity-position > span { font-size: 12px; color: var(--gmd-copy); }
+.gmd-liquidity-position strong { font-family: "Instrument Sans",Arial,sans-serif; font-size: 24px; font-variant-numeric: tabular-nums; }
+.gmd-liquidity-position small { font-size: 12px; color: var(--gmd-copy); }
+.gmd-liquidity-panel .gmd-wallet-balances { margin-bottom: 0; }
+.gmd-app .gmd-liquidity-panel .gmd-liquidity-mode { margin-bottom: 14px; }
+.gmd-liquidity-inputs { display: flex; flex-direction: column; gap: 10px; }
+.gmd-liquidity-panel .gmd-order-input input { font-size: 24px; }
+.gmd-liquidity-panel .gmd-order-input + .gmd-order-presets { margin-block: 12px 16px; }
+.gmd-liquidity-panel .gmd-order-input:only-of-type, .gmd-liquidity-panel > .gmd-order-input { margin-bottom: 14px; }
+.gmd-app .gmd-liquidity-help { font-size: 12px; margin-bottom: 14px; }
+.gmd-liquidity-panel .gmd-order-estimate { margin-top: 4px; }
+.gmd-liquidity-panel .gmd-facts > div { padding-block: 8px; }
+.gmd-liquidity-hashes { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 4px 12px; }
+.gmd-liquidity-panel :is(.gmd-tx-steps,.gmd-liquidity-done,.gmd-inline-error):focus { outline: none; }
+.gmd-liquidity-panel :is(.gmd-tx-steps,.gmd-liquidity-done,.gmd-inline-error):focus-visible { outline: 2px solid var(--gmd-accent); outline-offset: 3px; }
+.gmd-pool-pair :is(b,small) { white-space: nowrap; }
+@media (max-width: 930px) {
+  /* Stacked, the panel follows the pool list, whose button points to it. */
+  .gmd-pools-layout .gmd-detail-aside { order: -1; }
+  .gmd-pools-layout .gmd-detail-content > .gmd-fund:first-child { margin-top: 24px; }
+}
+.gmd-liquidity-panel .gmd-order-input > div span { white-space: nowrap; }
+@media (max-width: 600px) {
+  .gmd-pool-list { padding: 4px 16px 0; }
+  /* Phone width keeps the pool, its value and its yield; the panel follows right below. */
+  .gmd-pool-list .gmd-table :is(th,td):is(:nth-child(2),:nth-child(5),:nth-child(6)) { display: none; }
+  .gmd-pool-list .gmd-table :is(th,td):nth-child(4) { padding-inline-end: 0; }
+  .gmd-price-move { padding: 16px; }
+}

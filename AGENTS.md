@@ -4,9 +4,9 @@
 
 The public UI presents USTX as a live fund service, laid out like a production
 DeFi app: one testnet notice and the network and "Connect OKX Wallet" in the
-header; Markets (with the market's latest activity and its 24-hour figures, a countdown to the next NAV record, and a detail panel for each xStock); the USTX page (order panel with wallet and demo-balance investing, wallet orders routed to the fund or the pool at the better price, borrowing against USTX, fund
+header; Markets (with the market's latest activity and its 24-hour figures, a countdown to the next NAV record, and a detail panel for each xStock); Pools (the USTX/dUSD pool's value, 24-hour volume and fees, fee APR and price against the NAV, its activity, and adding or withdrawing liquidity from a wallet, in both tokens or demo dollars alone); the USTX page (order panel with wallet and demo-balance investing, wallet orders routed to the fund or the pool at the better price, borrowing against USTX, fund
 overview with the price oracle and the pool's market price, market activity from the contracts' events, factsheet holdings, About); Portfolio (the demo
-balance and the wallet's USTX, including any posted as lending collateral with its loan, looked through to each xStock, and valuation of
+balance and the wallet's USTX, including any posted as lending collateral with its loan and its liquidity in the pool, looked through to each xStock, and valuation of
 any wallet's xStocks on X Layer mainnet); and Transparency (the customer proof page). Keep pitch and developer
 material out of those screens: the technical checks, the tamper experiment and
 the evidence download (re-checked by `npm run verify:evidence`) live on
@@ -75,7 +75,7 @@ a clean tree (`rm -rf .vinext dist`) with `CLOUDFLARE_WORKER_NAME=ganymede-xlaye
 Never reuse an older `dist`. Record the source commit and the prior version in
 the deployment message, and add the new version to `docs/PRODUCT_RELEASE.md`.
 
-After deploying, verify Markets, USTX, Transparency, Portfolio, Activity, Lab and
+After deploying, verify Markets, Pools, USTX, Transparency, Portfolio, Activity, Lab and
 the legacy redirects on the public URL.
 
 ## Security rules that must stay

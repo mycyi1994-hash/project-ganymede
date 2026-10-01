@@ -31,9 +31,10 @@ test("Markets renders the actual product path without fabricated values or the v
 });
 
 test("public product routes share navigation and select the right destination before hydration", async () => {
-  const expected = [["/", "Markets"], ["/portfolio", "Portfolio"], ["/products/ustx/transparency", "Transparency"]];
+  const expected = [["/", "Markets"], ["/pools", "Pools"], ["/portfolio", "Portfolio"], ["/products/ustx/transparency", "Transparency"]];
   for (const [path, current, heading] of [
     ["/", "/", "US Tech Basket"],
+    ["/pools", "/pools", "Provide liquidity to USTX"],
     ["/products/ustx", "/", "About USTX"],
     ["/products/ustx/transparency", "/products/ustx/transparency", "Transparency"],
     ["/portfolio", "/portfolio", "Your wallet on X Layer"],
@@ -75,6 +76,28 @@ test("product pages offer clearly labelled demo investing next to the verificati
   assert.match(product, /OKX OnchainOS/);
   assert.doesNotMatch(product, /Testnet demo · demo dollars|Proof of NAV|model share/, "one testnet notice, customer wording");
   assert.match(product, /id="investment"/);
+});
+
+test("Pools offers the live pool's liquidity from a wallet, with its figures read in the browser", async () => {
+  const response = await render("/pools");
+  assert.equal(response.status, 200);
+  const html = visible(await response.text());
+  assert.match(html, /<h1>Pools<\/h1>/);
+  assert.match(html, /USTX \/ dUSD/);
+  assert.match(html, /Constant product/);
+  assert.match(html, /Provide liquidity/);
+  assert.match(html, /<div class="gmd-detail-aside" id="provide">/);
+  assert.match(html, /href="#provide"/);
+  assert.match(html, /Install the OKX Wallet extension/, "the panel asks for a wallet before the browser has one");
+  assert.match(html, /How providing liquidity works/);
+  assert.match(html, /If the NAV moves/);
+  assert.match(html, /Pool activity/);
+  assert.match(html, /Reading market activity from X Layer Testnet/);
+  assert.match(html, /You are on X Layer Testnet\. Balances are demo funds with no real value\./);
+  assert.match(html, /Demo dollars and USTX have no value/);
+  // Figures come from the chain in the browser: nothing is invented on the server.
+  assert.doesNotMatch(html, /Example account|\$12,454|Try to break it|npm run/);
+  assert.equal(html.match(/You are on X Layer Testnet/g).length, 1, "one testnet notice");
 });
 
 test("legacy URLs route to their matching product or simulation destination", async () => {
