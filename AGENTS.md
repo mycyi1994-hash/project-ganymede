@@ -4,15 +4,15 @@
 
 The public UI presents USTX as a live fund service, laid out like a production
 DeFi app: one testnet notice and the network and "Connect OKX Wallet" in the
-header; Markets (with the market's latest activity and its 24-hour figures, a countdown to the next NAV record, and a detail panel for each xStock); the USTX page (order panel with wallet and demo-balance investing, wallet orders routed to the fund or the pool at the better price, borrowing against USTX, fund
+header; Markets (with the market's latest activity and its 24-hour figures, a countdown to the next NAV record, and a detail panel for each xStock); Pools (the USTX/dUSD pool's value, 24-hour volume and fees, fee APR and price against the NAV, its activity, and adding or withdrawing liquidity from a wallet, in both tokens or demo dollars alone); the USTX page (order panel with wallet and demo-balance investing, wallet orders routed to the fund or the pool at the better price, borrowing against USTX, fund
 overview with the price oracle and the pool's market price, market activity from the contracts' events, factsheet holdings, About); Portfolio (the demo
-balance and the wallet's USTX, including any posted as lending collateral with its loan, looked through to each xStock, and valuation of
+balance and the wallet's USTX, including any posted as lending collateral with its loan and its liquidity in the pool, looked through to each xStock, and valuation of
 any wallet's xStocks on X Layer mainnet); and Transparency (the customer proof page). Keep pitch and developer
 material out of those screens: the technical checks, the tamper experiment and
 the evidence download (re-checked by `npm run verify:evidence`) live on
 `/developers`, which with `/issuers`, the `/embed/ustx` badge (and `/embed/basket` for a basket
 defined by a file under `public/baskets/`, such as the MAG3 demo in its own registry) and the public
-`GET /api/v1/ustx` (with `GET /api/v1/ustx/activity`) forms the partner surface linked from the footer. The
+`GET /api/v1/ustx` (with `GET /api/v1/ustx/activity` and `GET /api/v1/ustx/pools`) forms the partner surface linked from the footer. The
 GMDCORE test ledger page (`/activity`) and the paper Lab are earlier work and
 stay out of the navigation. Production is the `ganymede-xlayer` Worker; the
 settlement relayer is `ganymede-settlement-relayer`, and the arbitrage keeper is
@@ -42,7 +42,12 @@ Borrow section (`app/product-ui/Lending.tsx`, `lib/xstocks/lending.ts`) deposits
 USTX, borrows, repays, withdraws and lends through it. Pausing it again or any
 other administrator action needs the user's approval.
 `GanymedeBasketVault` (in-kind creation and redemption) runs only on a fork (`npm run fork:vault` in
-`onchain/`); deploying it anywhere needs the user's approval. Real money stays out of scope: no mainnet deployment of these contracts, no real deposits, withdrawals, custody or payment destinations, and
+`onchain/`); deploying it anywhere needs the user's approval. `GanymedeRwaLiquidityHook` (a Uniswap
+v4 hook that runs a USTX/dUSD pool around the NAV and holds its liquidity for depositors) and
+`GanymedeV4Router` run only on a fork (`npm run fork:v4`); deploying them (`npm run deploy:v4`, which
+also deploys Uniswap's PoolManager on X Layer Testnet) needs the user's approval. Pools shows that
+pool only once `V4_POOL_DEPLOYMENT` in `lib/xstocks/v4-liquidity.ts` is pinned to the recorded deployment,
+and the keeper moves it to each NAV record once its `V4_HOOK_ADDRESS` is set. Real money stays out of scope: no mainnet deployment of these contracts, no real deposits, withdrawals, custody or payment destinations, and
 no value for dUSD or USTX. Never create or name an address that would receive
 real funds, and keep the demo, testnet and simulation labels.
 `lib/product-contract.ts` keeps `canSubscribe`, `canRedeem`, `settlementAsset`
@@ -72,7 +77,7 @@ a clean tree (`rm -rf .vinext dist`) with `CLOUDFLARE_WORKER_NAME=ganymede-xlaye
 Never reuse an older `dist`. Record the source commit and the prior version in
 the deployment message, and add the new version to `docs/PRODUCT_RELEASE.md`.
 
-After deploying, verify Markets, USTX, Transparency, Portfolio, Activity, Lab and
+After deploying, verify Markets, Pools, USTX, Transparency, Portfolio, Activity, Lab and
 the legacy redirects on the public URL.
 
 ## Security rules that must stay
