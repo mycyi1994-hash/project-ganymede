@@ -13,6 +13,7 @@
     "deploy:lending": "hardhat run scripts/deploy-lending.ts --network xlayerTestnet",
     "activate:lending": "hardhat run scripts/activate-lending.ts --network xlayerTestnet",
     "deploy:v4": "hardhat run scripts/deploy-v4.ts --network xlayerTestnet",
+    "analyze": "bash scripts/slither.sh",
     "trade:v4": "hardhat run scripts/trade-v4.ts --network xlayerTestnet",
     "fork:lending": "hardhat run scripts/fork-lending.ts",
     "fork:vault": "hardhat run scripts/fork-vault.ts",
