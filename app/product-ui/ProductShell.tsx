@@ -8,7 +8,6 @@ import { Icon } from "./Icons";
 import { AskUstx } from "./AskUstx";
 import { MarketProvider } from "./MarketProvider";
 import { WalletAccountProvider, useWalletAccount } from "./WalletAccount";
-import "./product.css";
 
 export type ProductSection = "markets" | "pools" | "verify" | "portfolio" | "activity";
 export type DesignScreen = "markets" | "product" | "order" | "portfolio" | "holding" | "activity" | "transaction";
