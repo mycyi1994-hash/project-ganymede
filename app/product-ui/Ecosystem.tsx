@@ -160,6 +160,14 @@ const mcpExample = `curl -s ${SITE}/mcp -H 'Content-Type: application/json' -d '
   "params": { "name": "quote_ustx_order", "arguments": { "side": "buy", "amount": 500 } }
 }'`;
 
+const mcpClientExample = `# Claude Code
+claude mcp add --transport http ganymede-ustx ${SITE}/mcp
+
+# Cursor (.cursor/mcp.json) and other clients that take a server URL
+{ "mcpServers": { "ganymede-ustx": { "url": "${SITE}/mcp" } } }
+
+# Claude (web or desktop): Settings → Connectors → Add custom connector → ${SITE}/mcp`;
+
 const embedExample = `<iframe src="${SITE}/embed/ustx" title="USTX verified NAV"
   width="440" height="260" style="border:0" loading="lazy"></iframe>`;
 
@@ -179,7 +187,8 @@ export function DevelopersPage() {
           <a className="gmd-inline-link" href="/api/v1/ustx" target="_blank" rel="noreferrer">Open the live response <Icon name="external" size={14} /></a>
         </section>
         <section id="mcp"><h2>Ask from an AI agent (MCP)</h2><p>AI agents can read USTX through the Model Context Protocol at <code>{SITE}/mcp</code> (Streamable HTTP, JSON responses, no key or session). Its six tools only read: <code>get_ustx_nav</code> (the latest record and whether orders accept it), <code>verify_ustx_nav</code> (the record checked against its document), <code>get_ustx_holdings</code> (what one share holds), <code>quote_ustx_order</code> (the fund at the NAV against both pools, and the best), <code>get_ustx_pools</code> (both pools and their results for providers) and <code>get_ustx_market_activity</code>. None signs or sends anything: an order still needs the visitor&rsquo;s own wallet on the USTX page, and demo dollars and USTX have no value.</p>
-          <Code label="Call a tool">{mcpExample}</Code>
+          <Code label="Add it to your AI client">{mcpClientExample}</Code>
+          <Code label="Or call a tool directly">{mcpExample}</Code>
         </section>
         <section id="chain"><h2>Read the record from X Layer yourself</h2><p>You do not have to trust our API. The registry is a public contract on X Layer Testnet (chain {PROOF_DEPLOYMENT.chainId}); its <code>latestNav</code> getter returns the NAV per share, the shares outstanding, the composition fingerprint and the effective time.</p>
           <Code label="TypeScript with viem">{viemExample}</Code>
