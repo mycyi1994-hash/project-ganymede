@@ -7,7 +7,10 @@ DeFi app: one testnet notice and the network and "Connect OKX Wallet" in the
 header; Markets (with the market's latest activity and its 24-hour figures, a countdown to the next NAV record, and a detail panel for each xStock); Pools (the USTX/dUSD pool's value, 24-hour volume and fees, fee APR and price against the NAV, its activity (the v4 pool's trades and liquidity in a list of their own), and adding or withdrawing liquidity from a wallet, in both tokens or demo dollars alone; with the v4 pool, both pools' results for their providers at the NAV over the same records, kept by the activity cron in `lib/xstocks/lp-markout.ts`); the USTX page (order panel with wallet and demo-balance investing, wallet orders routed to the fund, the constant-product pool or the v4 pool at the best price (the v4 quote from its router's dry run), borrowing against USTX, fund
 overview with the price oracle and the pool's market price, market activity from the contracts' events, factsheet holdings, About); Portfolio (the demo
 balance and the wallet's USTX, including any posted as lending collateral with its loan and its liquidity in the pool, looked through to each xStock, and valuation of
-any wallet's xStocks on X Layer mainnet); and Transparency (the customer proof page). Keep pitch and developer
+any wallet's xStocks on X Layer mainnet); and Transparency (the customer proof page). Ask USTX (`app/product-ui/AskUstx.tsx`, `POST /api/assistant`,
+`lib/assistant/ask.ts`) answers questions on every product screen with an OpenAI model (the Worker secret
+`OPENAI_API_KEY`, optional `OPENAI_MODEL`) that reads only through the MCP tools, gives no investment
+advice and is limited per visitor and per day. Keep pitch and developer
 material out of those screens: the technical checks, the tamper experiment and
 the evidence download (re-checked by `npm run verify:evidence`) live on
 `/developers`, which with `/issuers`, the `/embed/ustx` badge (and `/embed/basket` for a basket

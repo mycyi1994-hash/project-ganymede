@@ -98,6 +98,7 @@ From 30 September, with the organizers' confirmation that finalists may present 
 | Providers against arbitrage | Pools compares both pools over the same NAV records, from the contracts' events: what each pool's trades made or lost for its providers at the NAV. In its first day, the keeper's arbitrage took $0.0505 from the constant-product pool's providers and nothing from the v4 pool's |
 | Routing | The USTX wallet order panel quotes the fund at the NAV, the constant-product pool and the v4 pool (through the router's dry run) and routes each order to whichever gives the most |
 | AI agents | An MCP server at `/mcp` (Streamable HTTP, no key) lets AI agents, such as an OKX.AI A2MCP client, read the latest NAV, check it against its document, look through a share, quote an order at the fund and both pools, and read the pools and the market's activity. Every tool reads; orders still need the user's own wallet |
+| Ask USTX | An assistant on every product screen answers questions about USTX with an OpenAI model that reads X Layer through the same read-only tools as the MCP server, and names the tools behind each answer. It gives no investment advice, keeps the demo labels and has a daily allowance per visitor and for the site |
 | Assurance | Invariant fuzzing of the hook against Uniswap's compiled PoolManager (1,000 random steps) and a Slither pass over every contract with each High and Medium finding triaged ([docs/STATIC_ANALYSIS.md](docs/STATIC_ANALYSIS.md)) |
 
 ## Project history

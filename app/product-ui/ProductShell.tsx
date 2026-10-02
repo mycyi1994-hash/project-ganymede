@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { BrandMark } from "../DesignElements";
 import { Icon } from "./Icons";
+import { AskUstx } from "./AskUstx";
 import { MarketProvider } from "./MarketProvider";
 import { WalletAccountProvider, useWalletAccount } from "./WalletAccount";
 import "./product.css";
@@ -61,5 +62,6 @@ export function ProductShell({ children, section = "markets", preview }: { child
     <ProductHeader section={section} preview={preview} />
     <main id="product-main" className="gmd-main">{children}</main>
     <footer className="gmd-footer"><div><b>Ganymede</b><span>Market data by OKX OnchainOS · Built on X Layer · Not investment advice</span></div><nav aria-label="Resources"><Link prefetch={false} href="/products/ustx/transparency">Transparency</Link><Link prefetch={false} href="/methodology">Methodology</Link><Link prefetch={false} href="/limitations">Risks</Link><Link prefetch={false} href="/developers">Docs</Link><Link prefetch={false} href="/issuers">For issuers</Link></nav></footer>
+    {!preview && <AskUstx />}
   </div></MarketProvider></WalletAccountProvider>;
 }
