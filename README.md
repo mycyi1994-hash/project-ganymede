@@ -8,7 +8,7 @@ Ganymede sells **USTX, the US Tech Basket**: one share tracks Apple, Microsoft, 
 
 Investing uses demo dollars with no value. From a wallet, the USTX contract on X Layer Testnet issues shares at the NAV recorded on X Layer; with a demo balance, nothing is issued on chain. No real money moves.
 
-**Built for OKX Dev Day 2026 (Build a Market).** Ganymede existed before the event. The new work of the 17–25 September build period is listed with its commits in [docs/BUILD_PERIOD.md](docs/BUILD_PERIOD.md) and summarized below.
+**Built for OKX Dev Day 2026 (Build a Market).** Ganymede existed before the event. The new work of the 17–25 September build period is listed with its commits in [docs/BUILD_PERIOD.md](docs/BUILD_PERIOD.md) and summarized below, apart from the work added since as one of the 30 finalists (Pools and a Uniswap v4 pool held at the NAV).
 
 <table>
 <tr>
@@ -80,13 +80,24 @@ Network fees on X Layer are a fraction of a cent on either path, so they do not 
 | Investing | Wallet investing on X Layer Testnet: the order panel quotes the USTX contract at the recorded NAV and the USTX/dUSD pool at its price after fee and price impact, routes each buy or sell to the better one (or the one the visitor picks), and OKX Wallet approves and sends it, with each step, the fill and the explorer link shown. Demo accounts with $10,000 in demo dollars, instant orders at the recorded NAV, idempotent retries and a daily order cap; a confirmation that shows the tokens each order put in the basket; a portfolio that looks through to every xStock |
 | Fund | Fund overview with size, investors, return since launch and look-through holdings; the shares outstanding in wallets and demo balances recorded on X Layer with every NAV |
 | Market activity | Markets shows the last 24 hours of the USTX market (volume, trades, keeper arbitrage and what it earned, loan actions) and the latest trades; the USTX page lists the market's latest events from X Layer Testnet: investments and redemptions at the NAV, pool trades with their price, the keeper's arbitrage as one row with what it earned, and every lending step, each linked to its transaction. A scheduled job on its own cron reads new blocks every five minutes (the public RPC answers 100 blocks per request) and the page reads the blocks since, so a visitor's own order appears within seconds |
-| Liquidity | A Pools screen for the live USTX/dUSD pool: value at the NAV, 24-hour volume and fees from the market activity index, a fee APR measured from the growth of √(USTX × dUSD) per LP token between two blocks, and the price against the NAV. OKX Wallet adds liquidity at the pool's ratio, or from demo dollars alone through the fund, and withdraws it, with every step shown and each quote matched to the pool contract's own arithmetic in tests |
 | Portfolio | The wallet's USTX on X Layer Testnet, including any posted as lending collateral with the loan against it and its liquidity in the pool, looked through to each xStock, and valuation of any wallet's xStocks on X Layer mainnet at the verified prices with a downloadable statement |
 | Ecosystem | Public NAV API with open CORS, an embeddable self-verifying badge, issuer and developer pages |
-| Product | Markets, Pools, USTX, Portfolio and Transparency screens laid out like a live service: one testnet notice, network and OKX Wallet in the header, fund facts with the price oracle, factsheet holdings and chart ranges |
+| Product | Markets, USTX, Portfolio and Transparency screens laid out like a live service: one testnet notice, network and OKX Wallet in the header, fund facts with the price oracle, factsheet holdings and chart ranges |
 | Hardening | Public reads never write, spoofable identity headers ignored, relayer retries reconcile before re-sending, upstream errors kept out of public responses |
 
 Commit-by-commit detail, with times and line counts: [docs/BUILD_PERIOD.md](docs/BUILD_PERIOD.md).
+
+## Since the build period (finalist round)
+
+From 30 September, with the organizers' confirmation that finalists may present the latest version:
+
+| Area | New since the build period |
+| --- | --- |
+| Liquidity | A Pools screen for the live USTX/dUSD pool: value at the NAV, 24-hour volume and fees from the market activity index, a fee APR measured from the growth of √(USTX × dUSD) per LP token between two blocks, and the price against the NAV. OKX Wallet adds liquidity at the pool's ratio, or from demo dollars alone through the fund, and withdraws it, with every step shown and each quote matched to the pool contract's own arithmetic in tests |
+| Uniswap v4 | `GanymedeRwaLiquidityHook`, a Uniswap v4 hook that runs a second USTX/dUSD pool around the NAV: it moves the pool to each NAV record before trading, prices deposits at the next record, charges a fee that rises from 0.30% to 1.00% as the record ages, and holds the liquidity for its depositors. Deployed with `GanymedeV4Router` and Uniswap v4-core's PoolManager on X Layer Testnet, seeded with $10,000, re-pegged by the keeper at each record ([design and run](docs/UNISWAP_V4_LIQUIDITY.md)) |
+| Providers against arbitrage | Pools compares both pools over the same NAV records, from the contracts' events: what each pool's trades made or lost for its providers at the NAV. In its first day, the keeper's arbitrage took $0.0505 from the constant-product pool's providers and nothing from the v4 pool's |
+| Routing | The USTX wallet order panel quotes the fund at the NAV, the constant-product pool and the v4 pool (through the router's dry run) and routes each order to whichever gives the most |
+| Assurance | Invariant fuzzing of the hook against Uniswap's compiled PoolManager (1,000 random steps) and a Slither pass over every contract with each High and Medium finding triaged ([docs/STATIC_ANALYSIS.md](docs/STATIC_ANALYSIS.md)) |
 
 ## Project history
 
