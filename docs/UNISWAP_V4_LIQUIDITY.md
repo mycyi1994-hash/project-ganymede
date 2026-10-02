@@ -288,6 +288,6 @@ The NAV moved little between records, so the constant-product pool's loss stays 
   liquidity just ahead of a trade it could see. A third made deposits wait while a record dated
   ahead of the block is out (taken then, a deposit would convert at that record once its time came)
   and sized a deposit that applies a record itself against the shares that record minted. The app shows the pool on Pools from its pinned
-  deployment (see "In the app"); it does not route the order panel's trades through it yet. The pool manager is Uniswap's BUSL-1.1 code, deployed
+  deployment (see "In the app"); the USTX order panel quotes it beside the fund and the constant-product pool through `GanymedeV4Router.quoteExactInput` and routes a wallet order to whichever gives the most. The pool manager is Uniswap's BUSL-1.1 code, deployed
   here only on a testnet; the hook and router import v4-core's MIT-licensed interfaces and
   libraries. Demo dollars and USTX have no value.

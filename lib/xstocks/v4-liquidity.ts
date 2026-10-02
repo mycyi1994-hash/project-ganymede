@@ -59,7 +59,16 @@ export const V4_SELECTORS = {
   totalSupply: "0x18160ddd",
   balanceOf: "0x70a08231",
   extsload: "0x1e2eaeaf",
+  // GanymedeV4Router
+  swapExactInput: "0x5310efdc",
+  quoteExactInput: "0x4ba5bd20",
 } as const;
+
+/** The pool key's fixed parts: a dynamic fee the hook sets on each swap, and ticks 10 apart. */
+export const V4_DYNAMIC_FEE = 0x800000;
+export const V4_TICK_SPACING = 10;
+/** keccak256("Swapped(address,bytes32,bool,uint256,uint256)"): the router's record of a swap. */
+export const V4_SWAPPED_TOPIC = "0x81e79d9473b5b38652c9c83ded1782fec24ebf89f59305aa8e73dc465101e9ad";
 
 export const V4_EVENTS = {
   deposited: "0x91ede45f04a37a7c170f5c1207df3b6bc748dc1e04ad5e917a241d0f52feada3",
@@ -356,3 +365,71 @@ export function v4ErrorMessage(error: unknown): string {
 
 /** The hook is pinned with the tokens the app already uses. */
 export const isPinnedToFund = (deployment: V4Deployment) => deployment.asset === FUND_DEPLOYMENT.fund && deployment.dollar === FUND_DEPLOYMENT.dollar;
+
+/** The pool key as the router takes it: (currency0, currency1, fee, tickSpacing, hooks), five words. */
+function poolKeyWords(deployment: V4Deployment): string {
+  const [currency0, currency1] = deployment.assetIsCurrency0 ? [deployment.asset, deployment.dollar] : [deployment.dollar, deployment.asset];
+  return `${addressWord(currency0)}${addressWord(currency1)}${word(BigInt(V4_DYNAMIC_FEE))}${word(BigInt(V4_TICK_SPACING))}${addressWord(deployment.hook)}`;
+}
+
+/** Whether a purchase of USTX with demo dollars swaps currency0 for currency1: only when the dollar is currency0. */
+const zeroForOne = (deployment: V4Deployment, side: "buy" | "sell") => (side === "buy") !== deployment.assetIsCurrency0;
+
+/**
+ * Trading on the pool through GanymedeV4Router: approvals go to the router, which takes the input
+ * with transferFrom. Buying, the amount is demo dollars; selling, USTX.
+ */
+export function v4SwapCalls(deployment: V4Deployment) {
+  const approve = (token: string, micros: bigint): TransactionCall => ({ to: token, data: `${FUND_SELECTORS.approve}${addressWord(deployment.router)}${word(micros)}` });
+  return {
+    approveDollars: (micros: bigint) => approve(deployment.dollar, micros),
+    approveShares: (micros: bigint) => approve(deployment.asset, micros),
+    swap: (side: "buy" | "sell", amountIn: bigint, minAmountOut: bigint, deadline: number): TransactionCall => ({
+      to: deployment.router,
+      data: `${V4_SELECTORS.swapExactInput}${poolKeyWords(deployment)}${word(zeroForOne(deployment, side) ? 1n : 0n)}${word(amountIn)}${word(minAmountOut)}${word(BigInt(deadline))}`,
+    }),
+  };
+}
+
+export type V4Quote = {
+  block: number;
+  /** What the order gets, or null where the pool cannot fill it now, with the reason. */
+  amountOut: bigint | null;
+  reason: string | null;
+  /** The swap fee now, in hundredths of a basis point, and what the router may take from `owner`. */
+  feePips: number | null;
+  allowanceMicros: bigint;
+};
+
+/**
+ * The pool's quote for an order of `amountIn`, from the router's own dry run of the swap, with the
+ * fee and `owner`'s allowance to the router, read at one block. A swap the hook or the pool would
+ * refuse (a stale NAV, too little liquidity) quotes nothing and says why.
+ */
+export async function readV4Quote(deployment: V4Deployment, side: "buy" | "sell", amountIn: bigint, owner: string, options: { rpc?: Rpc; minBlock?: number } = {}): Promise<V4Quote> {
+  const rpc = options.rpc ?? fundRpc();
+  const block = await readBlock(rpc, options.minBlock);
+  const tag = hexBlock(block);
+  return atBlock(async () => {
+    const token = side === "buy" ? deployment.dollar : deployment.asset;
+    const quote = call(rpc, deployment.router, `${V4_SELECTORS.quoteExactInput}${poolKeyWords(deployment)}${word(zeroForOne(deployment, side) ? 1n : 0n)}${word(amountIn)}`, tag)
+      .then(value => ({ amountOut: words(value, 1)[0], reason: null }), error => { if (!isRevert(error)) throw error; return { amountOut: null, reason: v4ErrorMessage(error) }; });
+    const fee = call(rpc, deployment.hook, V4_SELECTORS.currentFee, tag)
+      .then(value => Number(words(value, 1)[0]), error => { if (!isRevert(error)) throw error; return null; });
+    const allowance = call(rpc, token, `${FUND_SELECTORS.allowance}${addressWord(owner)}${addressWord(deployment.router)}`, tag).then(value => words(value, 1)[0]);
+    const [{ amountOut, reason }, feePips, allowanceMicros] = await Promise.all([quote, fee, allowance]);
+    return { block, amountOut: amountOut !== null && amountOut > 0n ? amountOut : null, reason: amountOut === 0n ? "The pool cannot fill an order this small." : reason, feePips, allowanceMicros };
+  });
+}
+
+/** The router's swap for `trader` in a receipt, as USTX and demo dollars; null when there is none. */
+export function v4SwapFill(receipt: FundReceipt, deployment: V4Deployment, trader: string): { side: "buy" | "sell"; sharesMicros: bigint; dollarsMicros: bigint } | null {
+  for (const log of receipt.logs) {
+    if (typeof log.address !== "string" || log.address.toLowerCase() !== deployment.router) continue;
+    if (log.topics?.[0]?.toLowerCase() !== V4_SWAPPED_TOPIC || log.topics[1]?.toLowerCase() !== `0x${addressWord(trader)}` || log.topics[2]?.toLowerCase() !== deployment.poolId) continue;
+    const [direction, amountIn, amountOut] = words(log.data, 3);
+    const side = (direction === 1n) === zeroForOne(deployment, "buy") ? "buy" : "sell";
+    return side === "buy" ? { side, dollarsMicros: amountIn, sharesMicros: amountOut } : { side, sharesMicros: amountIn, dollarsMicros: amountOut };
+  }
+  return null;
+}

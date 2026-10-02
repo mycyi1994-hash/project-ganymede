@@ -8,7 +8,7 @@ import { productKey, toBytes32 } from "../../relayer/src/ids";
 import { type FundReceipt } from "../../lib/xstocks/fund";
 import { V4_SWAP_TOPIC, applyEvents, type LpMarkout } from "../../lib/xstocks/lp-markout";
 import {
-  V4_ERRORS, V4_EVENTS, V4_POOL_DEPLOYMENT, V4_SELECTORS, isPinnedToFund, readV4Pool, v4Calls, v4DepositQuote, v4ErrorMessage, v4Fill, v4PairedDollars, v4ValueMicros,
+  V4_ERRORS, V4_EVENTS, V4_POOL_DEPLOYMENT, V4_SELECTORS, V4_SWAPPED_TOPIC, readV4Quote, v4SwapCalls, v4SwapFill, isPinnedToFund, readV4Pool, v4Calls, v4DepositQuote, v4ErrorMessage, v4Fill, v4PairedDollars, v4ValueMicros,
   v4WithdrawEstimate,
   type V4Deployment,
 } from "../../lib/xstocks/v4-liquidity";
@@ -30,7 +30,7 @@ describe("App v4 pool client", () => {
     const hook = (await hre.artifacts.readArtifact("GanymedeRwaLiquidityHook")).abi as readonly AbiItem[];
     const router = (await hre.artifacts.readArtifact("GanymedeV4Router")).abi as readonly AbiItem[];
     const manager = poolManagerArtifact().abi as readonly AbiItem[];
-    const functions = new Set([...hook, ...manager].filter(item => item.type === "function").map(item => toFunctionSelector(item as never)));
+    const functions = new Set([...hook, ...manager, ...router].filter(item => item.type === "function").map(item => toFunctionSelector(item as never)));
     for (const [name, selector] of Object.entries(V4_SELECTORS)) expect(functions.has(selector), name).to.equal(true);
     const events = hook.filter(item => item.type === "event") as unknown as Array<{ name: string; inputs: { type: string }[] }>;
     const topic = (name: string) => toEventSelector(signature(events.find(item => item.name === name)!));
@@ -40,6 +40,8 @@ describe("App v4 pool client", () => {
     });
     const managerEvents = manager.filter(item => item.type === "event") as unknown as Array<{ name: string; inputs: { type: string }[] }>;
     expect(V4_SWAP_TOPIC).to.equal(toEventSelector(signature(managerEvents.find(item => item.name === "Swap")!)));
+    const routerEvents = router.filter(item => item.type === "event") as unknown as Array<{ name: string; inputs: { type: string }[] }>;
+    expect(V4_SWAPPED_TOPIC).to.equal(toEventSelector(signature(routerEvents.find(item => item.name === "Swapped")!)));
     const errors = new Set([...hook, ...router].filter(item => item.type === "error").map(item => keccak256(toBytes(signature(item as never))).slice(0, 10)));
     for (const selector of Object.keys(V4_ERRORS)) expect(errors.has(selector), selector).to.equal(true);
   });
@@ -165,13 +167,26 @@ describe("App v4 pool client", () => {
     const start: LpMarkout = { fromBlock: 0, fromTime: 0, toBlock: 0, toTime: 0, navMicros: 101n * USD, navRecords: 0, repegs: 0, constantProduct: none, v4: none };
     const afterRepeg = applyEvents(start, await logsOf(repegged.hash), deployment);
     expect([afterRepeg.repegs, afterRepeg.v4.trades]).to.deep.equal([1, 0]);
-    const swapRouter = await hre.viem.getContractAt("GanymedeV4Router", deployed.router.address);
-    await dollar.write.approve([swapRouter.address, maxUint256], { account: provider.account });
+    // The app's own purchase on the pool: the router's quote, an approval to the router, the swap
+    // with the quote less 1%, and the fill read back from the router's event, exactly as quoted.
+    const swaps = v4SwapCalls(deployment);
+    const quoted = await readV4Quote(deployment, "buy", 10n * USD, provider.account.address, { rpc: appRpc });
+    expect(quoted.amountOut !== null && quoted.amountOut > 0n && quoted.feePips !== null, quoted.reason ?? "quoted").to.equal(true);
+    expect(quoted.allowanceMicros).to.equal(0n);
+    await send(provider, swaps.approveDollars(10n * USD));
     const [dollarsBefore, sharesBefore] = [await dollar.read.balanceOf([provider.account.address]), await fund.read.balanceOf([provider.account.address])];
-    const bought = await swapRouter.write.swapExactInput([await hook.read.poolKey(), !assetIsCurrency0, 10n * USD, 0n, BigInt(await deadline())], { account: provider.account });
+    const bought = await send(provider, swaps.swap("buy", 10n * USD, withSlippage(quoted.amountOut!), await deadline()));
     const paid = dollarsBefore - await dollar.read.balanceOf([provider.account.address]);
     const received = await fund.read.balanceOf([provider.account.address]) - sharesBefore;
-    const traded = applyEvents(afterRepeg, await logsOf(bought), deployment);
+    expect(v4SwapFill(bought, deployment, provider.account.address)).to.deep.equal({ side: "buy", dollarsMicros: paid, sharesMicros: quoted.amountOut });
+    expect(received).to.equal(quoted.amountOut);
+    // And a sale of a tenth of it back, the other direction through the same calls.
+    await send(provider, swaps.approveShares(received / 10n));
+    const sale = await readV4Quote(deployment, "sell", received / 10n, provider.account.address, { rpc: appRpc });
+    const sold = await send(provider, swaps.swap("sell", received / 10n, withSlippage(sale.amountOut!), await deadline()));
+    expect(v4SwapFill(sold, deployment, provider.account.address)).to.deep.equal({ side: "sell", sharesMicros: received / 10n, dollarsMicros: sale.amountOut });
+    await send(provider, swaps.approveShares(0n));
+    const traded = applyEvents(afterRepeg, await logsOf(bought.hash), deployment);
     expect(traded.v4).to.deep.equal({ trades: 1, volumeMicros: paid, resultMicros: paid - received * 101n, arbitrages: 0, arbitrageResultMicros: 0n });
     expect(traded.v4.resultMicros > 0n, "a trade at the NAV leaves its fee with the providers").to.equal(true);
 
