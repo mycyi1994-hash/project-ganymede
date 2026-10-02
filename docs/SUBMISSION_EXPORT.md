@@ -1,6 +1,6 @@
 # 공개 제출 저장소 갱신 절차
 
-비공개 개발 저장소 전용 문서다. 공개 스냅샷에는 넣지 않는다.
+개발 저장소 전용 문서다. 공개 스냅샷에는 넣지 않는다.
 
 공개 제출 저장소 `project-ganymede-submission`은 심사자용 공개 스냅샷이다. 운영에 새 릴리스가 나가면 아래 절차로 맞춘다. 공개 저장소에 올리는 일은 사용자 승인을 받은 뒤에 한다. 권한 검사에서 막히면 우회하지 말고 사용자에게 허용 여부를 묻는다.
 
@@ -25,24 +25,26 @@
    - `outputs/`, `.env*`, 인증 파일
 5. 개발 트리에 없는 파일은 공개본에서도 지운다. 3번의 유지 파일은 예외다.
 6. `README.md`와 `docs/OKX_DEV_DAY.md`는 개발본을 쓰되, 아래 공개용 수정을 적용한다.
-7. `docs/BUILD_PERIOD.md`는 그대로 내보낸다. 커밋은 링크 없는 코드 표기라 수정이 필요 없다. 내보내기 직전에 다시 생성해 마지막 커밋까지 포함한다.
+7. `docs/BUILD_PERIOD.md`는 그대로 내보낸다. 첫머리가 공개 개발 저장소의 커밋 주소를 알려 주므로 수정이 필요 없다. 내보내기 직전에 다시 생성해 마지막 커밋까지 포함한다.
 
 ### README.md 공개용 수정
+
+머리말의 `listed with its commits in [docs/BUILD_PERIOD.md](docs/BUILD_PERIOD.md) and summarized below`를 `listed with its commits in [docs/BUILD_PERIOD.md](docs/BUILD_PERIOD.md), each of which opens in the public [development repository](https://github.com/mycyi1994-hash/project-ganymede), and summarized below`로 바꾼다.
 
 "Source and release" 절의 첫 문단을 다음으로 바꾼다. `<PRODUCTION_SHA>`는 운영 source 커밋의 전체 ID다.
 
 ```text
-This public review snapshot corresponds to production source commit `<PRODUCTION_SHA>`. Application code matches the recorded source; documentation may be newer. The original development history remains private, and public-hosting identifiers are adjusted. See [snapshot provenance](docs/BUILD_EVIDENCE.md). Cloudflare deployment messages identify the production source commit. [Release rules and identity model](docs/release-identity.md).
+This public review snapshot corresponds to production source commit `<PRODUCTION_SHA>`. Application code matches the recorded source; documentation may be newer. The full development history, with every commit listed in docs/BUILD_PERIOD.md, is public at [project-ganymede](https://github.com/mycyi1994-hash/project-ganymede); this snapshot adjusts public-hosting identifiers. See [snapshot provenance](docs/BUILD_EVIDENCE.md). Cloudflare deployment messages identify the production source commit. [Release rules and identity model](docs/release-identity.md).
 ```
 
 ### docs/OKX_DEV_DAY.md 공개용 수정
 
 - `- Source: https://github.com/mycyi1994-hash/project-ganymede`를 `- Source: https://github.com/mycyi1994-hash/project-ganymede-submission`으로 바꾼다.
-- 증거 표의 커밋 링크 `[abc1234](https://github.com/mycyi1994-hash/project-ganymede/commit/abc1234)`는 모두 `` `abc1234` ``로 바꾼다. 비공개 저장소 링크를 남기지 않는다.
-- "The development repository is PRIVATE"로 시작하는 문단은 다음으로 바꾼다.
+- 증거 표의 커밋 링크는 공개 개발 저장소를 가리키므로 그대로 둔다.
+- "The development repository is public"으로 시작하는 문단은 다음으로 바꾼다.
 
 ```text
-This separate submission snapshot is published for reviewer access. The original development repository remains private. Source commit identifiers in the evidence table are provenance references, not public history links; see BUILD_EVIDENCE.md.
+This separate submission snapshot is published for reviewer access. The development repository, which holds every commit linked in the evidence table, is public at https://github.com/mycyi1994-hash/project-ganymede; see BUILD_EVIDENCE.md.
 ```
 
 ### docs/BUILD_EVIDENCE.md
