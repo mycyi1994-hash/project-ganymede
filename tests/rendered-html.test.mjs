@@ -106,6 +106,8 @@ test("Pools offers the live pool's liquidity from a wallet, with its figures rea
   assert.match(html, /\$1,048\.81/);
   // The pinned Uniswap v4 pool is listed beside the live pool; its figures also wait for the chain.
   assert.match(html, /Uniswap v4 · held at the NAV/);
+  // The two pools side by side for their providers, from the served totals once the page has them.
+  assert.match(html, /Liquidity providers against arbitrage/);
   assert.match(html, /0\.30–1\.00%/);
   assert.match(html, /<title>Pools · Ganymede<\/title>/);
   assert.equal(html.match(/You are on X Layer Testnet/g).length, 1, "one testnet notice");

@@ -25,6 +25,7 @@ import { TxLink, sendFromWallet, useInjectedWallet, useWalletChain, type Provide
 import { TxSteps, WalletGate, orderDeadline, runPlan, useUnmountSignal, type PlanProgress, type PlanStep, type StepState, type TxStep } from "./LiquidityParts";
 import { V4_POOL_DEPLOYMENT, formatFeePips, v4ValueMicros } from "@/lib/xstocks/v4-liquidity";
 import { V4LiquidityPanel, V4PoolGuide, V4PoolOverview, useV4Pool, v4Position, type V4Reader } from "./PoolsV4";
+import { PoolResults } from "./PoolResults";
 
 // Providing liquidity to the USTX/dUSD pool on X Layer Testnet from OKX Wallet: deposit USTX and
 // demo dollars at the pool's ratio (or demo dollars alone, half invested at the fund at the NAV),
@@ -138,6 +139,7 @@ export function PoolsScreen() {
         </div>
       </>}
     </div>
+    {V4_POOL_DEPLOYMENT && <PoolResults />}
   </ActivityProvider>;
 }
 

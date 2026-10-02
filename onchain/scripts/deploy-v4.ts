@@ -206,6 +206,7 @@ async function main() {
     asset: fundAddress.toLowerCase(),
     dollar: dollarAddress.toLowerCase(),
     assetIsCurrency0,
+    poolId: (hookRecord.poolId as string).toLowerCase(),
     stateSlot: poolStateSlot(hookRecord.poolId as Hex),
   };
   console.log(`\nPin the pool in lib/xstocks/v4-liquidity.ts:\n\nexport const V4_POOL_DEPLOYMENT: V4Deployment | null = ${JSON.stringify(pin, null, 2)};`);

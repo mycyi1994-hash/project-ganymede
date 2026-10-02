@@ -7,7 +7,8 @@ import { GET, OPTIONS } from "../app/api/v1/ustx/pools/route.ts";
 import { FUND_DEPLOYMENT, FUND_SELECTORS, POOL_SELECTORS } from "../lib/xstocks/fund.ts";
 import { LIQUIDITY_SELECTORS, POOL_LAUNCH_BLOCK } from "../lib/xstocks/liquidity.ts";
 import { ACTIVITY_FIRST_BLOCK, ACTIVITY_KEEP, serializeActivityIndex } from "../lib/xstocks/activity.ts";
-import { STATE_MARKET_ACTIVITY } from "../lib/xstocks/activity-index.ts";
+import { STATE_LP_MARKOUT, STATE_MARKET_ACTIVITY } from "../lib/xstocks/activity-index.ts";
+import { MARKOUT_FIRST_BLOCK, serializeLpMarkout } from "../lib/xstocks/lp-markout.ts";
 
 const USD = 1_000_000n;
 const word = (value) => BigInt(value).toString(16).padStart(64, "0");
@@ -78,7 +79,7 @@ test("the pools API serves the pool's state, fee APR and last day to any origin,
     lpToken: { address: FUND_DEPLOYMENT.pool, symbol: "USTX-LP", decimals: 6, supplyMicros: "500000000" },
     feeBps: 30, reserves: { ustxMicros: "50100000", dusdMicros: "4995000000" }, priceMicros: "99700598", navMicros: "100000000",
     valueMicros: "10005000000", lpTokenValueMicros: "20010000",
-    feeApr: undefined, last24h: undefined, openedAt: "2026-09-25T05:08:37.000Z", explorerUrl: `${FUND_DEPLOYMENT.explorerUrl}/address/${FUND_DEPLOYMENT.pool}`,
+    feeApr: undefined, last24h: undefined, lpResult: null, openedAt: "2026-09-25T05:08:37.000Z", explorerUrl: `${FUND_DEPLOYMENT.explorerUrl}/address/${FUND_DEPLOYMENT.pool}`,
   });
   // √(50.1 × 4,995) against √(50 × 5,000) per LP token: 0.0499% in a week, 2.60% a year.
   assert.equal(pool.feeApr.fromBlock, WEEK_AGO);
@@ -89,7 +90,25 @@ test("the pools API serves the pool's state, fee APR and last day to any origin,
   assert.deepEqual([pool.feeApr.lpTokenValueFromMicros, pool.feeApr.lpTokenValueToMicros, pool.feeApr.heldValueToMicros], ["20000000", "20010000", "20000000"]);
   assert.deepEqual(pool.last24h, { trades: 1, volumeMicros: "100000000", feesMicros: "300000", complete: true, since: pool.last24h.since, toBlock: ACTIVITY_FIRST_BLOCK + 20 });
   assert.match(body.environment, /no value/);
+  assert.equal(body.lpResults, null, "no pool results before the scheduled job's first run");
   assert.equal((await OPTIONS()).status, 204);
+});
+
+test("the pools API serves each pool's result for its providers over the same blocks, scaled to $10,000 a year", async (t) => {
+  const { db, sql } = database();
+  env.DB = db;
+  const result = (resultMicros, arbitrages, arbitrageResultMicros) => ({ trades: 3, volumeMicros: 250n * USD, resultMicros, arbitrages, arbitrageResultMicros });
+  sql.prepare("INSERT INTO engine_state (key, value, updated_at) VALUES (?, ?, CURRENT_TIMESTAMP)").run(STATE_LP_MARKOUT, serializeLpMarkout({
+    fromBlock: MARKOUT_FIRST_BLOCK, fromTime: TIME - 86_400, toBlock: MARKOUT_FIRST_BLOCK + 86_400, toTime: TIME, navMicros: 100n * USD, navRecords: 288, repegs: 287,
+    constantProduct: result(-50_000n, 3, -60_000n), v4: result(9_000n, 0, 0n),
+  }));
+  db.readOnly = true;
+  t.mock.method(globalThis, "fetch", chain());
+  const body = await (await GET()).json();
+  assert.deepEqual(body.lpResults, { fromBlock: MARKOUT_FIRST_BLOCK, from: new Date((TIME - 86_400) * 1000).toISOString(), toBlock: MARKOUT_FIRST_BLOCK + 86_400, to: new Date(TIME * 1000).toISOString(), navRecords: 288 });
+  // −$0.05 in a day on the pool's $10,005: −$18.24 a year per $10,000.
+  assert.deepEqual(body.pools[0].lpResult, { trades: 3, volumeMicros: "250000000", resultMicros: "-50000", arbitrages: 3, arbitrageResultMicros: "-60000", per10kYearMicros: "-18240879" });
+  assert.match(body.rule, /lpResult compares the pools over the same blocks/);
 });
 
 test("the pools API keeps the pool when the yield or the index cannot be read, and says when the chain cannot", async (t) => {

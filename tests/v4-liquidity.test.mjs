@@ -14,7 +14,7 @@ const ALICE = "0x00000000000000000000000000000000000a11ce";
 /** A deployment as `npm run deploy:v4` would record it; addresses made up for the test. */
 const D = {
   poolManager: "0x00000000000000000000000000000000000000aa", hook: "0x00000000000000000000000000000000000028c0", router: "0x00000000000000000000000000000000000000bb",
-  asset: FUND_DEPLOYMENT.fund, dollar: FUND_DEPLOYMENT.dollar, assetIsCurrency0: true, stateSlot: `0x${"5".repeat(64)}`,
+  asset: FUND_DEPLOYMENT.fund, dollar: FUND_DEPLOYMENT.dollar, assetIsCurrency0: true, poolId: `0x${"4".repeat(64)}`, stateSlot: `0x${"5".repeat(64)}`,
 };
 const FLIPPED = { ...D, assetIsCurrency0: false };
 const Q96 = 1n << 96n;
@@ -25,6 +25,7 @@ test("the pool is pinned to the seeded deployment recorded on X Layer Testnet", 
   assert.equal(V4_POOL_DEPLOYMENT.hook, contracts.GanymedeRwaLiquidityHook.address.toLowerCase());
   assert.equal(V4_POOL_DEPLOYMENT.poolManager, contracts.UniswapV4PoolManager.address.toLowerCase());
   assert.equal(V4_POOL_DEPLOYMENT.router, contracts.GanymedeV4Router.address.toLowerCase());
+  assert.equal(V4_POOL_DEPLOYMENT.poolId, contracts.GanymedeRwaLiquidityHook.poolId.toLowerCase());
   assert.equal(V4_POOL_DEPLOYMENT.assetIsCurrency0, BigInt(V4_POOL_DEPLOYMENT.asset) < BigInt(V4_POOL_DEPLOYMENT.dollar));
   assert.equal(isPinnedToFund(V4_POOL_DEPLOYMENT), true);
   assert.equal(isPinnedToFund(D), true);

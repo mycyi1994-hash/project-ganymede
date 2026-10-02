@@ -21,6 +21,8 @@ export type V4Deployment = {
   asset: string;
   dollar: string;
   assetIsCurrency0: boolean;
+  /** keccak256 of the pool key: the pool manager's Swap events carry it as their first topic. */
+  poolId: string;
   /** Where the pool manager keeps this pool's slot0: keccak256(poolId, 6), read with extsload. */
   stateSlot: string;
 };
@@ -33,6 +35,7 @@ export const V4_POOL_DEPLOYMENT: V4Deployment | null = {
   asset: "0x77eaeba1366bde7818da12d3cbdbea0a2ee97596",
   dollar: "0xf07535080f74e8b0f571e58dfa600f47e72ea9bf",
   assetIsCurrency0: true,
+  poolId: "0x3da5321a25b931eab270ee3b86490e10648ea54f25b2f4011679b4ddc74c498a",
   stateSlot: "0x7549bdeca0ad849329463831768b1ef35511842b1c9ad3f6594c62fe94dce016",
 };
 

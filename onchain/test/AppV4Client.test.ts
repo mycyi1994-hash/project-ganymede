@@ -6,6 +6,7 @@ import { join } from "node:path";
 import { getAddress, keccak256, maxUint256, toBytes, toEventSelector, toFunctionSelector, type AbiItem, type Address, type Hex } from "viem";
 import { productKey, toBytes32 } from "../../relayer/src/ids";
 import { type FundReceipt } from "../../lib/xstocks/fund";
+import { V4_SWAP_TOPIC, applyEvents, type LpMarkout } from "../../lib/xstocks/lp-markout";
 import {
   V4_ERRORS, V4_EVENTS, V4_POOL_DEPLOYMENT, V4_SELECTORS, isPinnedToFund, readV4Pool, v4Calls, v4DepositQuote, v4ErrorMessage, v4Fill, v4PairedDollars, v4ValueMicros,
   v4WithdrawEstimate,
@@ -37,6 +38,8 @@ describe("App v4 pool client", () => {
       deposited: topic("Deposited"), depositCancelled: topic("DepositCancelled"), converted: topic("Converted"), sharesClaimed: topic("SharesClaimed"),
       withdrawn: topic("Withdrawn"), repegged: topic("Repegged"), transfer: topic("Transfer"),
     });
+    const managerEvents = manager.filter(item => item.type === "event") as unknown as Array<{ name: string; inputs: { type: string }[] }>;
+    expect(V4_SWAP_TOPIC).to.equal(toEventSelector(signature(managerEvents.find(item => item.name === "Swap")!)));
     const errors = new Set([...hook, ...router].filter(item => item.type === "error").map(item => keccak256(toBytes(signature(item as never))).slice(0, 10)));
     for (const selector of Object.keys(V4_ERRORS)) expect(errors.has(selector), selector).to.equal(true);
   });
@@ -71,7 +74,7 @@ describe("App v4 pool client", () => {
     // What `npm run deploy:v4` records and the app pins.
     const deployment: V4Deployment = {
       poolManager: deployed.poolManager.address.toLowerCase(), hook: deployed.hook.address.toLowerCase(), router: deployed.router.address.toLowerCase(),
-      asset: fund.address.toLowerCase(), dollar: dollar.address.toLowerCase(), assetIsCurrency0, stateSlot: poolStateSlot(poolId),
+      asset: fund.address.toLowerCase(), dollar: dollar.address.toLowerCase(), assetIsCurrency0, poolId: poolId.toLowerCase(), stateSlot: poolStateSlot(poolId),
     };
     const hook = await hre.viem.getContractAt("GanymedeRwaLiquidityHook", deployed.hook.address);
     expect(await hook.read.poolId()).to.equal(poolId);
@@ -140,7 +143,8 @@ describe("App v4 pool client", () => {
     await publish(101n * USD);
     ({ pool } = await readV4Pool(deployment, provider.account.address, { rpc: appRpc }));
     expect(pool.nav.answer! > 0n && pool.nav.answer !== null && (pool.nav as { updatedAt: number }).updatedAt > pool.peggedAt).to.equal(true, "a newer record waits to be applied");
-    const converted = v4Fill(await send(keeper, calls.repeg()), deployment, provider.account.address).converted!;
+    const repegged = await send(keeper, calls.repeg());
+    const converted = v4Fill(repegged, deployment, provider.account.address).converted!;
     expect(converted.epoch).to.equal(1n);
     expect(converted.navAnswer).to.equal(101n * 100_000_000n);
     account = (await readV4Pool(deployment, provider.account.address, { rpc: appRpc })).account!;
@@ -150,6 +154,27 @@ describe("App v4 pool client", () => {
     // The claim pays the LP tokens out of the hook to the wallet.
     const claimed = v4Fill(await send(provider, calls.claimShares(provider.account.address)), deployment, provider.account.address);
     expect(claimed.claimedLpMicros).to.equal(converted.lpMicros);
+    // The pool's trades as lib/xstocks/lp-markout.ts counts them for its providers. The re-peg's own
+    // swap, which moves the empty pool, is not one; a purchase's result at the NAV is what the buyer
+    // paid less the USTX they received at that NAV, read here from their balances.
+    const logsOf = async (hash: string) => (await publicClient.getTransactionReceipt({ hash: hash as Hex })).logs.map(log => ({
+      address: log.address.toLowerCase(), topics: log.topics.map(topic => topic.toLowerCase()), data: log.data.toLowerCase(),
+      block: Number(log.blockNumber), logIndex: log.logIndex, hash: log.transactionHash.toLowerCase(),
+    }));
+    const none = { trades: 0, volumeMicros: 0n, resultMicros: 0n, arbitrages: 0, arbitrageResultMicros: 0n };
+    const start: LpMarkout = { fromBlock: 0, fromTime: 0, toBlock: 0, toTime: 0, navMicros: 101n * USD, navRecords: 0, repegs: 0, constantProduct: none, v4: none };
+    const afterRepeg = applyEvents(start, await logsOf(repegged.hash), deployment);
+    expect([afterRepeg.repegs, afterRepeg.v4.trades]).to.deep.equal([1, 0]);
+    const swapRouter = await hre.viem.getContractAt("GanymedeV4Router", deployed.router.address);
+    await dollar.write.approve([swapRouter.address, maxUint256], { account: provider.account });
+    const [dollarsBefore, sharesBefore] = [await dollar.read.balanceOf([provider.account.address]), await fund.read.balanceOf([provider.account.address])];
+    const bought = await swapRouter.write.swapExactInput([await hook.read.poolKey(), !assetIsCurrency0, 10n * USD, 0n, BigInt(await deadline())], { account: provider.account });
+    const paid = dollarsBefore - await dollar.read.balanceOf([provider.account.address]);
+    const received = await fund.read.balanceOf([provider.account.address]) - sharesBefore;
+    const traded = applyEvents(afterRepeg, await logsOf(bought), deployment);
+    expect(traded.v4).to.deep.equal({ trades: 1, volumeMicros: paid, resultMicros: paid - received * 101n, arbitrages: 0, arbitrageResultMicros: 0n });
+    expect(traded.v4.resultMicros > 0n, "a trade at the NAV leaves its fee with the providers").to.equal(true);
+
     const { pool: after, account: holder } = await readV4Pool(deployment, provider.account.address, { rpc: appRpc });
     expect(holder!.lpMicros).to.equal(converted.lpMicros);
 
@@ -194,6 +219,7 @@ describe("App v4 pool client", () => {
     expect(V4_POOL_DEPLOYMENT!.hook).to.equal(hook.address.toLowerCase());
     expect(V4_POOL_DEPLOYMENT!.poolManager).to.equal(record.contracts.UniswapV4PoolManager.address.toLowerCase());
     expect(V4_POOL_DEPLOYMENT!.router).to.equal(record.contracts.GanymedeV4Router.address.toLowerCase());
+    expect(V4_POOL_DEPLOYMENT!.poolId).to.equal(hook.poolId.toLowerCase());
     expect(V4_POOL_DEPLOYMENT!.stateSlot).to.equal(poolStateSlot(hook.poolId));
     expect(isPinnedToFund(V4_POOL_DEPLOYMENT!)).to.equal(true);
     // The lower address is currency0; a wrong flag would swap every USTX and dUSD amount the app reads and sends.
