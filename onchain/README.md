@@ -216,6 +216,15 @@ each transaction with its own nonce and gas limit, seeds the pool from the admin
 (claim 10,000 dUSD, invest $5,000, deposit the USTX with $5,000), reads the wiring back and records
 the addresses, the salt and the pool ID in `deployments/xlayer-testnet.json`.
 
+```bash
+npm run trade:v4
+```
+
+makes demo trades on the deployed pool from the administrator wallet: a purchase of USTX with $25 of
+demo dollars (`TRADE_DOLLARS` to change it) and a sale of half of it through the router, each at
+least 99% of the router's quote, and a deposit of the rest that becomes LP tokens at the next NAV
+record; a later run claims them. Trades, not administrator actions; demo dollars have no value.
+
 ## Verify the sources
 
 Source verification makes the contract readable on the explorer. All eight
