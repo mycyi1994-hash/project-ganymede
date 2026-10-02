@@ -283,7 +283,7 @@ The NAV moved little between records, so the constant-product pool's loss stays 
   `effectiveAt`; a record dated far ahead would stop these swaps and, since each record must be later
   than the last, block the records after it. A registry for mainnet should refuse times past its
   block.
-- **Status.** Deployed on X Layer Testnet only, and not audited. Two independent review rounds changed deposits to
+- **Status.** Deployed on X Layer Testnet only, and not audited; Slither's findings and the invariant fuzzing are in [STATIC_ANALYSIS.md](STATIC_ANALYSIS.md). Two independent review rounds changed deposits to
   forward pricing, added the future-date check and closed the last way for a deposit to become
   liquidity just ahead of a trade it could see. A third made deposits wait while a record dated
   ahead of the block is out (taken then, a deposit would convert at that record once its time came)

@@ -3,6 +3,7 @@ import hre from "hardhat";
 import { time } from "@nomicfoundation/hardhat-network-helpers";
 import { getAddress, getContract, maxUint256, parseAbi, parseEventLogs, toFunctionSelector, zeroAddress, type Address, type Hash, type Hex } from "viem";
 import { productKey, toBytes32 } from "../../relayer/src/ids";
+import { applyEvents, type LpMarkout } from "../../lib/xstocks/lp-markout";
 import {
   ALL_HOOK_MASK,
   CREATE2_PROXY,
@@ -1021,5 +1022,94 @@ describe("GanymedeRwaLiquidityHook", () => {
     expect((await fund.read.balanceOf([hook.address])) + (await dollar.read.balanceOf([hook.address]))).to.equal(0n);
   });
 
-});
 
+  it("never lets trades take value from its providers at the NAV, across random NAV paths and orders", async () => {
+    // HOOK_FUZZ_SEEDS and HOOK_FUZZ_STEPS run it longer; each seed replays.
+    const seeds = Number(process.env.HOOK_FUZZ_SEEDS ?? 3);
+    const steps = Number(process.env.HOOK_FUZZ_STEPS ?? 40);
+    const { hook, lp, lp2, trader, keeper, managerAddress, poolId, assetIsCurrency0, fund, dollar, split, prepare, seed, buy, sell, publish, valueAt, receipt } = await deploy();
+    await prepare(lp, 4_000n * USD);
+    await prepare(lp2, 2_000n * USD);
+    await prepare(trader, 6_000n * USD);
+    await seed(lp, 40n * SHARE, 4_000n * USD);
+    // What the app counts for the providers (lib/xstocks/lp-markout.ts), over this pool's events.
+    const deployment = {
+      poolManager: managerAddress.toLowerCase(), hook: hook.address.toLowerCase(), router: "", asset: fund.address.toLowerCase(), dollar: dollar.address.toLowerCase(),
+      assetIsCurrency0, poolId: poolId.toLowerCase(), stateSlot: "",
+    };
+    const none = { trades: 0, volumeMicros: 0n, resultMicros: 0n, arbitrages: 0, arbitrageResultMicros: 0n };
+    const traderHolds = async () => [await fund.read.balanceOf([trader.account.address]), await dollar.read.balanceOf([trader.account.address])] as const;
+    let nav = NAV;
+    // Everything the providers own, waiting deposits included, valued at the NAV in effect. Moving
+    // the pool to a new record changes none of it, so it is the baseline the trades after that record
+    // are measured from: liquidity is worth least at the NAV when the pool's price is at the NAV, and
+    // every trade away from it, and its fee, can only add.
+    const value = async () => {
+      const waiting = split([await hook.read.pending0(), await hook.read.pending1()]);
+      return (await valueAt(nav)) + (waiting.ustx * nav) / SHARE + waiting.dollars;
+    };
+    let baseline = await value();
+    let counted = 0n;
+    let swaps = 0;
+    let refused = 0;
+    let records = 0;
+    for (let run = 0; run < seeds; run++) {
+      let state = 0x9e3779b97f4a7c15n + BigInt(run);
+      const random = (below: bigint) => {
+        state = (state * 6364136223846793005n + 1442695040888963407n) & ((1n << 64n) - 1n);
+        return (state >> 33n) % below;
+      };
+      for (let step = 0; step < steps; step++) {
+        // A record up to 3% either way, often none; a keeper's re-peg now and then; a deposit rarely.
+        if (random(3n) === 0n) {
+          nav = (nav * (10_000n + random(600n) - 300n)) / 10_000n;
+          await publish(nav);
+          baseline = await value();
+          counted = 0n;
+          records++;
+        }
+        if (random(3n) === 0n) await hook.write.repeg({ account: keeper.account }).catch(() => undefined);
+        if (random(8n) === 0n) {
+          const before = await value();
+          await seed(lp2, random(5n) * SHARE + 1n, random(500n) * USD + 1n).catch(() => undefined);
+          baseline += (await value()) - before;
+        }
+        const before = await value();
+        const [sharesBefore, dollarsBefore] = await traderHolds();
+        const size = random(4n) + 1n; // up to about 4% of the pool
+        try {
+          // Within what the trader holds: an order it cannot pay for goes the other way.
+          const dollars = size * 100n * USD + random(USD);
+          const shares = size * SHARE + random(SHARE);
+          const buying = random(2n) === 0n ? dollarsBefore >= dollars : sharesBefore < shares;
+          const hash = buying ? await buy(trader, dollars) : await sell(trader, shares);
+          const after = await value();
+          const { logs, blockNumber } = await receipt(hash);
+          const start: LpMarkout = { fromBlock: 0, fromTime: 0, toBlock: 0, toTime: 0, navMicros: nav, navRecords: 0, repegs: 0, constantProduct: none, v4: none };
+          const trade = applyEvents(start, logs.map(log => ({
+            address: log.address.toLowerCase(), topics: log.topics.map(topic => topic.toLowerCase()), data: log.data.toLowerCase(),
+            block: Number(blockNumber), logIndex: log.logIndex, hash: log.transactionHash.toLowerCase(),
+          })), deployment).v4;
+          // The app counts exactly what the trader gave up at the NAV, to a micro of rounding, and,
+          // within the rounding of valuing liquidity, what the providers' holdings gained.
+          const [sharesAfter, dollarsAfter] = await traderHolds();
+          expect(trade.trades).to.equal(1);
+          expectClose(trade.resultMicros, (dollarsBefore - dollarsAfter) - ((sharesAfter - sharesBefore) * nav) / SHARE, 2n);
+          expectClose(trade.resultMicros, after - before, 1_000n);
+          counted += trade.resultMicros;
+          swaps++;
+        } catch (error) {
+          // A trade that would move the price more than 5% from the NAV is refused, not filled.
+          if (!revertText(error).toLowerCase().includes(selector("OutsideBand(uint160)"))) throw error;
+          refused++;
+        }
+        // Since the last record, the trades have cost the providers nothing at the NAV: what they
+        // own has not fallen, and what the app counted for them adds up to no loss.
+        const now = await value();
+        expect(now - baseline >= -2_000n, `seed ${run} step ${step}: providers are ${baseline - now} micros down since the record`).to.equal(true);
+        expect(counted >= -2_000n, `seed ${run} step ${step}: the app counted ${counted} micros since the record`).to.equal(true);
+      }
+    }
+    expect(swaps > (seeds * steps) / 2 && records > seeds * 5, `${swaps} swaps, ${refused} refused, ${records} records`).to.equal(true);
+  }).timeout(0); // its length follows HOOK_FUZZ_SEEDS and HOOK_FUZZ_STEPS
+});
