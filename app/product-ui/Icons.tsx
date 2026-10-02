@@ -1,4 +1,7 @@
 import type { CSSProperties } from "react";
+// The product stylesheet rides on this module, which every product screen and badge imports:
+// a stylesheet imported on its own becomes an empty chunk that the build drops but still preloads.
+import "./product.css";
 
 export function Icon({ name, size = 20 }: { name: "arrow" | "back" | "external" | "wallet" | "market" | "portfolio" | "activity" | "check" | "info" | "refresh" | "chevron" | "lock" | "download" | "close" | "pool" | "spark" | "send"; size?: number }) {
   const paths: Record<string, string> = {
