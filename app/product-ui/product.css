@@ -1221,3 +1221,21 @@ a.gmd-pool-pair:hover b { text-decoration: underline; text-underline-offset: 3px
   .gmd-pool-list .gmd-table :is(th,td):nth-child(4) { padding-inline-end: 0; }
   .gmd-price-move { padding: 16px; }
 }
+
+/* Liquidity providers against arbitrage: the two pools side by side */
+.gmd-lp-results { margin-top: 24px; }
+.gmd-lp-compare { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 12px; }
+.gmd-lp-compare article { background: #f6f8f9; border-radius: 8px; padding: 16px 18px; min-width: 0; }
+.gmd-app .gmd-lp-compare h3 { font-size: 16px; }
+.gmd-lp-compare article > span { display: block; font-size: 13px; color: var(--gmd-copy); margin-top: 2px; }
+.gmd-lp-compare strong { display: block; font-family: "Instrument Sans",Arial,sans-serif; font-size: 28px; line-height: 1.2; margin-top: 12px; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.gmd-lp-compare small { display: block; font-size: 12px; color: var(--gmd-copy); margin-top: 4px; }
+.gmd-lp-compare dl { margin-top: 12px; }
+.gmd-lp-compare dl > div { display: flex; justify-content: space-between; gap: 16px; padding-block: 9px; border-top: 1px solid #e3e8eb; }
+.gmd-lp-compare dt { font-size: 14px; color: var(--gmd-copy); }
+.gmd-lp-compare dd { font-size: 14px; text-align: end; font-variant-numeric: tabular-nums; }
+.gmd-lp-compare .gmd-skeleton { display: block; height: 1em; margin-block: 8px; }
+@media (max-width:600px) {
+  .gmd-lp-compare { grid-template-columns: 1fr; }
+  .gmd-lp-compare strong { font-size: 24px; }
+}

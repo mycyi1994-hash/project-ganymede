@@ -242,6 +242,25 @@ script read back the hook's wiring and the pool price at the seeding block, and 
 `onchain/deployments/xlayer-testnet.json`. `V4_POOL_DEPLOYMENT` in `lib/xstocks/v4-liquidity.ts` pins
 it, and `V4_HOOK_ADDRESS` in `relayer/wrangler.keeper.jsonc` has the keeper re-peg it.
 
+## Measured against the constant-product pool
+
+Pools shows both USTX/dUSD pools side by side over the same NAV records, from the v4 pool's
+deployment on (`lib/xstocks/lp-markout.ts`, served as `lpResult` by `GET /api/v1/ustx/pools`). Each
+trade counts for the providers what the pool took in less what it paid out, USTX at the NAV in effect
+when the trade landed and demo dollars at face value: the fee, less what the trader gained by
+trading away from the NAV. The app's activity cron reads the pools', the arbitrage contract's, the
+pool manager's and the registry's events in block order and keeps the totals; a run that fails
+changes nothing. `onchain/test/AppV4Client.test.ts` checks the reading of the pool manager's Swap
+event against a swap on Uniswap's compiled PoolManager, and that the hook's own swap at a re-peg is
+not counted.
+
+Over the first 256 records (1 October 15:57 to 2 October 13:23 UTC), the keeper's three arbitrage
+trades took $0.0505 from the constant-product pool's providers, the sum of what the keeper earned,
+about −$20.52 a year per $10,000 of liquidity at the pool's value. The hook moved its pool to the NAV
+254 times and no trade was open against a stale price; it had no other trades in that time either.
+The NAV moved little between records, so the constant-product pool's loss stays small against its
+0.3% fee; the tests above show the gap at a 5% move.
+
 ## What this does not cover
 
 - **The NAV's latency.** A record prices the xStocks a few minutes earlier, and the prices are public

@@ -4,7 +4,7 @@
 
 The public UI presents USTX as a live fund service, laid out like a production
 DeFi app: one testnet notice and the network and "Connect OKX Wallet" in the
-header; Markets (with the market's latest activity and its 24-hour figures, a countdown to the next NAV record, and a detail panel for each xStock); Pools (the USTX/dUSD pool's value, 24-hour volume and fees, fee APR and price against the NAV, its activity, and adding or withdrawing liquidity from a wallet, in both tokens or demo dollars alone); the USTX page (order panel with wallet and demo-balance investing, wallet orders routed to the fund or the pool at the better price, borrowing against USTX, fund
+header; Markets (with the market's latest activity and its 24-hour figures, a countdown to the next NAV record, and a detail panel for each xStock); Pools (the USTX/dUSD pool's value, 24-hour volume and fees, fee APR and price against the NAV, its activity, and adding or withdrawing liquidity from a wallet, in both tokens or demo dollars alone; with the v4 pool, both pools' results for their providers at the NAV over the same records, kept by the activity cron in `lib/xstocks/lp-markout.ts`); the USTX page (order panel with wallet and demo-balance investing, wallet orders routed to the fund or the pool at the better price, borrowing against USTX, fund
 overview with the price oracle and the pool's market price, market activity from the contracts' events, factsheet holdings, About); Portfolio (the demo
 balance and the wallet's USTX, including any posted as lending collateral with its loan and its liquidity in the pool, looked through to each xStock, and valuation of
 any wallet's xStocks on X Layer mainnet); and Transparency (the customer proof page). Keep pitch and developer
@@ -19,8 +19,8 @@ settlement relayer is `ganymede-settlement-relayer`, and the arbitrage keeper is
 `ganymede-arbitrage-keeper` (`relayer/wrangler.keeper.jsonc`). The app Worker has two
 crons: the USTX NAV record every five minutes (`runUstxNavCycle`; the earlier engine's
 paper strategies run only through the operator API, so the record stays small in CPU time),
-and the market activity index (`lib/xstocks/activity-index.ts`) four minutes past, apart so
-it never holds up the NAV. The fund and the lending market refuse a NAV older than one hour,
+and the market activity index (`lib/xstocks/activity-index.ts`, with the pools' results for their
+providers as a second job) four minutes past, apart so it never holds up the NAV. The fund and the lending market refuse a NAV older than one hour,
 so a stalled record stops wallet orders and loans; check the cron's outcome after each deploy.
 `docs/PRODUCT_RELEASE.md` records the current source and Worker version.
 

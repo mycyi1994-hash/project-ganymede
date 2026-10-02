@@ -320,8 +320,14 @@ test("the Worker runs market activity on its own cron, apart from the NAV cycle"
   workerUrl.searchParams.set("test", `${process.pid}-activity`);
   const { default: worker } = await import(workerUrl.href);
   const pending = [];
+  const errors = t.mock.method(console, "error", () => {});
   await worker.scheduled({ cron: ACTIVITY_CRON, scheduledTime: Date.now(), noRetry() {} }, { DB: db }, { waitUntil: promise => pending.push(promise), passThroughOnException() {} });
-  await Promise.all(pending);
+  // Two jobs: the activity index and the pools' results. This chain cannot answer the fund's NAV, so
+  // the second fails, alone, and says so.
+  const [activity, results] = await Promise.allSettled(pending);
+  assert.equal(activity.status, "fulfilled");
+  assert.equal(results.status, "rejected");
+  assert.match(String(errors.mock.calls[0].arguments[0]), /pool results run failed/);
   assert.deepEqual(sql.prepare("SELECT key FROM engine_state").all().map(row => row.key), [STATE_MARKET_ACTIVITY], "only the activity index; no engine cycle ran");
   assert.equal(parseActivityIndex(sql.prepare("SELECT value FROM engine_state").get().value)?.rows.length, 5);
 });
