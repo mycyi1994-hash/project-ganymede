@@ -22,6 +22,7 @@
    - `docs/CLAUDE_HANDOFF_2026-09-24_KO.md` — D1 ID와 개인 PC 경로가 들어 있다.
    - `docs/SUBMISSION_EXPORT.md` — 이 문서
    - `docs/SUBMISSION_CHECKLIST_KO.md` — 팀 내부 제출 체크리스트
+   - `docs/FINALE_KIT_KO.md` — 결선 발표 대본·예상 질문·당일 점검
    - `outputs/`, `.env*`, 인증 파일
 5. 개발 트리에 없는 파일은 공개본에서도 지운다. 3번의 유지 파일은 예외다.
 6. `README.md`와 `docs/OKX_DEV_DAY.md`는 개발본을 쓰되, 아래 공개용 수정을 적용한다.
