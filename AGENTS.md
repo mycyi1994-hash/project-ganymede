@@ -82,6 +82,8 @@ a clean tree (`rm -rf .vinext dist`) with `CLOUDFLARE_WORKER_NAME=ganymede-xlaye
 `CLOUDFLARE_D1_DATABASE_ID`. Then run `npx wrangler deploy -c dist/server/wrangler.json --keep-vars`.
 Never reuse an older `dist`. Record the source commit and the prior version in
 the deployment message, and add the new version to `docs/PRODUCT_RELEASE.md`.
+When a deployment adds or changes a cron, confirm each cron runs in the Worker's logs; on 3 October a
+new cron registered but never ran until `npx wrangler triggers deploy -c dist/server/wrangler.json`.
 
 After deploying, verify Markets, Pools, USTX, Transparency, Portfolio, Activity, Lab and
 the legacy redirects on the public URL.
