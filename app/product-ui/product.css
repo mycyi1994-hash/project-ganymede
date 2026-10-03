@@ -242,8 +242,6 @@
 .gmd-empty-symbol { width: 80px; height: 80px; display: flex; align-items: center; justify-content: center; border-radius: 50%; background: #e8f0ee; color: var(--gmd-accent); margin-bottom: 26px; }
 .gmd-account-empty h2 { font-size: 28px; }
 .gmd-account-empty p { max-width: 54ch; margin-block: 14px 26px; }
-.gmd-lab-reference { margin-top: 28px; display: flex; justify-content: space-between; align-items: center; gap: 20px; }
-.gmd-lab-reference p { font-size: 14px; margin-top: 5px; }
 .gmd-lab-reference a { display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--gmd-accent); }
 .gmd-design-toolbar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px 20px; padding: 10px 28px; background: #f3e8d6; border-bottom: 1px solid #d9c3a0; font-size: 12px; }
 .gmd-design-toolbar b { margin-inline-end: 10px; }
