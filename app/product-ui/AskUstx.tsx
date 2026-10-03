@@ -32,6 +32,7 @@ export function AskUstx() {
   const [draft, setDraft] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [reading, setReading] = useState<string | null>(null);
   const log = useRef<HTMLDivElement>(null);
   const input = useRef<HTMLTextAreaElement>(null);
 
@@ -46,19 +47,52 @@ export function AskUstx() {
     setDraft("");
     setError(null);
     setBusy(true);
+    let answer = "";
+    const read: string[] = [];
     try {
       const response = await fetch("/api/assistant", {
-        method: "POST", headers: { "Content-Type": "application/json" },
+        method: "POST", headers: { "Content-Type": "application/json", Accept: "application/x-ndjson" },
         body: JSON.stringify({ messages: next.slice(-12).map(({ role, content }) => ({ role, content })) }),
       });
-      const body = await response.json().catch(() => ({})) as { answer?: string; toolsUsed?: string[]; error?: string };
-      if (!response.ok || !body.answer) throw new Error(body.error || "The assistant is unavailable right now.");
-      setTurns([...next, { role: "assistant", content: body.answer, tools: body.toolsUsed ?? [] }]);
+      if (!response.ok || !response.body) {
+        const body = await response.json().catch(() => ({})) as { error?: string };
+        throw new Error(body.error || "The assistant is unavailable right now.");
+      }
+      // One event per line: a tool being read, a piece of the answer, the end or an error.
+      const reader = response.body.pipeThrough(new TextDecoderStream()).getReader();
+      let buffer = "";
+      let finished = false;
+      for (;;) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buffer += value;
+        let end: number;
+        while ((end = buffer.indexOf("\n")) >= 0) {
+          const line = buffer.slice(0, end).trim();
+          buffer = buffer.slice(end + 1);
+          if (!line) continue;
+          const event = JSON.parse(line) as { type: string; name?: string; text?: string; answer?: string; toolsUsed?: string[]; message?: string };
+          if (event.type === "tool" && event.name) {
+            if (!read.includes(event.name)) read.push(event.name);
+            setReading(TOOL_LABELS[event.name] ?? event.name);
+          } else if (event.type === "delta" && event.text) {
+            answer += event.text;
+            setReading(null);
+            setTurns([...next, { role: "assistant", content: answer, tools: read }]);
+          } else if (event.type === "done") {
+            finished = true;
+            setTurns([...next, { role: "assistant", content: event.answer ?? answer, tools: event.toolsUsed ?? read }]);
+          } else if (event.type === "error") {
+            throw new Error(event.message || "The assistant is unavailable right now.");
+          }
+        }
+      }
+      if (!finished) throw new Error("The answer was cut off. Try again.");
     } catch (failure) {
       setError(failure instanceof Error ? failure.message : "The assistant is unavailable right now.");
-      setTurns(turns);
-      setDraft(text);
+      if (!answer) { setTurns(turns); setDraft(text); }
     } finally {
+      setReading(null);
       setBusy(false);
     }
   }
@@ -76,7 +110,7 @@ export function AskUstx() {
         <p>{turn.content}</p>
         {turn.role === "assistant" && turn.tools && turn.tools.length > 0 && <small><Icon name="check" size={13} />Read from {turn.tools.map(tool => TOOL_LABELS[tool] ?? tool).join(", ")}</small>}
       </div>)}
-      {busy && <div className="gmd-ask-turn is-assistant is-busy"><p>Reading X Layer…</p></div>}
+      {busy && turns[turns.length - 1]?.role !== "assistant" && <div className="gmd-ask-turn is-assistant is-busy"><p>{reading ? `Reading the ${reading}…` : "Reading X Layer…"}</p></div>}
       {error && <p className="gmd-ask-error" role="alert">{error}</p>}
     </div>
     <form onSubmit={event => { event.preventDefault(); void ask(draft); }}>

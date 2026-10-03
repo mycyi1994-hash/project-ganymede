@@ -112,11 +112,58 @@ async function runTool(tools: readonly McpTool[], call: ToolCall): Promise<strin
   }
 }
 
+/** What the assistant reports while it answers: a tool it reads, a piece of the answer, the end. */
+export type AskEvent =
+  | { type: "tool"; name: string }
+  | { type: "delta"; text: string }
+  | { type: "done"; answer: string; toolsUsed: string[] };
+
+type StreamChunk = { choices?: { delta?: { content?: string | null; tool_calls?: { index: number; id?: string; type?: string; function?: { name?: string; arguments?: string } }[] }; finish_reason?: string | null }[] };
+
+/** The model's reply, streamed (server-sent events) or whole (JSON), as text and tool calls. */
+async function* readReply(response: Response): AsyncGenerator<{ delta?: string; calls?: ToolCall[] }> {
+  if (!(response.headers.get("content-type") ?? "").includes("text/event-stream") || !response.body) {
+    const completion = await response.json().catch(() => ({})) as Completion;
+    const message = completion.choices?.[0]?.message;
+    if (message?.content) yield { delta: message.content };
+    yield { calls: (message?.tool_calls ?? []).filter(call => call.type === "function") };
+    return;
+  }
+  const calls: ToolCall[] = [];
+  const reader = response.body.pipeThrough(new TextDecoderStream()).getReader();
+  let buffer = "";
+  for (;;) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    buffer += value;
+    let end: number;
+    while ((end = buffer.indexOf("\n")) >= 0) {
+      const line = buffer.slice(0, end).trim();
+      buffer = buffer.slice(end + 1);
+      if (!line.startsWith("data:")) continue;
+      const data = line.slice(5).trim();
+      if (data === "[DONE]") continue;
+      let chunk: StreamChunk;
+      try { chunk = JSON.parse(data) as StreamChunk; } catch { continue; }
+      const delta = chunk.choices?.[0]?.delta;
+      if (delta?.content) yield { delta: delta.content };
+      for (const part of delta?.tool_calls ?? []) {
+        const call = calls[part.index] ??= { id: "", type: "function", function: { name: "", arguments: "" } };
+        if (part.id) call.id = part.id;
+        if (part.function?.name) call.function.name += part.function.name;
+        if (part.function?.arguments) call.function.arguments += part.function.arguments;
+      }
+    }
+  }
+  yield { calls: calls.filter(call => call.id && call.function.name) };
+}
+
 /**
- * One answer: the model may call the tools for up to four rounds before it must reply. Upstream
- * failures become an AssistantError with no detail from the provider.
+ * One answer, as it happens: the model may call the tools for up to four rounds before it must
+ * reply, and the reply streams as it is written. Upstream failures become an AssistantError with no
+ * detail from the provider.
  */
-export async function askUstx(conversation: ChatMessage[], tools: readonly McpTool[], options: { apiKey: string; model?: string; fetcher?: typeof fetch }): Promise<AskResult> {
+export async function* streamUstx(conversation: ChatMessage[], tools: readonly McpTool[], options: { apiKey: string; model?: string; fetcher?: typeof fetch }): AsyncGenerator<AskEvent> {
   const fetcher = options.fetcher ?? fetch;
   const model = options.model || ASSISTANT_DEFAULT_MODEL;
   const reasoning = /^(gpt-5|o\d)/.test(model);
@@ -131,7 +178,7 @@ export async function askUstx(conversation: ChatMessage[], tools: readonly McpTo
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${options.apiKey}` },
         body: JSON.stringify({
-          model, messages, tools: definitions, tool_choice: last ? "none" : "auto",
+          model, messages, tools: definitions, tool_choice: last ? "none" : "auto", stream: true,
           max_completion_tokens: reasoning ? 4_000 : 900,
           ...(reasoning ? { reasoning_effort: "low" } : { temperature: 0.2 }),
         }),
@@ -141,15 +188,23 @@ export async function askUstx(conversation: ChatMessage[], tools: readonly McpTo
       console.error("Ask USTX: the model could not be reached", error instanceof Error ? error.name : "error");
       throw new AssistantError("The assistant could not be reached. Try again in a minute.", 502, "upstream");
     }
-    const completion = await response.json().catch(() => ({})) as Completion;
     if (!response.ok) {
-      console.error("Ask USTX: the model refused the request", response.status, completion.error?.code ?? completion.error?.type ?? "");
+      const refusal = await response.json().catch(() => ({})) as Completion;
+      console.error("Ask USTX: the model refused the request", response.status, refusal.error?.code ?? refusal.error?.type ?? "");
       throw new AssistantError(response.status === 429 ? "The assistant is busy. Try again in a minute." : "The assistant is unavailable right now.", 502, "upstream");
     }
-    const choice = completion.choices?.[0];
-    const calls = (choice?.message?.tool_calls ?? []).filter(call => call.type === "function").slice(0, ASSISTANT_LIMITS.toolCallsPerRound);
+    let answer = "";
+    let calls: ToolCall[] = [];
+    for await (const part of readReply(response)) {
+      if (part.delta) {
+        answer += part.delta;
+        yield { type: "delta", text: part.delta };
+      }
+      if (part.calls) calls = part.calls.slice(0, ASSISTANT_LIMITS.toolCallsPerRound);
+    }
     if (calls.length && !last) {
-      messages.push({ role: "assistant", content: choice?.message?.content ?? null, tool_calls: calls });
+      messages.push({ role: "assistant", content: answer || null, tool_calls: calls });
+      for (const call of calls) yield { type: "tool", name: call.function.name };
       const results = await Promise.all(calls.map(call => runTool(tools, call)));
       calls.forEach((call, index) => {
         if (!toolsUsed.includes(call.function.name)) toolsUsed.push(call.function.name);
@@ -157,9 +212,17 @@ export async function askUstx(conversation: ChatMessage[], tools: readonly McpTo
       });
       continue;
     }
-    const answer = choice?.message?.content?.trim();
-    if (!answer) throw new AssistantError("The assistant could not finish an answer. Try a shorter question.", 502, "empty");
-    return { answer, toolsUsed };
+    if (!answer.trim()) throw new AssistantError("The assistant could not finish an answer. Try a shorter question.", 502, "empty");
+    yield { type: "done", answer: answer.trim(), toolsUsed };
+    return;
+  }
+  throw new AssistantError("The assistant could not finish an answer. Try a shorter question.", 502, "empty");
+}
+
+/** One answer, whole: the streamed answer collected. */
+export async function askUstx(conversation: ChatMessage[], tools: readonly McpTool[], options: { apiKey: string; model?: string; fetcher?: typeof fetch }): Promise<AskResult> {
+  for await (const event of streamUstx(conversation, tools, options)) {
+    if (event.type === "done") return { answer: event.answer, toolsUsed: event.toolsUsed };
   }
   throw new AssistantError("The assistant could not finish an answer. Try a shorter question.", 502, "empty");
 }
