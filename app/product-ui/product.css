@@ -1280,7 +1280,7 @@ a.gmd-pool-pair:hover b { text-decoration: underline; text-underline-offset: 3px
 .gmd-wallet-gate-actions > * { flex: 1 1 180px; }
 .gmd-controls td p { margin: 0; font-size: 13px; }
 .gmd-controls td p + p { margin-top: 4px; }
-.gmd-controls td { vertical-align: top; }
+.gmd-controls :is(th,td) { vertical-align: top; text-align: left; }
 .gmd-controls td:last-child { min-width: 280px; }
 .gmd-app .gmd-wallet-gas.is-done { background: #edf6ef; color: #1f5a32; }
 .gmd-wallet-gas-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 8px; }
@@ -1296,4 +1296,4 @@ a.gmd-pool-pair:hover b { text-decoration: underline; text-underline-offset: 3px
 .gmd-roadmap b { display: block; }
 @media (max-width: 760px) { .gmd-usage { grid-template-columns: 1fr 1fr; } }
 .gmd-dex-compare { margin-top: 18px; }
-.gmd-dex-compare h3 { font-size: 16px; margin: 0; }
+.gmd-dex-compare h3 { font-size: 16px; margin: 0 0 4px; }
