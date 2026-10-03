@@ -5,6 +5,7 @@ import { runUstxNavCycle } from "../lib/engine/runner";
 import type { EngineEnv } from "../lib/engine/types";
 import { ACTIVITY_CRON, runActivityIndex, runLpMarkout } from "../lib/xstocks/activity-index";
 import { POOLS_CRON, runPoolsSnapshot } from "../lib/xstocks/pools-api";
+import { runNavSnapshot } from "../lib/xstocks/nav-api";
 
 interface Env extends EngineEnv {
   ASSETS: Fetcher;
@@ -59,10 +60,15 @@ const worker = {
       controller.noRetry();
       return;
     }
-    // A snapshot of both pools for the public pools API, every minute, apart from the NAV record.
+    // Snapshots for the public NAV and pools APIs, every minute, apart from the NAV record; each
+    // job apart, so a failure in one leaves the other.
     if (controller.cron === POOLS_CRON) {
       ctx.waitUntil(runPoolsSnapshot(env).catch((error) => {
         console.error("Ganymede pools snapshot failed", error);
+        throw error;
+      }));
+      ctx.waitUntil(runNavSnapshot(env).catch((error) => {
+        console.error("Ganymede NAV snapshot failed", error);
         throw error;
       }));
       return;

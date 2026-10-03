@@ -23,8 +23,8 @@ settlement relayer is `ganymede-settlement-relayer`, and the arbitrage keeper is
 crons: the USTX NAV record every five minutes (`runUstxNavCycle`; the earlier engine's
 paper strategies run only through the operator API, so the record stays small in CPU time),
 and the market activity index (`lib/xstocks/activity-index.ts`, with the pools' results for their
-providers as a second job) four minutes past, apart so it never holds up the NAV, and a snapshot of both pools every minute
-(`runPoolsSnapshot` in `lib/xstocks/pools-api.ts`) that `GET /api/v1/ustx/pools` serves while under 90 seconds old. The fund and the lending market refuse a NAV older than one hour,
+providers as a second job) four minutes past, apart so it never holds up the NAV, and snapshots of both pools and the latest NAV record every minute
+(`runPoolsSnapshot` in `lib/xstocks/pools-api.ts`, `runNavSnapshot` in `lib/xstocks/nav-api.ts`) that `GET /api/v1/ustx/pools` and `GET /api/v1/ustx` serve while under 90 seconds old. The fund and the lending market refuse a NAV older than one hour,
 so a stalled record stops wallet orders and loans; check the cron's outcome after each deploy.
 `docs/PRODUCT_RELEASE.md` records the current source and Worker version.
 
