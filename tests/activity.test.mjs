@@ -188,9 +188,10 @@ test("an index never claims blocks whose rows it dropped", async () => {
   assert.equal(index.fromBlock, F);
   // A new event past a full index drops the oldest row, and the range starts after the new oldest.
   const full = Array.from({ length: ACTIVITY_KEEP }, (_, n) => ({ ...row, hash: tx(100 + n), block: F + 5_000 - n }));
-  network = chain({ head: F + 5_001 + ACTIVITY_INDEX_MARGIN, logs: [log(fund, [FUND_EVENTS.invested, topic(BOB)], [20n * USD, 200_000n, 100n * USD, TIME], { block: F + 5_001, index: 0, hash: tx(900) })] });
-  index = await updateActivityIndex({ fromBlock: F + 4_000, toBlock: F + 5_000, keep: ACTIVITY_KEEP, rows: full }, network.rpc, { chunks: 3 });
-  assert.deepEqual([index.rows.length, index.rows[0].block, index.rows.at(-1).block, index.fromBlock], [ACTIVITY_KEEP, F + 5_001, F + 4_802, F + 4_803]);
+  network = chain({ head: F + 5_001 + ACTIVITY_INDEX_MARGIN, logs: [log(fund, [FUND_EVENTS.invested, topic(BOB)], [20n * USD, 200_000n, 100n * USD, TIME], { block: F + 5_001, index: 0, hash: tx(90_000) })] });
+  index = await updateActivityIndex({ fromBlock: F + 5_000 - ACTIVITY_KEEP, toBlock: F + 5_000, keep: ACTIVITY_KEEP, rows: full }, network.rpc, { chunks: 3 });
+  const oldest = F + 5_001 - (ACTIVITY_KEEP - 1);
+  assert.deepEqual([index.rows.length, index.rows[0].block, index.rows.at(-1).block, index.fromBlock], [ACTIVITY_KEEP, F + 5_001, oldest, oldest + 1]);
   assert.deepEqual(network.ranges(), [[F + 5_001, F + 5_001]], "a full index reads no history");
 });
 

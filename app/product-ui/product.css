@@ -1271,3 +1271,8 @@ a.gmd-pool-pair:hover b { text-decoration: underline; text-underline-offset: 3px
   .gmd-ask { z-index: 45; inset: auto 0 0 0; width: 100%; height: min(88dvh, 640px); border-radius: 14px 14px 0 0; padding-bottom: env(safe-area-inset-bottom); }
 }
 .gmd-ask form button svg { width: 18px; height: 18px; }
+
+/* Long names and addresses in running text wrap on narrow screens; code blocks scroll inside their box. */
+.gmd-document { min-width: 0; }
+.gmd-document :is(p,li,dd,td) code { overflow-wrap: anywhere; }
+.gmd-code, .gmd-code pre { max-width: 100%; min-width: 0; }
