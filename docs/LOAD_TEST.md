@@ -56,10 +56,11 @@ written. The administrator sent each wallet 0.0004 testnet OKB for gas and took 
    closed the gap at its next five-minute check, with nobody involved: it invested at the fund,
    sold 1.7315 USTX in the pool and earned $6.12, leaving the pool 0.29% above the NAV.
 4. **Slower reads (fixed on 3 October).** The pools API and the MCP pools tool took 2.6–2.7 s at the
-   median because each request read both pools from X Layer. The Worker now keeps a read for 30
-   seconds in memory, requests arriving together share one read, and when X Layer cannot be read
-   the last read is served for up to 10 minutes marked `stale`. The response's `readAt` says when
-   X Layer was read.
+   median because each request read both pools from X Layer. A cron now reads both pools every
+   minute and stores them in the engine state; the API serves that read while it is under 90
+   seconds old, and each server instance keeps what it served for 30 seconds. X Layer is read for a
+   request only when the snapshot is older, and when X Layer cannot be read, a read up to 10 minutes
+   old is served marked `stale`. The response's `readAt` says when X Layer was read.
 
 ## Test wallets
 
