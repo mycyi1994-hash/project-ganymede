@@ -11,6 +11,7 @@ import {
   parseActivityDay, parseActivityIndex, parseHighlights, readActivityTail, scanActivity, serializeActivityIndex, updateActivityIndex, withNewerRows,
 } from "../lib/xstocks/activity.ts";
 import { ACTIVITY_CRON, STATE_MARKET_ACTIVITY, runActivityIndex } from "../lib/xstocks/activity-index.ts";
+import { STATE_USAGE } from "../lib/xstocks/usage.ts";
 import { GET, OPTIONS } from "../app/api/v1/ustx/activity/route.ts";
 
 const F = ACTIVITY_FIRST_BLOCK;
@@ -309,7 +310,8 @@ test("the scheduled run keeps the index, and the public API serves it to any ori
   db.readOnly = false;
   const network = chain({ head: F + 400 + ACTIVITY_INDEX_MARGIN, logs: MARKET });
   assert.deepEqual(await runActivityIndex({ DB: db }, { rpc: network.rpc }), { fromBlock: F, toBlock: F + 400, rows: 5 });
-  assert.deepEqual(sql.prepare("SELECT key FROM engine_state").all().map(row => row.key), [STATE_MARKET_ACTIVITY]);
+  // Usage since launch follows the index (lib/xstocks/usage.ts).
+  assert.deepEqual(sql.prepare("SELECT key FROM engine_state ORDER BY key").all().map(row => row.key), [STATE_MARKET_ACTIVITY, STATE_USAGE]);
 
   db.readOnly = true;
   t.mock.method(globalThis, "fetch", async () => { throw new Error("the API reads only the stored index"); });
@@ -349,14 +351,16 @@ test("the Worker runs market activity on its own cron, apart from the NAV cycle"
   const pending = [];
   const errors = t.mock.method(console, "error", () => {});
   await worker.scheduled({ cron: ACTIVITY_CRON, scheduledTime: Date.now(), noRetry() {} }, { DB: db }, { waitUntil: promise => pending.push(promise), passThroughOnException() {} });
-  // Two jobs: the activity index and the pools' results. This chain cannot answer the fund's NAV, so
-  // the second fails, alone, and says so.
-  const [activity, results] = await Promise.allSettled(pending);
+  // Three jobs: the activity index, the pools' results and the hourly OKX DEX quotes. This chain
+  // cannot answer the fund's NAV, so the second fails, alone, and says so; without OnchainOS
+  // credentials the third does nothing.
+  const [activity, results, quotes] = await Promise.allSettled(pending);
   assert.equal(activity.status, "fulfilled");
   assert.equal(results.status, "rejected");
+  assert.equal(quotes.status, "fulfilled");
   assert.match(String(errors.mock.calls[0].arguments[0]), /pool results run failed/);
-  assert.deepEqual(sql.prepare("SELECT key FROM engine_state").all().map(row => row.key), [STATE_MARKET_ACTIVITY], "only the activity index; no engine cycle ran");
-  assert.equal(parseActivityIndex(sql.prepare("SELECT value FROM engine_state").get().value)?.rows.length, 5);
+  assert.deepEqual(sql.prepare("SELECT key FROM engine_state ORDER BY key").all().map(row => row.key), [STATE_MARKET_ACTIVITY, STATE_USAGE], "only the activity index and usage; no engine cycle ran");
+  assert.equal(parseActivityIndex(sql.prepare("SELECT value FROM engine_state WHERE key = ?").get(STATE_MARKET_ACTIVITY).value)?.rows.length, 5);
 });
 
 test("the NAV chart marks every arbitrage and orders of $1,000 or more, and nothing from a malformed list", () => {

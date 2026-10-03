@@ -50,8 +50,10 @@ test("each question counts against the visitor's and the site's daily allowance,
   for (let index = 0; index < ASSISTANT_LIMITS.perVisitorPerDay; index += 1) await takeQuestion(db, "203.0.113.7", day);
   await assert.rejects(takeQuestion(db, "203.0.113.7", day), (error) => error instanceof AssistantError && error.status === 429 && error.code === "visitor_limit");
   await takeQuestion(db, "198.51.100.2", day);
-  const keys = db.sql.prepare("SELECT key FROM engine_state ORDER BY key").all().map((row) => row.key);
+  const keys = db.sql.prepare("SELECT key FROM engine_state WHERE key LIKE 'assistant:%' ORDER BY key").all().map((row) => row.key);
   assert.equal(keys.length, 3);
+  // Every question is also counted since launch, for the public usage figures.
+  assert.equal(db.sql.prepare("SELECT value FROM engine_state WHERE key = 'usage:ask-questions'").get().value, String(ASSISTANT_LIMITS.perVisitorPerDay + 2));
   assert.ok(keys.every((key) => !key.includes("203.0.113.7") && !key.includes("198.51.100.2")), "addresses are stored only as hashes");
   assert.equal(db.sql.prepare("SELECT value FROM engine_state WHERE key = 'assistant:site:2026-10-02'").get().value, String(ASSISTANT_LIMITS.perVisitorPerDay + 2));
   await takeQuestion(db, "203.0.113.7", new Date("2026-10-03T00:01:00.000Z"));

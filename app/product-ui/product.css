@@ -1276,3 +1276,24 @@ a.gmd-pool-pair:hover b { text-decoration: underline; text-underline-offset: 3px
 .gmd-document { min-width: 0; }
 .gmd-document :is(p,li,dd,td) code { overflow-wrap: anywhere; }
 .gmd-code, .gmd-code pre { max-width: 100%; min-width: 0; }
+.gmd-wallet-gate-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+.gmd-wallet-gate-actions > * { flex: 1 1 180px; }
+.gmd-controls td p { margin: 0; font-size: 13px; }
+.gmd-controls td p + p { margin-top: 4px; }
+.gmd-controls td { vertical-align: top; }
+.gmd-controls td:last-child { min-width: 280px; }
+.gmd-app .gmd-wallet-gas.is-done { background: #edf6ef; color: #1f5a32; }
+.gmd-wallet-gas-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 8px; }
+.gmd-wallet-gas .gmd-inline-error { margin-top: 8px; }
+.gmd-usage { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 12px; margin: 16px 0 8px; }
+.gmd-usage div { background: #fff; border: 1px solid var(--gmd-line); border-radius: 10px; padding: 16px; }
+.gmd-usage dt { font-size: 12px; color: var(--gmd-copy); }
+.gmd-usage dd { margin: 6px 0 0; }
+.gmd-usage strong { display: block; font-size: 22px; }
+.gmd-usage small { display: block; margin-top: 4px; font-size: 12px; color: var(--gmd-copy); }
+.gmd-roadmap { margin-top: 16px; }
+.gmd-roadmap li { margin-bottom: 12px; }
+.gmd-roadmap b { display: block; }
+@media (max-width: 760px) { .gmd-usage { grid-template-columns: 1fr 1fr; } }
+.gmd-dex-compare { margin-top: 18px; }
+.gmd-dex-compare h3 { font-size: 16px; margin: 0; }

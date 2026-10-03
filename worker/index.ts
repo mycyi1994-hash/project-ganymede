@@ -6,6 +6,7 @@ import type { EngineEnv } from "../lib/engine/types";
 import { ACTIVITY_CRON, runActivityIndex, runLpMarkout } from "../lib/xstocks/activity-index";
 import { POOLS_CRON, runPoolsSnapshot } from "../lib/xstocks/pools-api";
 import { runNavSnapshot } from "../lib/xstocks/nav-api";
+import { runDexQuotes } from "../lib/xstocks/dex-quotes";
 
 interface Env extends EngineEnv {
   ASSETS: Fetcher;
@@ -82,6 +83,13 @@ const worker = {
       // The pools' results for their providers: apart, so a failure in either leaves the other.
       ctx.waitUntil(runLpMarkout(env).catch((error) => {
         console.error("Ganymede pool results run failed", error);
+        throw error;
+      }));
+      // OKX DEX quotes for building the basket by hand, once an hour (lib/xstocks/dex-quotes.ts).
+      ctx.waitUntil(runDexQuotes(env).then((quotes) => {
+        if (quotes) console.log("Ganymede DEX quotes", quotes.error ?? `${quotes.legs.length} legs`);
+      }).catch((error) => {
+        console.error("Ganymede DEX quotes failed", error);
         throw error;
       }));
       return;

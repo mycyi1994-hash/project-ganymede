@@ -13,6 +13,7 @@ import Holdings from "./Holdings";
 import { OkxSource } from "./OkxSource";
 import { useRecordCheck } from "./useRecordCheck";
 import PoolCheck from "./PoolCheck";
+import ContractControls from "./ContractControls";
 
 // Proof of NAV for customers, in the manner of an exchange's proof-of-reserves page: the result,
 // how a price is made, the holdings and the records. The technical checks live on /developers.
@@ -54,6 +55,7 @@ export default function Transparency() {
       <div><dt>USTX token</dt><dd><ExplorerLink href={`${FUND_DEPLOYMENT.explorerUrl}/token/${FUND_DEPLOYMENT.fund}`} /></dd></div>
     </dl></aside></div>
     <PoolCheck composition={composition} />
+    <ContractControls />
     <section className="gmd-proof-history" aria-labelledby="history-title"><header className="gmd-section-heading"><h2 id="history-title">Recent records</h2><span>A new record every five minutes</span></header><div className="gmd-data-table-scroll"><table className="gmd-table"><thead><tr><th>Time</th><th>NAV per share</th><th>Transaction</th></tr></thead><tbody>{records.map(entry => { const link = txUrl(entry.txHash); return <tr key={entry.holdingsHash}><th scope="row">{shortTime(entry.asOf)}</th><td>{formatUsdMicros(entry.navPerShareMicros, 4)}</td><td>{link ? <ExplorerLink href={link} /> : "—"}</td></tr>; })}</tbody></table>{!records.length && <p className="gmd-caption">{loading ? "Loading records…" : "No recent records are available."}</p>}</div></section>
     <section className="gmd-scope" aria-label="What verification covers"><div><h2>What verification covers</h2><ul><li>The NAV matches the record on X Layer.</li><li>The holdings add up exactly to that NAV.</li><li>The holdings are the ones recorded, unchanged since.</li><li>No price is more than a minute older than the record’s time; orders and loans accept the record for an hour after it.</li></ul><h2>Also shown</h2><ul><li>The prices beside the xStocks’ trading pools on X Layer, read by your browser. This comparison does not change the verification result.</li><li>By the USTX contract’s verified source, USTX in wallets is issued only by investing at the recorded NAV.</li></ul></div><div><h2>What it does not cover</h2><ul><li>Whether market prices match the stock market. OKX OnchainOS and the pools both price xStocks on X Layer, so a price wrong in both would pass, and a large trade can move a pool for a while.</li><li>Custody. USTX is a demo fund bought with demo dollars, and no real assets are held.</li></ul></div></section>
     <div className="gmd-terms-links"><Link href="/developers#verify" prefetch={false}>The technical checks, for developers <Icon name="arrow" size={16} /></Link><Link href="/methodology" prefetch={false}>Methodology <Icon name="arrow" size={16} /></Link><Link href="/limitations" prefetch={false}>Limitations <Icon name="arrow" size={16} /></Link></div>

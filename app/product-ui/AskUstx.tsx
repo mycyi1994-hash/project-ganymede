@@ -37,6 +37,13 @@ export function AskUstx() {
   const input = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => { if (open) input.current?.focus(); }, [open]);
+  // Escape closes the panel wherever focus is, even after a button inside it has gone away.
+  useEffect(() => {
+    if (!open) return;
+    const close = (event: KeyboardEvent) => { if (event.key === "Escape") setOpen(false); };
+    document.addEventListener("keydown", close);
+    return () => document.removeEventListener("keydown", close);
+  }, [open]);
   useEffect(() => { log.current?.scrollTo({ top: log.current.scrollHeight, behavior: "smooth" }); }, [turns, busy]);
 
   async function ask(question: string) {
@@ -99,9 +106,9 @@ export function AskUstx() {
 
   if (!open) return <button type="button" className="gmd-ask-launch" onClick={() => setOpen(true)} aria-haspopup="dialog"><Icon name="spark" size={18} />Ask USTX</button>;
 
-  return <section className="gmd-ask" role="dialog" aria-label="Ask USTX" onKeyDown={event => { if (event.key === "Escape") setOpen(false); }}>
+  return <section className="gmd-ask" role="dialog" aria-label="Ask USTX">
     <header><div><strong><Icon name="spark" size={17} />Ask USTX</strong><span>Answers read live from X Layer Testnet</span></div>
-      <div>{turns.length > 0 && <button type="button" className="gmd-ask-reset" onClick={() => { setTurns([]); setError(null); }}>New chat</button>}<button type="button" aria-label="Close Ask USTX" onClick={() => setOpen(false)}><Icon name="close" size={18} /></button></div>
+      <div>{turns.length > 0 && <button type="button" className="gmd-ask-reset" onClick={() => { setTurns([]); setError(null); input.current?.focus(); }}>New chat</button>}<button type="button" aria-label="Close Ask USTX" onClick={() => setOpen(false)}><Icon name="close" size={18} /></button></div>
     </header>
     <div className="gmd-ask-log" ref={log} aria-live="polite">
       {turns.length === 0 && <div className="gmd-ask-intro"><p>Ask about USTX&rsquo;s NAV, what a share holds, quotes at the fund and the pools, or how the record is checked.</p>
