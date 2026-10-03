@@ -38,8 +38,6 @@ test("public product routes share navigation and select the right destination be
     ["/products/ustx", "/", "About USTX"],
     ["/products/ustx/transparency", "/products/ustx/transparency", "Transparency"],
     ["/portfolio", "/portfolio", "Your wallet on X Layer"],
-    // The separate test share ledger stays reachable by address but is not a primary destination.
-    ["/activity", null, "Your testnet share records"],
   ]) {
     const response = await render(path);
     assert.equal(response.status, 200, path);
@@ -114,19 +112,22 @@ test("Pools offers the live pool's liquidity from a wallet, with its figures rea
 });
 
 test("legacy URLs, the retired paper Lab's among them, route to the dollar product", async () => {
-  for (const [path, target] of [["/?app=select", "/products/ustx"], ["/?app=portfolio", "/portfolio"], ["/proof", "/products/ustx/transparency"], ["/etfs/gmd-core", "/products/ustx"], ["/lab", "/portfolio"], ["/lab/strategies/gmd-core", "/products/ustx"], ["/lab/verification", "/developers"]]) {
+  for (const [path, target] of [["/?app=select", "/products/ustx"], ["/?app=portfolio", "/portfolio"], ["/proof", "/products/ustx/transparency"], ["/etfs/gmd-core", "/products/ustx"], ["/lab", "/portfolio"], ["/lab/strategies/gmd-core", "/products/ustx"], ["/lab/verification", "/developers"], ["/activity", "/products/ustx"], [`/activity/0x${"a".repeat(64)}`, "/products/ustx"]]) {
     const response = await render(path);
     assert.ok([307, 308].includes(response.status), `${path}: ${response.status}`);
     assert.equal(new URL(response.headers.get("location"), "http://localhost").pathname, target);
   }
 });
 
-test("public Portfolio and Activity do not contain the local example account or simulated balances", async () => {
-  for (const path of ["/portfolio", "/activity"]) {
-    const html = visible(await (await render(path)).text());
-    assert.doesNotMatch(html, /12,454|125\.250000|Example account|Preview processing/);
-  }
-  assert.doesNotMatch(visible(await (await render("/activity")).text()), /href="\/lab|paper allocation/i);
+test("public Portfolio does not contain the local example account or simulated balances, and no operator console is public", async () => {
+  const html = visible(await (await render("/portfolio")).text());
+  assert.doesNotMatch(html, /12,454|125\.250000|Example account|Preview processing/);
+  const operations = visible(await (await render("/?app=operations")).text());
+  assert.doesNotMatch(operations, /Operator workspace|Fund operations|operator access/i, "the old operator console is not served to the public");
+  assert.match(operations, /US Tech Basket/);
+  const missing = await render("/not-a-page");
+  assert.equal(missing.status, 404);
+  assert.match(visible(await missing.text()), /Page not found/);
   const response = await render("/design-preview?screen=portfolio");
   assert.equal(response.status, 404, "design fixtures must not be served by the production build");
 });
@@ -164,9 +165,9 @@ test("the developer page keeps the checks, the experiment on a local copy and th
 });
 
 test("public pages are in US dollars and say nothing of paper portfolios", async () => {
-  for (const path of ["/", "/pools", "/products/ustx", "/products/ustx/transparency", "/portfolio", "/activity", "/developers", "/issuers", "/methodology", "/limitations"]) {
+  for (const path of ["/", "/pools", "/products/ustx", "/products/ustx/transparency", "/portfolio", "/developers", "/issuers", "/methodology", "/limitations"]) {
     const html = visible(await (await render(path)).text());
-    assert.doesNotMatch(html, /\bKRW\b|₩|paper portfolio|paper strateg|Strategy Lab/i, path);
+    assert.doesNotMatch(html, /\bKRW\b|₩|paper portfolio|paper strateg|Strategy Lab|GMDCORE|share ledger|earlier work/i, path);
   }
 });
 
