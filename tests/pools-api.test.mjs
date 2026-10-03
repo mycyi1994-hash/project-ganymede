@@ -3,7 +3,8 @@ import test from "node:test";
 import { DatabaseSync } from "node:sqlite";
 import { readFileSync } from "node:fs";
 import { env } from "cloudflare:workers";
-import { GET, OPTIONS } from "../app/api/v1/ustx/pools/route.ts";
+import { GET, OPTIONS, POOLS_FRESH_MS, POOLS_STALE_MS } from "../app/api/v1/ustx/pools/route.ts";
+import { clearReadCache } from "../lib/read-cache.ts";
 import { FUND_DEPLOYMENT, FUND_SELECTORS, POOL_SELECTORS } from "../lib/xstocks/fund.ts";
 import { LIQUIDITY_SELECTORS, POOL_LAUNCH_BLOCK } from "../lib/xstocks/liquidity.ts";
 import { ACTIVITY_FIRST_BLOCK, ACTIVITY_KEEP, serializeActivityIndex } from "../lib/xstocks/activity.ts";
@@ -58,6 +59,8 @@ function chain({ oldBlockReverts = false } = {}) {
   };
 }
 
+test.beforeEach(() => clearReadCache());
+
 test("the pools API serves the pool's state, fee APR and last day to any origin, and never writes", async (t) => {
   const { db, sql } = database();
   env.DB = db;
@@ -69,8 +72,10 @@ test("the pools API serves the pool's state, fee APR and last day to any origin,
   const response = await GET();
   assert.equal(response.status, 200);
   assert.equal(response.headers.get("access-control-allow-origin"), "*");
-  assert.equal(response.headers.get("cache-control"), "public, max-age=60");
+  assert.equal(response.headers.get("cache-control"), "public, max-age=30");
   const body = await response.json();
+  assert.equal(body.stale, false);
+  assert.ok(Date.now() - Date.parse(body.readAt) < 60_000, "readAt is when X Layer was read");
   assert.deepEqual([body.network, body.chainId, body.pools.length], ["X Layer Testnet", 1952, 1], "the v4 pool is not listed until it is deployed");
   const [pool] = body.pools;
   assert.deepEqual({ ...pool, feeApr: undefined, last24h: undefined }, {
@@ -111,10 +116,30 @@ test("the pools API serves each pool's result for its providers over the same bl
   assert.match(body.rule, /lpResult compares the pools over the same blocks/);
 });
 
+test("a read of the pools serves every request for 30 seconds, and requests at the same moment share one read", async (t) => {
+  const { db } = database();
+  env.DB = db;
+  db.readOnly = true;
+  t.mock.timers.enable({ apis: ["Date"], now: Date.now() });
+  const mock = t.mock.method(globalThis, "fetch", chain());
+  const [first, second] = await Promise.all([GET(), GET()]);
+  const calls = mock.mock.callCount();
+  assert.deepEqual(await first.json(), await second.json(), "two requests at once wait for the same read");
+  t.mock.timers.tick(POOLS_FRESH_MS - 1);
+  const cached = await (await GET()).json();
+  assert.equal(mock.mock.callCount(), calls, "X Layer is not read again within the fresh period");
+  assert.equal(cached.stale, false);
+  t.mock.timers.tick(2);
+  const again = await (await GET()).json();
+  assert.ok(mock.mock.callCount() > calls, "after it X Layer is read again");
+  assert.ok(Date.parse(again.readAt) > Date.parse(cached.readAt));
+});
+
 test("the pools API keeps the pool when the yield or the index cannot be read, and says when the chain cannot", async (t) => {
   const { db } = database();
   env.DB = db;
   db.readOnly = true;
+  t.mock.timers.enable({ apis: ["Date"], now: Date.now() });
   const mock = t.mock.method(globalThis, "fetch", chain({ oldBlockReverts: true }));
   const partial = await (await GET()).json();
   assert.equal(partial.pools[0].feeApr, null);
@@ -122,6 +147,16 @@ test("the pools API keeps the pool when the yield or the index cannot be read, a
   assert.equal(partial.pools[0].valueMicros, "10005000000");
   mock.mock.mockImplementation(async () => { throw new Error("connect ECONNREFUSED https://testrpc.xlayer.tech/terigon"); });
   t.mock.method(console, "error", () => {});
+  // X Layer down after the read went stale: the last read is served, marked, for up to ten minutes.
+  t.mock.timers.tick(POOLS_FRESH_MS + 1);
+  const stale = await GET();
+  assert.equal(stale.status, 200);
+  assert.equal(stale.headers.get("cache-control"), "public, max-age=15");
+  const staleBody = await stale.json();
+  assert.equal(staleBody.stale, true);
+  assert.equal(staleBody.readAt, partial.readAt);
+  assert.equal(staleBody.pools[0].valueMicros, "10005000000");
+  t.mock.timers.tick(POOLS_STALE_MS);
   const down = await GET();
   assert.equal(down.status, 503);
   assert.equal(down.headers.get("cache-control"), "no-store");
