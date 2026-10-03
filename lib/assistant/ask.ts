@@ -63,6 +63,9 @@ export function parseConversation(body: unknown): ChatMessage[] {
   return messages;
 }
 
+/** Every question asked since 3 October 2026, for GET /api/v1/ustx/usage. */
+export const ASK_COUNT_KEY = "usage:ask-questions";
+
 type D1 = { prepare(query: string): { bind(...values: unknown[]): { first<T>(): Promise<T | null>; run(): Promise<unknown> } }; batch(statements: unknown[]): Promise<unknown> };
 
 /**
@@ -76,7 +79,7 @@ export async function takeQuestion(db: D1, visitor: string, now: Date): Promise<
   const siteKey = `assistant:site:${day}`;
   const visitorKey = `assistant:visitor:${day}:${(await sha256Hex(`${day}:${visitor}`)).slice(0, 32)}`;
   const count = (key: string) => db.prepare("INSERT INTO engine_state (key, value, updated_at) VALUES (?, '1', ?) ON CONFLICT(key) DO UPDATE SET value = CAST(CAST(value AS INTEGER) + 1 AS TEXT), updated_at = excluded.updated_at").bind(key, at);
-  await db.batch([count(siteKey), count(visitorKey)]);
+  await db.batch([count(siteKey), count(visitorKey), count(ASK_COUNT_KEY)]);
   const read = async (key: string) => Number((await db.prepare("SELECT value FROM engine_state WHERE key = ?").bind(key).first<{ value: string }>())?.value ?? 0);
   const [site, mine] = await Promise.all([read(siteKey), read(visitorKey)]);
   if (site === 1) await db.prepare("DELETE FROM engine_state WHERE key LIKE 'assistant:%' AND updated_at < ?").bind(`${day}T00:00:00.000Z`).run();

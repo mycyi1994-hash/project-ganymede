@@ -15,7 +15,7 @@ material out of those screens: the technical checks, the tamper experiment and
 the evidence download (re-checked by `npm run verify:evidence`) live on
 `/developers`, which with `/issuers`, the `/embed/ustx` badge (and `/embed/basket` for a basket
 defined by a file under `public/baskets/`, such as the MAG3 demo in its own registry) and the public
-`GET /api/v1/ustx` (with `GET /api/v1/ustx/activity` and `GET /api/v1/ustx/pools`) and the read-only MCP server at `/mcp` (`lib/mcp/server.ts`, tools in `app/mcp/tools.ts`) form the partner surface linked from the footer. The
+`GET /api/v1/ustx` (with `GET /api/v1/ustx/activity` `GET /api/v1/ustx/pools`, `GET /api/v1/ustx/usage` (usage since launch, the team's wallets in `lib/xstocks/team-wallets.ts` apart) and `GET /api/v1/ustx/dex-quotes` (hourly OKX DEX aggregator quotes for buying the six xStocks by hand, `lib/xstocks/dex-quotes.ts`), described in `/api/v1/openapi.json`, with `/llms.txt` for agents) and the read-only MCP server at `/mcp` (`lib/mcp/server.ts`, tools in `app/mcp/tools.ts`) form the partner surface linked from the footer. The
 earlier work is retired from the public site: the won-denominated paper Lab (`/lab`, `/lab/*`, `/etfs/*`,
 `/?app=portfolio`) and the GMDCORE test share ledger (`/activity`, `/activity/*`) redirect to the dollar product,
 the old operator console (`/?app=operations`) is not served (the operator API remains), and public pages show US dollars only (tested in `tests/rendered-html.test.mjs`). Production is the `ganymede-xlayer` Worker; the
@@ -31,7 +31,8 @@ so a stalled record stops wallet orders and loans; check the cron's outcome afte
 
 Investing uses demo dollars with no value, in two ways. Wallet investing
 (`lib/xstocks/fund.ts`, `app/product-ui/WalletInvest.tsx`) runs on X Layer
-Testnet only: anyone can claim `GanymedeDemoDollar` (dUSD), and
+Testnet only: anyone can claim `GanymedeDemoDollar` (dUSD) (and a wallet with almost no test OKB gets 0.0005 once from `POST /api/faucet`,
+`lib/faucet.ts`, signed by the Worker secret `FAUCET_PRIVATE_KEY`, a key holding test OKB only with no role on any contract), and
 `GanymedeBasketFund` issues USTX only when a wallet invests at the latest NAV in
 the registry and redeems at that NAV, holding no assets. Demo-balance investing
 (`lib/demo/`, `app/api/demo/`) keeps a D1 ledger per browser and issues nothing

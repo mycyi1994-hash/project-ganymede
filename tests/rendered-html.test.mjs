@@ -143,6 +143,8 @@ test("transparency is a customer proof page that starts unverified and states it
   assert.match(html, /What verification covers/);
   assert.match(html, /What it does not cover/);
   assert.match(html, /href="\/developers#verify"/);
+  // Who can do what to each contract, read by the browser.
+  assert.match(html, /Who controls the contracts/);
   // Developer material lives on /developers, not on the customer page.
   assert.doesNotMatch(html, /Try to break it|npm run verify:evidence|Original composition document|NAV verified on X Layer/);
 });
@@ -212,9 +214,14 @@ test("issuer, developer and embed pages render for partners", async () => {
   assert.match(issuers, /Plans/);
   assert.match(issuers, /Contact us/);
   assert.doesNotMatch(issuers, /Roadmap|Planned/);
+  assert.match(issuers, /How Ganymede earns/);
+  assert.match(issuers, /The road to mainnet/);
+  assert.match(issuers, /Usage so far/);
   const developers = visible(await (await render("/developers")).text());
   assert.match(developers, /\/api\/v1\/ustx/);
   assert.match(developers, /latestNav/);
+  assert.match(developers, /href="\/api\/v1\/openapi.json"/);
+  assert.match(developers, /href="\/llms.txt"/);
   assert.match(developers, /\/embed\/ustx/);
   assert.match(developers, /verify:evidence/);
   assert.match(developers, /Invest from a wallet or a contract/);
