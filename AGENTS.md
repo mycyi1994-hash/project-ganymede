@@ -16,15 +16,16 @@ the evidence download (re-checked by `npm run verify:evidence`) live on
 `/developers`, which with `/issuers`, the `/embed/ustx` badge (and `/embed/basket` for a basket
 defined by a file under `public/baskets/`, such as the MAG3 demo in its own registry) and the public
 `GET /api/v1/ustx` (with `GET /api/v1/ustx/activity` and `GET /api/v1/ustx/pools`) and the read-only MCP server at `/mcp` (`lib/mcp/server.ts`, tools in `app/mcp/tools.ts`) form the partner surface linked from the footer. The
-GMDCORE test ledger page (`/activity`) and the paper Lab are earlier work and
-stay out of the navigation. Production is the `ganymede-xlayer` Worker; the
+GMDCORE test ledger page (`/activity`) is earlier work and stays out of the navigation. The earlier
+won-denominated paper Lab is retired from the public site: `/lab`, `/lab/*`, `/etfs/*` and `/?app=portfolio`
+redirect to the dollar product, and public pages show US dollars only (tested in `tests/rendered-html.test.mjs`). Production is the `ganymede-xlayer` Worker; the
 settlement relayer is `ganymede-settlement-relayer`, and the arbitrage keeper is
 `ganymede-arbitrage-keeper` (`relayer/wrangler.keeper.jsonc`). The app Worker has three
 crons: the USTX NAV record every five minutes (`runUstxNavCycle`; the earlier engine's
 paper strategies run only through the operator API, so the record stays small in CPU time),
 and the market activity index (`lib/xstocks/activity-index.ts`, with the pools' results for their
-providers as a second job) four minutes past, apart so it never holds up the NAV, and a snapshot of both pools every minute
-(`runPoolsSnapshot` in `lib/xstocks/pools-api.ts`) that `GET /api/v1/ustx/pools` serves while under 90 seconds old. The fund and the lending market refuse a NAV older than one hour,
+providers as a second job) four minutes past, apart so it never holds up the NAV, and snapshots of both pools and the latest NAV record every minute
+(`runPoolsSnapshot` in `lib/xstocks/pools-api.ts`, `runNavSnapshot` in `lib/xstocks/nav-api.ts`) that `GET /api/v1/ustx/pools` and `GET /api/v1/ustx` serve while under 90 seconds old. The fund and the lending market refuse a NAV older than one hour,
 so a stalled record stops wallet orders and loans; check the cron's outcome after each deploy.
 `docs/PRODUCT_RELEASE.md` records the current source and Worker version.
 
@@ -85,7 +86,7 @@ the deployment message, and add the new version to `docs/PRODUCT_RELEASE.md`.
 When a deployment adds or changes a cron, confirm each cron runs in the Worker's logs; on 3 October a
 new cron registered but never ran until `npx wrangler triggers deploy -c dist/server/wrangler.json`.
 
-After deploying, verify Markets, Pools, USTX, Transparency, Portfolio, Activity, Lab and
+After deploying, verify Markets, Pools, USTX, Transparency, Portfolio, Activity and
 the legacy redirects on the public URL.
 
 ## Security rules that must stay

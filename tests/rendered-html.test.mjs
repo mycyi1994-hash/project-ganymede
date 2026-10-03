@@ -113,8 +113,8 @@ test("Pools offers the live pool's liquidity from a wallet, with its figures rea
   assert.equal(html.match(/You are on X Layer Testnet/g).length, 1, "one testnet notice");
 });
 
-test("legacy URLs route to their matching product or simulation destination", async () => {
-  for (const [path, target] of [["/?app=select", "/products/ustx"], ["/?app=portfolio", "/lab"], ["/proof", "/products/ustx/transparency"], ["/etfs/gmd-core", "/lab/strategies/gmd-core"]]) {
+test("legacy URLs, the retired paper Lab's among them, route to the dollar product", async () => {
+  for (const [path, target] of [["/?app=select", "/products/ustx"], ["/?app=portfolio", "/portfolio"], ["/proof", "/products/ustx/transparency"], ["/etfs/gmd-core", "/products/ustx"], ["/lab", "/portfolio"], ["/lab/strategies/gmd-core", "/products/ustx"], ["/lab/verification", "/developers"]]) {
     const response = await render(path);
     assert.ok([307, 308].includes(response.status), `${path}: ${response.status}`);
     assert.equal(new URL(response.headers.get("location"), "http://localhost").pathname, target);
@@ -126,7 +126,7 @@ test("public Portfolio and Activity do not contain the local example account or 
     const html = visible(await (await render(path)).text());
     assert.doesNotMatch(html, /12,454|125\.250000|Example account|Preview processing/);
   }
-  assert.match(visible(await (await render("/activity")).text()), /href="\/lab"/);
+  assert.doesNotMatch(visible(await (await render("/activity")).text()), /href="\/lab|paper allocation/i);
   const response = await render("/design-preview?screen=portfolio");
   assert.equal(response.status, 404, "design fixtures must not be served by the production build");
 });
@@ -163,18 +163,11 @@ test("the developer page keeps the checks, the experiment on a local copy and th
   assert.doesNotMatch(html, /<details[^>]*\bopen(?:[=>\s])/);
 });
 
-test("legacy paper products remain reachable and distinct from the customer portfolio", async () => {
-  const response = await render("/lab/strategies/gmd-core");
-  assert.equal(response.status, 200);
-  const html = visible(await response.text());
-  assert.match(html, /GANYMEDE CORE 20/);
-  assert.match(html, /Review simulation/);
-  assert.doesNotMatch(html, /\$23\.84/);
-  const lab = visible(await (await render("/lab")).text());
-  assert.match(lab, /Your paper portfolio/);
-  assert.match(lab, /aria-label="Paper strategies"/);
-  const exercise = visible(await (await render("/lab/verification")).text());
-  assert.match(exercise, /Try changing one price/);
+test("public pages are in US dollars and say nothing of paper portfolios", async () => {
+  for (const path of ["/", "/pools", "/products/ustx", "/products/ustx/transparency", "/portfolio", "/activity", "/developers", "/issuers", "/methodology", "/limitations"]) {
+    const html = visible(await (await render(path)).text());
+    assert.doesNotMatch(html, /\bKRW\b|₩|paper portfolio|paper strateg|Strategy Lab/i, path);
+  }
 });
 
 test("unknown ETF slugs return not found", async () => {

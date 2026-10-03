@@ -8,7 +8,7 @@ export default async function Home({ searchParams }: {
 }) {
   const { app } = await searchParams;
   if (app === "select") redirect("/products/ustx");
-  if (app === "portfolio") redirect("/lab");
+  if (app === "portfolio") redirect("/portfolio");
   if (app === "operations") return <HomeClient initialView="operations" />;
   return <ProductShell><MarketScreen /></ProductShell>;
 }

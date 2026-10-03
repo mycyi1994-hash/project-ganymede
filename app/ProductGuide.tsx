@@ -27,7 +27,7 @@ const guides = {
       ["Publication can fail", "The NAV record is scheduled every five minutes, but provider limits, database limits, RPC or relayer failures can delay publication. A rate-limited price request is asked again 30 and 90 seconds later, then at the next cycle. Pricing success and chain confirmation are separate states. A historical record can pass consistency checks even when the next update is delayed. Sampled health checks do not establish uninterrupted uptime."],
       ["Browser verification limits", "The browser relies on the pinned public RPC and the deployed verifier code. A matching hash shows agreement with the registry, not that the issuer's inputs were true. The tamper experiment changes a browser copy only; it does not test custody, trading or contract security."],
       ["Document retention", "The service keeps the original documents for the latest 12 publications, about one hour. Older NAVs and fingerprints remain on X Layer, but their documents are no longer served. An evidence file downloaded at the time still verifies against its transaction."],
-      ["A shared registry", "The same X Layer Testnet registry also carries NAV records for Ganymede's earlier paper strategies under a different product key. The USTX check reads only the USTX key. The GMDCORE test share ledger comes from the same earlier work; its supply is zero and it is not a claim on USTX."],
+      ["A shared registry", "The same X Layer Testnet registry also carries NAV records for Ganymede's earlier strategy products under a different product key. The USTX check reads only the USTX key. The GMDCORE test share ledger comes from the same earlier work; its supply is zero and it is not a claim on USTX."],
     ],
   },
 };
