@@ -5,6 +5,7 @@ import { readFileSync } from "node:fs";
 import { env } from "cloudflare:workers";
 import { GET, OPTIONS, POOLS_FRESH_MS, POOLS_STALE_MS } from "../app/api/v1/ustx/pools/route.ts";
 import { clearReadCache } from "../lib/read-cache.ts";
+import { POOLS_CRON, POOLS_SNAPSHOT_FRESH_MS, STATE_POOLS_SNAPSHOT, runPoolsSnapshot } from "../lib/xstocks/pools-api.ts";
 import { FUND_DEPLOYMENT, FUND_SELECTORS, POOL_SELECTORS } from "../lib/xstocks/fund.ts";
 import { LIQUIDITY_SELECTORS, POOL_LAUNCH_BLOCK } from "../lib/xstocks/liquidity.ts";
 import { ACTIVITY_FIRST_BLOCK, ACTIVITY_KEEP, serializeActivityIndex } from "../lib/xstocks/activity.ts";
@@ -164,3 +165,41 @@ test("the pools API keeps the pool when the yield or the index cannot be read, a
   assert.equal(error.code, "pools_unavailable");
   assert.doesNotMatch(JSON.stringify(error), /xlayer\.tech|ECONNREFUSED/, "upstream details stay out of the response");
 });
+
+test("the API serves the cron's snapshot without reading X Layer while it is under 90 seconds old", async (t) => {
+  const { db, sql } = database();
+  env.DB = db;
+  t.mock.timers.enable({ apis: ["Date"], now: Date.now() });
+  const mock = t.mock.method(globalThis, "fetch", chain());
+  const stored = await runPoolsSnapshot({ DB: db });
+  assert.equal(JSON.parse(sql.prepare("SELECT value FROM engine_state WHERE key = ?").get(STATE_POOLS_SNAPSHOT).value).readAt, stored.readAt);
+  db.readOnly = true;
+  const calls = mock.mock.callCount();
+  t.mock.timers.tick(POOLS_SNAPSHOT_FRESH_MS - 1_000);
+  const served = await (await GET()).json();
+  assert.equal(mock.mock.callCount(), calls, "no read of X Layer");
+  assert.equal(served.readAt, new Date(stored.readAt).toISOString(), "readAt is when the cron read X Layer");
+  assert.equal(served.stale, false);
+  assert.equal(served.pools[0].valueMicros, "10005000000");
+  // Past 90 seconds (and past this isolate's 30), X Layer is read again.
+  t.mock.timers.tick(POOLS_FRESH_MS + 2_000);
+  const fresh = await (await GET()).json();
+  assert.ok(mock.mock.callCount() > calls);
+  assert.ok(Date.parse(fresh.readAt) > stored.readAt);
+});
+
+test("the Worker stores the pools snapshot on its own once-a-minute cron and runs no NAV record", async (t) => {
+  const config = JSON.parse(readFileSync(new URL("../dist/server/wrangler.json", import.meta.url), "utf8"));
+  assert.ok(config.triggers.crons.includes(POOLS_CRON));
+  const { db, sql } = database();
+  t.mock.method(globalThis, "fetch", chain());
+  const workerUrl = new URL("../dist/server/index.js", import.meta.url);
+  workerUrl.searchParams.set("test", `${process.pid}-pools`);
+  const { default: worker } = await import(workerUrl.href);
+  const pending = [];
+  await worker.scheduled({ cron: POOLS_CRON, scheduledTime: Date.now(), noRetry() {} }, { DB: db }, { waitUntil: promise => pending.push(promise), passThroughOnException() {} });
+  assert.equal(pending.length, 1);
+  await pending[0];
+  assert.deepEqual(sql.prepare("SELECT key FROM engine_state").all().map(row => row.key), [STATE_POOLS_SNAPSHOT], "only the snapshot; no NAV cycle ran");
+});
+

@@ -19,11 +19,12 @@ defined by a file under `public/baskets/`, such as the MAG3 demo in its own regi
 GMDCORE test ledger page (`/activity`) and the paper Lab are earlier work and
 stay out of the navigation. Production is the `ganymede-xlayer` Worker; the
 settlement relayer is `ganymede-settlement-relayer`, and the arbitrage keeper is
-`ganymede-arbitrage-keeper` (`relayer/wrangler.keeper.jsonc`). The app Worker has two
+`ganymede-arbitrage-keeper` (`relayer/wrangler.keeper.jsonc`). The app Worker has three
 crons: the USTX NAV record every five minutes (`runUstxNavCycle`; the earlier engine's
 paper strategies run only through the operator API, so the record stays small in CPU time),
 and the market activity index (`lib/xstocks/activity-index.ts`, with the pools' results for their
-providers as a second job) four minutes past, apart so it never holds up the NAV. The fund and the lending market refuse a NAV older than one hour,
+providers as a second job) four minutes past, apart so it never holds up the NAV, and a snapshot of both pools every minute
+(`runPoolsSnapshot` in `lib/xstocks/pools-api.ts`) that `GET /api/v1/ustx/pools` serves while under 90 seconds old. The fund and the lending market refuse a NAV older than one hour,
 so a stalled record stops wallet orders and loans; check the cron's outcome after each deploy.
 `docs/PRODUCT_RELEASE.md` records the current source and Worker version.
 
