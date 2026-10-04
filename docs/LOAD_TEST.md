@@ -11,8 +11,33 @@ printed.
 
 | Date | Test | Transactions | Result |
 | --- | --- | --- | --- |
+| 4 October | Lending market, 100 wallets (`npm run stress:lending`) | 6,200 (6,000 in the lending market) | All succeeded |
 | 4 October | Every wallet flow, 100 wallets (`npm run stress:testnet`), with 2,147 HTTP requests | 2,386 | 2,379 succeeded; 7 reverted as the contracts should (below) |
 | 2 October | Every wallet flow, 30 wallets, with 1,198 HTTP requests | 618 | All succeeded |
+
+## 4 October: lending market, 100 wallets
+
+`npm run stress:lending` with 100 wallets, 10 at a time and 6 rounds each, 06:29–06:57 UTC. Each
+wallet invested $250–400 at the fund for collateral and then, in each round:
+1. posted 40–60% of its USTX as collateral;
+2. borrowed 25–40% of its borrow limit (at least $10), then $10 more;
+3. took back a fifth of the collateral while the loan was open;
+4. repaid half the loan, then all of it, and took back the rest of the collateral;
+5. lent $20–80 of demo dollars, withdrew half and then the rest.
+
+At the end it redeemed all its USTX at the fund. In its first round it also tried five wrong orders
+without sending them: a loan with no collateral, a loan under the $10 minimum, a loan past the borrow
+limit, taking back all collateral while borrowing, and withdrawing more than it lent.
+
+| Measure | Result |
+| --- | --- |
+| Transactions | 6,200 sent, 6,200 succeeded, 0 failed or reverted: 600 each of post collateral, borrow, borrow more, partial collateral withdrawal, repay half, repay in full, collateral withdrawal, lend, withdraw half and withdraw the rest; 100 investments and 100 redemptions |
+| Wrong orders | 500 tried, 500 refused with the expected error (`InsufficientCollateral` 300, `BelowMinimum` 100, `InsufficientBalance` 100) |
+| Time to confirmation | 1.2 s median, 1.9 s at the 95th percentile, 3.6 s at most |
+| Gas | 433 million, about 0.0087 testnet OKB |
+| Market before → after | Cash $4,790.00 → $4,790.00, lent $5,000.11 → $5,000.11, borrowed $210.12 → $210.12 (other wallets' loans), reserves up $0.002 from the test loans' interest |
+| End state | Every wallet holds no USTX, loan, collateral or lending; investors 5 → 5 |
+| NAV record | All six products (USTX and the five funds) recorded every five minutes through the run |
 
 ## 4 October: every wallet flow, 100 wallets
 
