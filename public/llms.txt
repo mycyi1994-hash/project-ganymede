@@ -1,6 +1,6 @@
 # Ganymede — USTX, the US Tech Basket on X Layer
 
-> One USTX share tracks six tokenized US tech stocks (AAPLx, MSFTx, NVDAx, AMZNx, METAx, TSLAx) on X Layer. Every five minutes the xStocks are priced through OKX OnchainOS and the NAV, with a SHA-256 fingerprint of its full document, is recorded in a registry on X Layer Testnet (chain 1952). Anyone can verify a record in their browser. Investing uses demo dollars with no value on X Layer Testnet; nothing here is an offer or investment advice.
+> One USTX share tracks nine tokenized US tech stocks (AAPLx, MSFTx, NVDAx, AMZNx, METAx, TSLAx, GOOGLx, ORCLx, PLTRx) on X Layer. Every five minutes the xStocks are priced through OKX OnchainOS and the NAV, with a SHA-256 fingerprint of its full document, is recorded in a registry on X Layer Testnet (chain 1952). Anyone can verify a record in their browser. Investing uses demo dollars with no value on X Layer Testnet; nothing here is an offer or investment advice.
 
 ## For AI agents
 

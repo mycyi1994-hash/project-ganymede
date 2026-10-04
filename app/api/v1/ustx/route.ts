@@ -2,7 +2,7 @@ import { engineEnv } from "@/lib/engine/api-helpers";
 import { SettlementClient } from "@/lib/engine/settlement";
 import { cachedRead } from "@/lib/read-cache";
 import { POOL_FACTORY, POOL_FEE, POOL_TOLERANCE, XSTOCK_POOLS } from "@/lib/xstocks/pool-prices";
-import { XSTOCKS_CHAIN, XSTOCKS_PRODUCT } from "@/lib/xstocks/basket";
+import { XSTOCKS_CHAIN, XSTOCKS_CONSTITUENTS, XSTOCKS_PRODUCT } from "@/lib/xstocks/basket";
 import { FUND_DEPLOYMENT } from "@/lib/xstocks/fund";
 import { navForRequest } from "@/lib/xstocks/nav-api";
 
@@ -38,7 +38,7 @@ export async function GET(request: Request) {
     const { record, transactionHash, calculatedAt, demo, wallets } = read.body;
     const stale = memoryStale || read.stale;
     return json({
-      product: { id: XSTOCKS_PRODUCT.id, ticker: "USTX", name: "US Tech Basket", constituents: ["AAPLx", "MSFTx", "NVDAx", "AMZNx", "METAx", "TSLAx"] },
+      product: { id: XSTOCKS_PRODUCT.id, ticker: "USTX", name: "US Tech Basket", constituents: XSTOCKS_CONSTITUENTS.map(constituent => constituent.symbol) },
       nav: {
         perShareUsd: usd(record.navPerShareMicros),
         perShareMicros: record.navPerShareMicros,

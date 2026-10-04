@@ -1,6 +1,6 @@
 /**
- * What it costs to build USTX's basket by hand on X Layer mainnet: six swaps from USDT into the six
- * xStocks, quoted by the OKX OnchainOS DEX aggregator (its quote API, which sends nothing). Once an
+ * What it costs to build USTX's basket by hand on X Layer mainnet: one swap from USDT into each
+ * xStock, quoted by the OKX OnchainOS DEX aggregator (its quote API, which sends nothing). Once an
  * hour the activity cron (lib/xstocks/activity-index.ts) asks for one $1,000 basket, split equally,
  * and keeps the answer for GET /api/v1/ustx/dex-quotes and the issuers page. A failure is kept too,
  * so the page says so instead of showing an old figure as new.
@@ -135,7 +135,7 @@ export async function runDexQuotes(env: Pick<EngineEnv, "DB" | "OKX_API_KEY" | "
 
 export type DexComparison = { legs: number; paidMicros: bigint; receivedMicros: bigint | null; costMicros: bigint | null; networkFeeUsd: number | null; maxImpactPercent: number | null };
 
-/** The six swaps added up: what was paid, what it bought at the aggregator's prices, and the gap. */
+/** The swaps added up: what was paid, what it bought at the aggregator's prices, and the gap. */
 export function compareDex(quotes: DexQuotes): DexComparison {
   const paid = quotes.legs.reduce((sum, leg) => sum + BigInt(leg.paidMicros), 0n);
   const received = quotes.legs.every(leg => leg.receivedMicros !== null) && quotes.legs.length ? quotes.legs.reduce((sum, leg) => sum + BigInt(leg.receivedMicros as string), 0n) : null;

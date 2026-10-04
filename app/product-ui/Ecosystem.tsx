@@ -236,7 +236,7 @@ export function DevelopersPage() {
         </section>
         <section id="okx"><h2>Built on the OKX stack</h2>
           <ul className="gmd-stack-list">
-            <li><b>OKX OnchainOS Market API</b><span>Prices all six xStocks on X Layer every five minutes. The NAV is never published without them.</span></li>
+            <li><b>OKX OnchainOS Market API</b><span>Prices all nine xStocks on X Layer every five minutes. The NAV is never published without them.</span></li>
             <li><b>X Layer Testnet</b><span>Holds the NAV registry (every NAV, its composition fingerprint and the shares outstanding), the USTX token, which issues shares only at the recorded NAV, a feed that serves that NAV to other contracts in the Chainlink interface, a USTX/dUSD pool whose gap to the NAV any wallet can close in one transaction, and a market that lends demo dollars against USTX at that NAV.</span></li>
             <li><b>X Layer mainnet</b><span>Where the xStocks live. Portfolio reads any wallet’s xStock balances directly from mainnet.</span></li>
             <li><b>OKX Wallet</b><span>Buys and sells USTX on X Layer Testnet from the USTX page, at the fund or in the pool, borrows against it, and shows its balances on Portfolio.</span></li>
