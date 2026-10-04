@@ -156,9 +156,9 @@ function PoolSummary({ snapshot, owner, growth }: { snapshot: Snapshot | null; o
   const nav = pool?.nav.navMicros ?? null;
   const account = snapshot && snapshot.owner === owner ? snapshot.account : null;
   const mine = account && pool ? liquidityPosition(account.lpMicros, pool, nav) : null;
-  return <section className="gmd-pool-summary" aria-labelledby="pool-summary-title">
+  return <section className="gmd-pools-summary" aria-labelledby="pool-summary-title">
     <h2 id="pool-summary-title">USTX / dUSD pool</h2>
-    <div className="gmd-pool-summary-stats">
+    <div className="gmd-pools-summary-stats">
       <div><span>Fee APR</span><strong>{growth.value ? formatYield(growth.value.aprWad) : growth.loaded ? "—" : <Skeleton width={56} />}</strong><small>{growth.value ? windowLabel(growth.value) : "From the pool’s fees"}</small></div>
       <div><span>In the pool</span><strong>{pool && nav !== null ? formatUsdRounded(poolValueMicros(pool, nav)) : <Skeleton width={72} />}</strong><small>USTX and demo dollars</small></div>
       <div><span>Your liquidity</span><strong>{!owner ? "—" : !account || !mine ? <Skeleton width={56} /> : account.lpMicros === 0n ? "None yet" : mine.valueMicros !== null ? formatUsdRounded(mine.valueMicros) : `${formatSharesShort(account.lpMicros, 4)} USTX-LP`}</strong><small>{owner ? "In this wallet" : "Connect OKX Wallet"}</small></div>
@@ -579,7 +579,7 @@ function LiquidityPanel({ provider, chain, owner, reader, onBusy }: { provider: 
         <p id="liquidity-simple-help">{dollarsText && addProblem ? addProblem : splitQuote ? `You receive ${formatShares(splitQuote.liquidity)} USTX-LP · ${confirmations} wallet ${confirmations === 1 ? "confirmation" : "confirmations"}` : `In your wallet: ${usd(account.dollarsMicros)}`}</p>
       </div>
       {(presets.length > 0 || account.dollarsMicros > 0n) && <div className="gmd-order-presets" role="group" aria-label="Amount">
-        {presets.map(value => <button type="button" key={String(value)} aria-pressed={dollarsOnly === value} onClick={() => { setTab("add"); setMode("dollars"); setDollarsText(plain(value)); setFailure(null); }}>{formatUsdRounded(value)}</button>)}
+        {presets.map(value => <button type="button" key={String(value)} aria-pressed={dollarsOnly === value} onClick={() => { setTab("add"); setMode("dollars"); setDollarsText(plain(value)); setFailure(null); }}>${(value / ONE).toLocaleString("en-US")}</button>)}
         {account.dollarsMicros > 0n && <button type="button" aria-pressed={dollarsOnly === account.dollarsMicros} onClick={() => { setTab("add"); setMode("dollars"); setDollarsText(plain(account.dollarsMicros)); setFailure(null); }}>Max</button>}
       </div>}
       {failureLine}
