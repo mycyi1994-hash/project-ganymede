@@ -12,7 +12,7 @@ function json(value: unknown, status: number, cache: string): Response {
   return new Response(JSON.stringify(value, null, 2), { status, headers: { ...CORS, "Content-Type": "application/json", "Cache-Control": cache } });
 }
 
-/** The OKX DEX aggregator's quotes for buying USTX's six xStocks by hand on X Layer mainnet. Reads only. */
+/** The OKX DEX aggregator's quotes for buying USTX's xStocks by hand on X Layer mainnet. Reads only. */
 export async function GET() {
   try {
     const quotes = parseDexQuotes((await new EngineRepository(engineEnv().DB).getState(STATE_DEX_QUOTES))?.value);
@@ -36,7 +36,7 @@ export async function GET() {
         networkFeeUsd: total.networkFeeUsd,
         maxPriceImpactPercent: total.maxImpactPercent,
       },
-      rule: "Once an hour, a quote for each of the six xStocks, paying an equal share of basketUsd in USDT, from the OKX OnchainOS DEX aggregator on X Layer mainnet. Quotes only: nothing is sent. receivedMicros values what each swap returns at the aggregator's own unit price; costMicros is what was paid less that value, before network fees. Token approvals add a transaction per token the first time. Amounts are micros (6 decimals).",
+      rule: "Once an hour, a quote for each of the xStocks, paying an equal share of basketUsd in USDT, from the OKX OnchainOS DEX aggregator on X Layer mainnet. Quotes only: nothing is sent. receivedMicros values what each swap returns at the aggregator's own unit price; costMicros is what was paid less that value, before network fees. Token approvals add a transaction per token the first time. Amounts are micros (6 decimals).",
     }, 200, "public, max-age=300");
   } catch (error) {
     console.error("Public DEX quotes read failed", error instanceof Error ? error.message : String(error));

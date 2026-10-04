@@ -22,7 +22,7 @@ Administrator actions on the deployed contracts are taken only with the project 
 
 ## What you trust
 
-- **The prices.** The NAV is the six xStocks' OKX OnchainOS market prices on X Layer, recorded every five minutes by the relayer's key. Anyone can recompute each record from its published holdings and compare the prices with the xStocks' X Layer pools; a price wrong in both sources would pass.
+- **The prices.** The NAV is the nine xStocks' OKX OnchainOS market prices on X Layer, recorded every five minutes by the relayer's key. Anyone can recompute each record from its published holdings and compare the prices with the xStocks' X Layer pools; a price wrong in both sources would pass.
 - **The publisher key.** A stolen publisher key could record a wrong NAV, at which the fund would issue and redeem and the lending market would value collateral, until the administrator paused the registry and named a new publisher. Records cannot be rewritten afterwards, so a wrong one stays visible.
 - **Freshness.** The fund and the lending market refuse a NAV more than one hour old, so a stalled publisher stops wallet orders and new loans rather than filling them at an old price. Repaying and withdrawing never depend on it except where collateral must be valued.
 - **The web app.** It builds every transaction in your browser, dry-runs it, and asks your wallet to sign; it never holds a key of yours. Public requests cannot gain operator access, and public GET requests never write to the server's database.

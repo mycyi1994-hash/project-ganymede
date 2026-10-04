@@ -19,9 +19,20 @@ export const PRICE_CLOCK_TOLERANCE_MS = 60_000;
 /** What a document must describe. `addresses`, when given, pins each symbol's token (lowercase). */
 export type ReportProfile = { productId: string; pricingChainIndex: string; symbols: readonly string[]; addresses?: Readonly<Record<string, string>> };
 const USTX_PROFILE: ReportProfile = { productId: XSTOCKS_PRODUCT.id, pricingChainIndex: "196", symbols: XSTOCKS_CONSTITUENTS.map(item => item.symbol) };
+/** USTX's first six constituents, which every record before 4 October 2026 holds. */
+const USTX_FIRST_PROFILE: ReportProfile = { ...USTX_PROFILE, symbols: XSTOCKS_CONSTITUENTS.slice(0, 6).map(item => item.symbol) };
 
-/** The live path always uses the pinned USTX profile. */
-export function parseComposition(canonical: string): Composition { return parseReport(canonical, USTX_PROFILE); }
+/** The pinned USTX profile a document is checked against: the current constituents, or the first six. */
+function ustxProfile(canonical: string): ReportProfile {
+  try {
+    const doc = JSON.parse(canonical) as { holdings?: unknown };
+    if (Array.isArray(doc?.holdings) && doc.holdings.length === USTX_FIRST_PROFILE.symbols.length) return USTX_FIRST_PROFILE;
+  } catch { /* parseReport reports it */ }
+  return USTX_PROFILE;
+}
+
+/** The live path always uses a pinned USTX profile. */
+export function parseComposition(canonical: string): Composition { return parseReport(canonical, ustxProfile(canonical)); }
 
 /** Explicit profile for offline examples; it never changes the live deployment. */
 export function parseReport(canonical: string, profile: ReportProfile): Composition {
@@ -49,7 +60,7 @@ export function parseReport(canonical: string, profile: ReportProfile): Composit
 }
 
 export async function verifyComposition(canonical: string, record: OnchainNav): Promise<{ hash: Check; nav: Check; composition: Composition | null }> {
-  return verifyReport(canonical, record, USTX_PROFILE, "chain");
+  return verifyReport(canonical, record, ustxProfile(canonical), "chain");
 }
 
 /** Shared arithmetic and byte checks. Offline records are explicitly not chain evidence. */

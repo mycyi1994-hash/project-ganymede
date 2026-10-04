@@ -167,7 +167,7 @@ export default function ProofClient() {
   const checkList = [
     { label: "Direct chain read", check: checks?.chain, description: "Read from X Layer in your browser." },
     { label: "Composition hash", check: checks?.hash, description: "The document matches the hash on chain." },
-    { label: "Recalculated NAV", check: checks?.nav, description: "Six holding values sum to the recorded NAV." },
+    { label: "Recalculated NAV", check: checks?.nav, description: "The holding values sum to the recorded NAV." },
   ];
   const passed = checkList.filter(({ check }) => check?.state === "pass").length;
   const summaryState = error || checks?.rpcError ? "unavailable" : !data ? "loading" : !record ? "waiting" : !checks ? "checking" : checkList.some(({ check }) => check?.state === "fail") ? "fail" : passed === 3 ? "pass" : "waiting";
@@ -198,7 +198,7 @@ export default function ProofClient() {
         <div>
           <p className="proof-kicker">GMD USTX · NAV evidence</p>
           <h1 id="proof-title">The value.<br />And the evidence.</h1>
-          <p className="proof-lede">Follow one published model share from its six holding values to the X Layer Testnet record. Your browser checks whether the calculation, document and record agree.</p>
+          <p className="proof-lede">Follow one published model share from its holding values to the X Layer Testnet record. Your browser checks whether the calculation, document and record agree.</p>
           <div className="proof-jump-links"><a href="#proof-verify">Results</a><a href="#proof-experiment">Try a change</a><a href="#proof-holdings">Calculation</a><a href="#proof-record">Chain record</a></div>
         </div>
         <div className="proof-record" role="group" aria-label="Last on-chain NAV">

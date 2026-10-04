@@ -79,7 +79,7 @@ test("the public NAV API serves the X Layer record to any origin and never write
     assert.equal(body.lending.market, "0xae2f54ae3d0370295de18510d56de92afb8843c7");
     // The second price source is named with its pools, so a partner can repeat the comparison.
     assert.equal(body.pricing.crossCheck.factory, "0x4b2ab38dbf28d31d467aa8993f6c2585981d6804");
-    assert.deepEqual(body.pricing.crossCheck.pools.map((pool) => pool.symbol), ["AAPLx", "MSFTx", "NVDAx", "AMZNx", "METAx", "TSLAx"]);
+    assert.deepEqual(body.pricing.crossCheck.pools.map((pool) => pool.symbol), ["AAPLx", "MSFTx", "NVDAx", "AMZNx", "METAx", "TSLAx", "GOOGLx", "ORCLx", "PLTRx"]);
     assert.deepEqual(body.pricing.crossCheck.toleranceBps, { nav: 100 });
     assert.equal(body.stale, false);
     assert.ok(Math.abs(Date.now() - Date.parse(body.readAt)) < 60_000, "readAt is when X Layer was read");

@@ -18,7 +18,7 @@ export const OPENAPI = {
   info: {
     title: "Ganymede USTX public API",
     version: "1.0.0",
-    summary: "The verified NAV of USTX, a basket of six tokenized US tech stocks on X Layer, its pools and its market activity.",
+    summary: "The verified NAV of USTX, a basket of nine tokenized US tech stocks on X Layer, its pools and its market activity.",
     description: "Read-only, no key, no cookies, CORS open to every origin. Prices come from OKX OnchainOS; every NAV is recorded on X Layer Testnet (chain 1952) with a SHA-256 fingerprint of its document. Demo dollars and USTX on X Layer Testnet have no value; nothing here is an offer or investment advice. AI agents can read the same data through the MCP server at /mcp.",
   },
   servers: [{ url: SITE }],
@@ -101,7 +101,7 @@ export const OPENAPI = {
       get: {
         operationId: "getDexQuotes",
         summary: "Building the basket by hand: OKX DEX aggregator quotes on X Layer mainnet",
-        description: "Once an hour, an OKX OnchainOS DEX aggregator quote for each of the six xStocks, paying an equal share of $1,000 in USDT on X Layer mainnet, and the total: swaps, what they buy at the aggregator's prices, network fees and the largest price impact. Quotes only; nothing is sent.",
+        description: "Once an hour, an OKX OnchainOS DEX aggregator quote for each of the nine xStocks, paying an equal share of $1,000 in USDT on X Layer mainnet, and the total: swaps, what they buy at the aggregator's prices, network fees and the largest price impact. Quotes only; nothing is sent.",
         responses: {
           200: { description: "The quotes", content: { "application/json": { schema: { type: "object", required: ["at", "legs", "total"], properties: {
             at: iso, basketUsd: { type: "number" }, error: { type: "string" },

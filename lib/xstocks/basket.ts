@@ -1,5 +1,5 @@
 /**
- * GMD US TECH x — an equal-weight basket of tokenized US mega-cap tech stocks
+ * GMD US TECH x — an equal-weight basket of tokenized US large-cap tech stocks
  * (xStocks) that trade on X Layer mainnet.
  *
  * The basket works like an ETF's portfolio composition file: a fixed number of
@@ -52,7 +52,28 @@ export const XSTOCKS_CONSTITUENTS: ConstituentDefinition[] = [
   { symbol: "AMZNx", underlying: "AMZN", name: "Amazon" },
   { symbol: "METAx", underlying: "META", name: "Meta Platforms" },
   { symbol: "TSLAx", underlying: "TSLA", name: "Tesla" },
+  // Added 4 October 2026, re-fixed at the prevailing NAV: each has a Uniswap V3 pool on X Layer about
+  // as deep as AAPLx's, and its token is the same xStocks proxy and implementation as the six above.
+  { symbol: "GOOGLx", underlying: "GOOGL", name: "Alphabet" },
+  { symbol: "ORCLx", underlying: "ORCL", name: "Oracle" },
+  { symbol: "PLTRx", underlying: "PLTR", name: "Palantir" },
 ];
+
+/**
+ * The xStocks token contracts on X Layer, pinned here so a constituent added in code is priced
+ * without a configuration change. XSTOCKS_ADDRESSES may still override any of them.
+ */
+export const XSTOCKS_PINNED_ADDRESSES: Record<string, string> = {
+  AAPLx: "0x9d275685dc284c8eb1c79f6aba7a63dc75ec890a",
+  MSFTx: "0x5621737f42dae558b81269fcb9e9e70c19aa6b35",
+  NVDAx: "0xc845b2894dbddd03858fd2d643b4ef725fe0849d",
+  AMZNx: "0x3557ba345b01efa20a1bddc61f573bfd87195081",
+  METAx: "0x96702be57cd9777f835117a809c7124fe4ec989a",
+  TSLAx: "0x8ad3c73f833d3f9a523ab01476625f269aeb7cf0",
+  GOOGLx: "0xe92f673ca36c5e2efd2de7628f815f84807e803f",
+  ORCLx: "0x548308e91ec9f285c7bff05295badbd56a6e4971",
+  PLTRx: "0x6d482cec5f9dd1f05ccee9fd3ff79b246170f8e2",
+};
 
 export type Quote = {
   symbol: string;
@@ -243,8 +264,19 @@ export async function evaluateBasket(input: EvaluateInput): Promise<Evaluation> 
   let rebalanced = false;
   const sameConstituents = basket !== null && basket.holdings.length === constituents.length
     && basket.holdings.every((holding) => constituents.some((constituent) => constituent.symbol === holding.symbol));
-  if (!basket || !sameConstituents) {
+  if (!basket) {
     basket = fixBasket(constituents, prices, XSTOCKS_PRODUCT.inceptionNavMicros, asOf);
+  } else if (!sameConstituents) {
+    // A constituent added or removed re-fixes at the prevailing NAV, like the quarterly re-fix, so
+    // the NAV holders own stays continuous. That NAV needs a live price for every holding being
+    // replaced; without one the record waits rather than restarting at the inception NAV.
+    const unpriced = basket.holdings.filter((holding) => !prices.has(holding.symbol)).map((holding) => holding.symbol);
+    if (unpriced.length > 0) {
+      blockers.push(`Cannot re-fix without a live price for ${unpriced.join(", ")}`);
+      return { status: "awaiting_prices", basket: input.previous, rebalanced: false, composition: null, canonical: null, holdingsHash: null, publishable: false, blockers };
+    }
+    basket = fixBasket(constituents, prices, basketNavMicros(basket, prices), asOf);
+    rebalanced = true;
   } else if (addressesChanged || rebalanceDue(basket, input.now)) {
     // A corrected or migrated token address re-fixes at the prevailing value, like the
     // quarterly re-fix, so the published NAV stays continuous and the change is evidenced.
@@ -331,5 +363,5 @@ export function constituentsWithAddresses(raw: string | undefined): Array<Consti
     const [symbol, address] = entry.split("=").map((part) => part?.trim());
     if (symbol && address && /^0x[a-fA-F0-9]{40}$/.test(address)) configured.set(symbol.toLowerCase(), address);
   }
-  return XSTOCKS_CONSTITUENTS.map((constituent) => ({ ...constituent, address: configured.get(constituent.symbol.toLowerCase()) ?? null }));
+  return XSTOCKS_CONSTITUENTS.map((constituent) => ({ ...constituent, address: configured.get(constituent.symbol.toLowerCase()) ?? XSTOCKS_PINNED_ADDRESSES[constituent.symbol] ?? null }));
 }

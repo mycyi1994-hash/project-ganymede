@@ -11,6 +11,7 @@ import { DEX_QUOTE_PATH, STATE_DEX_QUOTES, compareDex, parseQuote, quoteBasket, 
 import { PERMISSION_SELECTORS, controlSpecs, readControls } from "../lib/xstocks/permissions.ts";
 import { FUND_DEPLOYMENT } from "../lib/xstocks/fund.ts";
 import { okxAppUrl } from "../lib/okx-app.ts";
+import { XSTOCK_TOKENS } from "../lib/xstocks/mainnet.ts";
 import { GET as openApi, OPENAPI } from "../app/api/v1/openapi.json/route.ts";
 
 const schema = readFileSync(new URL("../drizzle/0000_giant_speedball.sql", import.meta.url), "utf8");
@@ -108,7 +109,7 @@ const quotePayload = (symbol) => ({
   data: [{ toTokenAmount: "500000000000000000", priceImpactPercent: "-0.25", tradeFee: "0.0011", toToken: { decimal: "18", tokenUnitPrice: "330.5", tokenSymbol: symbol }, dexRouterList: [{ dexProtocol: { dexName: "Uniswap V3", percent: "100" } }] }],
 });
 
-test("OKX DEX quotes: each xStock is asked for with a signed GET, and the six add up", async () => {
+test("OKX DEX quotes: each xStock is asked for with a signed GET, and the legs add up", async () => {
   const leg = parseQuote("AAPLx", 166_666_666n, quotePayload("AAPLx"));
   assert.deepEqual(leg, { symbol: "AAPLx", paidMicros: "166666666", receivedMicros: "165250000", priceImpactPercent: "-0.25", networkFeeUsd: "0.0011", routes: ["Uniswap V3"] });
   assert.throws(() => parseQuote("AAPLx", 1n, { code: "51000", msg: "Parameter chainIndex error" }), /Parameter chainIndex error/);
@@ -117,18 +118,18 @@ test("OKX DEX quotes: each xStock is asked for with a signed GET, and the six ad
   const fetcher = async (url, init) => { requests.push({ url, headers: init.headers }); return new Response(JSON.stringify(quotePayload("x"))); };
   const credentials = { apiKey: "key", secret: "secret", passphrase: "pass", baseUrl: "https://example.test" };
   const quotes = await quoteBasket(credentials, { fetcher, wait: async () => undefined, now });
-  assert.equal(requests.length, 6);
+  assert.equal(requests.length, XSTOCK_TOKENS.length);
   const first = new URL(requests[0].url);
   assert.equal(first.pathname, DEX_QUOTE_PATH);
   assert.equal(first.searchParams.get("chainIndex"), "196");
-  assert.equal(first.searchParams.get("amount"), "166666666");
+  assert.equal(first.searchParams.get("amount"), "111111111");
   assert.ok(requests[0].headers["OK-ACCESS-SIGN"]);
   const total = compareDex(quotes);
-  assert.equal(total.legs, 6);
-  assert.equal(total.paidMicros, 999_999_996n);
-  assert.equal(total.costMicros, 999_999_996n - 6n * 165_250_000n);
+  assert.equal(total.legs, 9);
+  assert.equal(total.paidMicros, 999_999_999n);
+  assert.equal(total.costMicros, 999_999_999n - 9n * 165_250_000n);
   assert.equal(total.maxImpactPercent, 0.25);
-  assert.ok(Math.abs(total.networkFeeUsd - 0.0066) < 1e-9);
+  assert.ok(Math.abs(total.networkFeeUsd - 0.0099) < 1e-9);
 });
 
 test("OKX DEX quotes are asked for once an hour, and a failure is kept as a failure", async () => {
@@ -142,8 +143,8 @@ test("OKX DEX quotes are asked for once an hour, and a failure is kept as a fail
   assert.equal(await runDexQuotes(env, { fetcher: failing, wait: async () => undefined, now: new Date(now.getTime() + 30 * 60_000) }), null);
   assert.equal(calls, 1);
   const later = await runDexQuotes(env, { fetcher: async () => new Response(JSON.stringify(quotePayload("x"))), wait: async () => undefined, now: new Date(now.getTime() + 60 * 60_000) });
-  assert.equal(later.legs.length, 6);
-  assert.equal(JSON.parse(db.sql.prepare("SELECT value FROM engine_state WHERE key = ?").get(STATE_DEX_QUOTES).value).legs.length, 6);
+  assert.equal(later.legs.length, 9);
+  assert.equal(JSON.parse(db.sql.prepare("SELECT value FROM engine_state WHERE key = ?").get(STATE_DEX_QUOTES).value).legs.length, 9);
   assert.equal(await runDexQuotes({ DB: db }), null);
 });
 

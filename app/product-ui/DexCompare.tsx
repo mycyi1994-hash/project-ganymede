@@ -34,7 +34,7 @@ export default function DexCompare() {
     <dl className="gmd-usage">
       <div><dt>Swaps to sign</dt><dd><strong>{total.swaps}</strong><small>plus an approval each the first time</small></dd></div>
       <div><dt>Lost to price and fees</dt><dd><strong>{cost !== null ? formatUsdMicros(cost < 0n ? 0n : cost, 2) : "—"}</strong><small>{percent !== null ? `${Math.max(percent, 0).toFixed(2)}% of the order, at the aggregator's prices` : "at the aggregator's prices"}</small></dd></div>
-      <div><dt>Network fees</dt><dd><strong>{total.networkFeeUsd !== null ? `$${total.networkFeeUsd.toFixed(4)}` : "—"}</strong><small>estimated for the six swaps</small></dd></div>
+      <div><dt>Network fees</dt><dd><strong>{total.networkFeeUsd !== null ? `$${total.networkFeeUsd.toFixed(4)}` : "—"}</strong><small>estimated for all the swaps</small></dd></div>
       <div><dt>Largest price impact</dt><dd><strong>{total.maxPriceImpactPercent !== null ? `${total.maxPriceImpactPercent.toFixed(2)}%` : "—"}</strong><small>{quotes.legs.find(leg => leg.priceImpactPercent !== null && Math.abs(Number(leg.priceImpactPercent)) === total.maxPriceImpactPercent)?.symbol ?? ""}</small></dd></div>
     </dl>
     <p className="gmd-caption">Quoted by the OKX OnchainOS DEX aggregator at {time(quotes.at)} for USDT into each xStock, an equal share each; nothing was sent. A fund share is one order for the whole basket, rebalanced for every holder at once. <OkxSource>OKX OnchainOS</OkxSource></p>
