@@ -501,5 +501,5 @@ USTX와 GMDCORE는 다른 대상이다. USTX는 모델 바스켓이다. 지갑 �
 - 2026-10-04 6개 펀드 배포: 앱 `42155c8` → `2974906b-c909-4d8e-a32a-b25cdaf97b33`(직전 `d3c08668`, `41940e3`). 키퍼는 `5e23f598` 그대로다.
   - 바뀐 점(PR #82): xStocks 18종으로 펀드 6개를 운영한다. USTX(기술주 9) 외에 Magnificent 7(M7X), AI & Semiconductors(AIX), Crypto Economy(CRYX), US Core Index(CORX: SPYx·QQQx), Retail Favorites(RTLX). 18종 모두 AAPLx와 같은 xStocks 구현이다. 5분 NAV 크론이 USTX 기록 뒤에 OnchainOS 요청 한 번으로 모든 종목 가격을 받아, 펀드마다 같은 레지스트리에 자기 상품 키(keccak256(id))로 기록한다. 모든 종목에 깊은 풀이 있는 펀드(M7X, CORX)는 X Layer 풀 가격과 대조하고, 나머지는 어떤 종목이 대조할 풀이 없는지 적는다. 새 펀드는 데모 잔고(USTX와 같은 현금)로 사고팔며, 표는 크론과 주문 경로가 처음 쓸 때 만든다. dUSD 발행자가 USTX 펀드 하나라서 지갑용 지분 토큰은 USTX만 있다. Markets에 펀드 목록, 펀드별 페이지 `/funds/<id>`, Portfolio에 펀드 보유, `GET /api/v1/funds`.
   - 확인: 앱 검사 250개, lint 오류 0. 배포 후 첫 크론(04:05 UTC)에서 새 펀드 5개가 모두 $100으로 첫 기록을 확정했고 경고는 없었다. M7X·CORX는 풀과 일치(−0.01%, 0.00%), AIX·CRYX·RTLX는 얕은 풀 종목이 있어 대조하지 않았다. 얕은 풀 종목의 OnchainOS 가격은 그 풀 가격과 같았고 실제 주가와도 맞았다(AMD $633.91, Intel 약 $119). 데스크톱·휴대폰에서 펀드 5개 페이지 모두 "NAV verified on X Layer", 데모 매수·환매·Portfolio 표시, 접근성 위반 0, 가로 넘침 0, 콘솔 오류 0.
-  - 후속: 펀드 목록의 로고 크기와 주문 패널의 Buy/Redeem 버튼을 고쳤다(PR #83).
+  - 후속: 펀드 목록의 로고 크기와 주문 패널의 Buy/Redeem 버튼을 고쳤고(PR #83, `627ddb17`), "+n" 표시 스타일이 Microsoft 로고의 칸에 걸리던 것을 고쳤다(PR #84).
 
