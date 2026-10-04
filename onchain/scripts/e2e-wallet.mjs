@@ -4,7 +4,9 @@
 //
 // Flows (E2E_FLOW): default buys $60 at the fund, the constant-product pool and the v4 pool and
 // sells everything at the fund; "lending" posts collateral, borrows, repays, withdraws, lends and
-// withdraws; "pools" adds liquidity from demo dollars and withdraws it all with the one-button view (SKIP_ADD=1 only withdraws).
+// withdraws; "pools" adds liquidity from demo dollars and withdraws it all with the one-button view (SKIP_ADD=1 only withdraws;
+// E2E_STRATEGY=Curve, "Spot + Curve" or Custom chooses a strategy first, so part or all of it goes to the v4 pool).
+// E2E_SITE points it at another deployment, such as a local `npm run dev`.
 // READ_ONLY=1 only visits the pages. It reports page errors, console errors and HTTP errors.
 //
 // Run from onchain/: ADMIN_PRIVATE_KEY=… node scripts/e2e-wallet.mjs
@@ -16,7 +18,7 @@ import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 
 const { chromium } = await import(process.env.PLAYWRIGHT_MODULE ?? "playwright");
 
-const SITE = "https://ganymede-xlayer.gana003.workers.dev";
+const SITE = process.env.E2E_SITE ?? "https://ganymede-xlayer.gana003.workers.dev";
 const SHOTS = process.env.SHOTS;
 const chain = { id: 1952, name: "X Layer Testnet", nativeCurrency: { name: "OKB", symbol: "OKB", decimals: 18 }, rpcUrls: { default: { http: ["https://testrpc.xlayer.tech/terigon"] } } };
 const transport = http(undefined, { retryCount: 4, retryDelay: 1500 });
@@ -135,6 +137,7 @@ if (process.env.E2E_FLOW === "lending") {
     // The one-button view: an amount of demo dollars and Add liquidity; Withdraw all returns everything as demo dollars.
     if (!process.env.SKIP_ADD) await step("add $40 of liquidity from demo dollars with one button", async () => {
       const provide = page.locator("#provide");
+      if (process.env.E2E_STRATEGY) await provide.getByRole("radio", { name: new RegExp(`^${process.env.E2E_STRATEGY.replace("+", "\\+")}`) }).click();
       await provide.locator("#liquidity-simple").fill("40");
       await page.waitForFunction(() => { const b = [...document.querySelectorAll("#provide button.gmd-button")].find(x => /Add liquidity/.test(x.textContent)); return b && !b.disabled; }, null, { timeout: 60000 });
       await provide.getByRole("button", { name: /Add liquidity/ }).click();

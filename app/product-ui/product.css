@@ -1921,3 +1921,57 @@ a.gmd-pool-pair:hover b { text-decoration: underline; text-underline-offset: 3px
   .gmd-autocall-now, .gmd-autocall-ki-label, .gmd-income-now-mark, .gmd-income-now-trail { animation: gmd-lq-fade 500ms 1000ms ease-out both; }
   .gmd-autocall-stepper-bar i { animation: gmd-lq-rise 620ms cubic-bezier(.2,.8,.2,1) both; animation-delay: var(--gmd-delay, 0ms); transform-origin: bottom; }
 }
+
+/* Liquidity strategies on Pools: Spot, Curve, Spot + Curve and a split of one's own, as Meteora lays them out. */
+.gmd-strategy { display: grid; gap: 8px; min-width: 0; }
+.gmd-strategy-label { font-size: 13px; font-weight: 600; color: var(--gmd-ink); }
+.gmd-strategy-options { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 6px; }
+.gmd-strategy-options button { display: grid; justify-items: center; gap: 3px; min-width: 0; padding: 10px 6px 9px; border: 1px solid var(--gmd-line) !important; border-radius: 10px; background: #fff; color: var(--gmd-copy); text-align: center; transition: border-color 160ms, box-shadow 160ms, background 160ms; }
+.gmd-strategy-options button b { font-size: 13px; color: var(--gmd-ink); }
+.gmd-strategy-options button small { font-size: 11px; line-height: 1.25; }
+.gmd-strategy-options button[aria-checked="true"] { border-color: var(--gmd-ustx) !important; box-shadow: 0 0 0 1px var(--gmd-ustx) inset; background: #f1faf8; }
+.gmd-strategy-options button[aria-checked="true"] b { color: var(--gmd-ustx); }
+.gmd-strategy-icon { width: 54px; height: 24px; }
+.gmd-strategy-icon rect.is-dollars { fill: var(--gmd-dusd); opacity: .8; }
+.gmd-strategy-icon rect.is-shares { fill: var(--gmd-ustx); opacity: .8; }
+.gmd-strategy-icon rect.is-mid { fill: #6b7c85; }
+.gmd-strategy-split { display: grid; gap: 4px; padding: 10px 12px; border-radius: 10px; background: var(--gmd-soft); }
+.gmd-strategy-split label { display: flex; justify-content: space-between; gap: 8px; font-size: 12px; color: var(--gmd-copy); }
+.gmd-strategy-split label b { color: var(--gmd-ink); font-variant-numeric: tabular-nums; }
+.gmd-strategy-split input { width: 100%; accent-color: var(--gmd-ustx); }
+.gmd-pools-summary > .gmd-strategy { margin-bottom: -4px; }
+.gmd-strategy-chart { padding: 18px 18px 16px; border: 1px solid var(--gmd-line); border-radius: 12px; background: linear-gradient(180deg, #fbfdfd, #fff); }
+.gmd-strategy-bar rect.is-v4 { transform-box: fill-box; transform-origin: bottom; }
+.gmd-strategy-bar.is-dollars rect.is-v4 { fill: var(--gmd-dusd); }
+.gmd-strategy-bar.is-shares rect.is-v4 { fill: var(--gmd-ustx); }
+.gmd-strategy-bar rect.is-cp { fill: #fff; fill-opacity: .55; pointer-events: none; }
+.gmd-strategy-bar.is-active rect.is-v4 { filter: brightness(1.12); }
+.gmd-lq-plot svg:hover .gmd-strategy-bar:not(.is-active) rect.is-v4 { opacity: .6; }
+.gmd-lq-legend i.is-cp { background: linear-gradient(90deg, #d9701f66, #0f8f8466); }
+.gmd-strategy-near { fill: #0f8f840d; stroke: #0f8f8433; stroke-dasharray: 3 4; }
+.gmd-strategy-near-label { font-weight: 600; fill: var(--gmd-ustx); }
+.gmd-strategy-nav { stroke: var(--gmd-ink); stroke-width: 1; stroke-dasharray: 4 4; }
+.gmd-strategy-facts { margin: 4px 0 0; display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 10px; }
+.gmd-strategy-facts > div { display: grid; gap: 2px; padding: 10px 12px; border-radius: 10px; background: var(--gmd-soft); min-width: 0; }
+.gmd-strategy-facts dt { font-size: 12px; color: var(--gmd-copy); }
+.gmd-strategy-facts dd { margin: 0; display: grid; gap: 2px; font-size: 18px; font-weight: 700; color: var(--gmd-ink); font-variant-numeric: tabular-nums; }
+.gmd-strategy-facts dd small { font-size: 11px; font-weight: 400; color: var(--gmd-copy); }
+.gmd-strategy-summary { margin: 2px 0 0; font-size: 14px; color: var(--gmd-ink); }
+.gmd-strategy-ask { display: grid; grid-template-columns: auto minmax(0,1fr); gap: 10px; align-items: start; padding: 12px 14px; border-radius: 10px; border: 1px solid #cfe5e0; background: #f1faf8; }
+.gmd-strategy-ask b { display: block; margin-bottom: 6px; font-size: 13px; color: var(--gmd-ink); }
+.gmd-strategy-ask .gmd-ask-guide-actions { flex-wrap: wrap; overflow: visible; margin: 0; padding: 0; }
+.gmd-strategy-ask .gmd-ask-guide-actions > * { white-space: normal; flex: 0 1 auto; }
+@media (max-width:600px) {
+  .gmd-strategy-options { grid-template-columns: repeat(2, minmax(0,1fr)); }
+  .gmd-strategy-facts { grid-template-columns: 1fr; }
+  .gmd-strategy-chart { padding: 14px 12px; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .gmd-strategy-bar rect.is-v4 { animation: gmd-lq-rise 620ms cubic-bezier(.2,.8,.2,1) both; animation-delay: var(--gmd-delay, 0ms); }
+  .gmd-strategy-bar rect.is-cp { animation: gmd-lq-fade 500ms 400ms ease-out both; }
+  .gmd-strategy-split, .gmd-strategy-summary { animation: gmd-lq-fade 300ms ease-out both; }
+}
+.gmd-liquidity-panel .gmd-strategy { margin-top: 4px; }
+.gmd-liquidity-panel .gmd-strategy-options { grid-template-columns: repeat(2, minmax(0,1fr)); }
+.gmd-liquidity-panel .gmd-strategy-options button { grid-template-columns: auto minmax(0,1fr); grid-template-rows: auto auto; justify-items: start; text-align: start; column-gap: 8px; padding: 9px 10px; }
+.gmd-liquidity-panel .gmd-strategy-icon { grid-row: 1 / span 2; width: 36px; height: 18px; align-self: center; }
