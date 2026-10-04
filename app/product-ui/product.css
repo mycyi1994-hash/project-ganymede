@@ -1316,7 +1316,7 @@ a.gmd-pool-pair:hover b { text-decoration: underline; text-underline-offset: 3px
 .gmd-fund-marks .gmd-asset-mark img { width: 17px; height: 17px; }
 .gmd-fund-marks .gmd-ms { transform: scale(.75); }
 .gmd-fund-marks .gmd-asset-mark:first-child { margin-left: 0; }
-.gmd-fund-marks i { font-style: normal; font-size: 12px; color: var(--gmd-copy); margin-left: 6px; }
+.gmd-fund-marks > i { font-style: normal; font-size: 12px; color: var(--gmd-copy); margin-left: 6px; }
 .gmd-app small.is-up, .gmd-app td.is-up { color: var(--gmd-accent); }
 .gmd-app small.is-down, .gmd-app td.is-down { color: #a23e39; }
 .gmd-fund-line { margin: 0; }
