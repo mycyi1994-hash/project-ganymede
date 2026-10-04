@@ -1868,3 +1868,56 @@ a.gmd-pool-pair:hover b { text-decoration: underline; text-underline-offset: 3px
   .gmd-income-rows li:nth-child(2) { animation-delay: 50ms; } .gmd-income-rows li:nth-child(3) { animation-delay: 100ms; } .gmd-income-rows li:nth-child(4) { animation-delay: 150ms; } .gmd-income-rows li:nth-child(5) { animation-delay: 200ms; }
 }
 @keyframes gmd-income-fill { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+
+/* The note's barrier chart, full width under the Structured feature card and on the note's page. */
+.gmd-market-wide { grid-column: 1 / -1; padding: 24px 28px 28px; border-top: 1px solid var(--gmd-line); min-width: 0; }
+.gmd-autocall-path.is-tall .gmd-navmove-head h3, .gmd-autocall-path.is-tall h3 { font-size: 18px; }
+.gmd-autocall-path .gmd-lq-legend { font-size: 13px; }
+.gmd-lq-legend i.is-zone-call { background: #0f8f8426; border: 1px solid #0f8f8466; }
+.gmd-lq-legend i.is-zone-loss { background: #c2410c1f; border: 1px solid #c2410c55; }
+.gmd-lq-skeleton.is-tall { height: 420px; }
+.gmd-autocall-zone { fill: #0f8f841c; stroke: none; }
+.gmd-autocall-loss { fill: #c2410c12; }
+.gmd-autocall-ki-label { font-size: 12px; font-weight: 600; fill: #b2410f; }
+.gmd-autocall-steps { stroke-width: 3; }
+.gmd-autocall-obs line { stroke: #9fb0b7; stroke-width: 1; stroke-dasharray: 2 4; }
+.gmd-autocall-obs circle { fill: #fff; stroke: var(--gmd-ustx); stroke-width: 2.5; transition: r 160ms, fill 160ms; }
+.gmd-autocall-obs.is-active circle { fill: var(--gmd-ustx); r: 7; }
+.gmd-autocall-obs.is-active line { stroke: var(--gmd-ustx); stroke-dasharray: none; }
+.gmd-autocall-obs.is-called circle { fill: var(--gmd-ustx); }
+.gmd-autocall-obs.is-missed circle { fill: #fff; stroke: #6b7c85; }
+.gmd-autocall-barrier { font-size: 13px; font-weight: 700; fill: var(--gmd-ustx); font-variant-numeric: tabular-nums; }
+.gmd-autocall-pay { font-size: 13px; font-weight: 700; fill: var(--gmd-ink); font-variant-numeric: tabular-nums; }
+.gmd-autocall-obs.is-active .gmd-autocall-pay { fill: var(--gmd-ustx); }
+.gmd-income-now-trail { stroke: var(--gmd-dusd); stroke-width: 1.5; stroke-dasharray: 3 4; opacity: .7; }
+.gmd-income-now-mark { stroke: var(--gmd-dusd); stroke-width: 1.5; }
+.gmd-autocall-now { font-size: 13px; font-weight: 700; fill: #b4571a; paint-order: stroke; stroke: #fff; stroke-width: 4px; stroke-linejoin: round; }
+.gmd-autocall-ki-label, .gmd-autocall-barrier { paint-order: stroke; stroke: #fff; stroke-width: 3px; stroke-linejoin: round; }
+.gmd-autocall-path .gmd-caption { font-size: 13px; }
+
+/* The six observations as steps in the feature card. */
+.gmd-autocall-stepper { list-style: none; margin: 20px 0 0; padding: 0; display: grid; grid-template-columns: repeat(6, minmax(0,1fr)); gap: 8px; }
+.gmd-autocall-stepper li { display: grid; gap: 2px; justify-items: start; padding: 10px 10px 12px; border: 1px solid var(--gmd-line); border-radius: 10px; background: #fff; min-width: 0; }
+.gmd-autocall-stepper-bar { position: relative; width: 100%; height: 64px; margin-bottom: 8px; border-radius: 6px; background: var(--gmd-soft); overflow: hidden; }
+.gmd-autocall-stepper-bar i { position: absolute; inset: auto 0 0 0; height: var(--gmd-step); background: linear-gradient(180deg, #0f8f8466, #0f8f8422); border-top: 2px solid var(--gmd-ustx); }
+.gmd-autocall-stepper b { font-size: 17px; color: var(--gmd-ustx); font-variant-numeric: tabular-nums; }
+.gmd-autocall-stepper small { font-size: 12px; color: var(--gmd-copy); }
+.gmd-autocall-stepper strong { font-size: 14px; color: var(--gmd-ink); font-variant-numeric: tabular-nums; }
+.gmd-autocall-stepper em { font-style: normal; font-size: 11px; color: var(--gmd-copy); }
+.gmd-autocall-stepper li.is-next { border-color: var(--gmd-ustx); box-shadow: 0 0 0 1px var(--gmd-ustx) inset; }
+.gmd-autocall-stepper li.is-next em { color: var(--gmd-ustx); font-weight: 600; }
+.gmd-autocall-stepper li.is-called { background: #0f8f840f; }
+.gmd-autocall-stepper li.is-missed .gmd-autocall-stepper-bar i { background: #6b7c8533; border-top-color: #6b7c85; }
+@media (max-width:860px) { .gmd-market-wide { padding: 20px; } }
+@media (max-width:600px) {
+  .gmd-autocall-stepper { grid-template-columns: repeat(3, minmax(0,1fr)); }
+  .gmd-market-wide { padding: 16px 14px 18px; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .gmd-autocall-zone, .gmd-autocall-loss { animation: gmd-lq-fade 700ms 300ms ease-out both; }
+  .gmd-autocall-obs { animation: gmd-lq-fade 400ms ease-out both; }
+  .gmd-autocall-obs:nth-of-type(2) { animation-delay: 500ms; } .gmd-autocall-obs:nth-of-type(3) { animation-delay: 580ms; } .gmd-autocall-obs:nth-of-type(4) { animation-delay: 660ms; }
+  .gmd-autocall-obs:nth-of-type(5) { animation-delay: 740ms; } .gmd-autocall-obs:nth-of-type(6) { animation-delay: 820ms; } .gmd-autocall-obs:nth-of-type(7) { animation-delay: 900ms; }
+  .gmd-autocall-now, .gmd-autocall-ki-label, .gmd-income-now-mark, .gmd-income-now-trail { animation: gmd-lq-fade 500ms 1000ms ease-out both; }
+  .gmd-autocall-stepper-bar i { animation: gmd-lq-rise 620ms cubic-bezier(.2,.8,.2,1) both; animation-delay: var(--gmd-delay, 0ms); transform-origin: bottom; }
+}
