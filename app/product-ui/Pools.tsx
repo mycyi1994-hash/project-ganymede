@@ -27,6 +27,7 @@ import { TxSteps, WalletGate, orderDeadline, runPlan, useUnmountSignal, type Pla
 import { V4_POOL_DEPLOYMENT, formatFeePips, v4ValueMicros } from "@/lib/xstocks/v4-liquidity";
 import { V4LiquidityPanel, V4PoolGuide, V4PoolOverview, useV4Pool, v4Position, type V4Reader } from "./PoolsV4";
 import { PoolResults } from "./PoolResults";
+import { DepositPreview, LiquidityChart, NavMoveChart } from "./PoolVisuals";
 
 // Providing liquidity to the USTX/dUSD pool on X Layer Testnet from OKX Wallet: deposit USTX and
 // demo dollars at the pool's ratio (or demo dollars alone, half invested at the fund at the NAV),
@@ -120,6 +121,8 @@ export function PoolsScreen() {
   const v4 = useV4Pool(V4_POOL_DEPLOYMENT, owner, busy);
   const [selected, setSelected] = useState<"live" | "v4">("live");
   const [more, setMore] = useState(false);
+  // The amount typed in the panel, which the pictures beside it follow.
+  const [amount, setAmount] = useState("");
   const showV4 = V4_POOL_DEPLOYMENT !== null && selected === "v4";
   // Choosing the v4 pool opens its own panel below, with the details.
   const select = (pool: "live" | "v4") => { setSelected(pool); if (pool === "v4") setMore(true); };
@@ -127,8 +130,8 @@ export function PoolsScreen() {
     <div className="gmd-page-heading"><div><h1>Pools</h1><p>Provide liquidity to USTX and earn a fee on every trade: enter demo dollars and press one button.</p></div><span className="gmd-badge">X Layer Testnet</span></div>
     {/* The panel comes first, as it shows on a phone; on a wide screen it sits beside the summary. */}
     <div className="gmd-detail-layout gmd-pools-layout">
-      <div className="gmd-detail-aside" id="provide"><LiquidityPanel provider={provider} chain={chain} owner={owner} reader={reader} onBusy={setBusy} /></div>
-      <div className="gmd-detail-content"><PoolSummary snapshot={reader.snapshot} owner={owner} growth={growth} /></div>
+      <div className="gmd-detail-aside" id="provide"><LiquidityPanel provider={provider} chain={chain} owner={owner} reader={reader} onBusy={setBusy} amount={amount} onAmount={setAmount} /></div>
+      <div className="gmd-detail-content"><PoolSummary snapshot={reader.snapshot} owner={owner} growth={growth} amount={amount} /></div>
     </div>
     <details className="gmd-pools-more" open={more} onToggle={event => setMore(event.currentTarget.open)}>
       <summary><span><b>Pool details and more options</b><small>Both pools, the Uniswap v4 pool, figures, activity and how it works</small></span><Icon name="arrow" size={17} /></summary>
@@ -150,12 +153,17 @@ export function PoolsScreen() {
   </ActivityProvider>;
 }
 
-/** What a provider needs before pressing the button: the fee APR, the pool's size, their own liquidity, and the three steps. */
-function PoolSummary({ snapshot, owner, growth }: { snapshot: Snapshot | null; owner: string | null; growth: { value: PoolYield | null; loaded: boolean } }) {
+/** What a provider sees before pressing the button: the figures, where the liquidity sits, how the deposit goes in, and what a NAV move does. */
+function PoolSummary({ snapshot, owner, growth, amount }: { snapshot: Snapshot | null; owner: string | null; growth: { value: PoolYield | null; loaded: boolean }; amount: string }) {
   const pool = snapshot?.pool ?? null;
   const nav = pool?.nav.navMicros ?? null;
   const account = snapshot && snapshot.owner === owner ? snapshot.account : null;
   const mine = account && pool ? liquidityPosition(account.lpMicros, pool, nav) : null;
+  const dollars = parseUsd(amount);
+  const split = pool && dollars !== null && dollars > 0n ? splitDollarsOnly(dollars, nav, pool) : null;
+  const quote = pool && split ? quoteAddLiquidity(split.sharesMicros, split.dollarsMicros, pool) : null;
+  const shareAfter = pool && quote ? ((account?.lpMicros ?? 0n) + quote.liquidity) * ONE / (pool.supply + quote.liquidity) : null;
+  const share = account && pool && pool.supply > 0n ? Number(account.lpMicros) / Number(pool.supply) : null;
   return <section className="gmd-pools-summary" aria-labelledby="pool-summary-title">
     <h2 id="pool-summary-title">USTX / dUSD pool</h2>
     <div className="gmd-pools-summary-stats">
@@ -163,12 +171,12 @@ function PoolSummary({ snapshot, owner, growth }: { snapshot: Snapshot | null; o
       <div><span>In the pool</span><strong>{pool && nav !== null ? formatUsdRounded(poolValueMicros(pool, nav)) : <Skeleton width={72} />}</strong><small>USTX and demo dollars</small></div>
       <div><span>Your liquidity</span><strong>{!owner ? "—" : !account || !mine ? <Skeleton width={56} /> : account.lpMicros === 0n ? "None yet" : mine.valueMicros !== null ? formatUsdRounded(mine.valueMicros) : `${formatSharesShort(account.lpMicros, 4)} USTX-LP`}</strong><small>{owner ? "In this wallet" : "Connect OKX Wallet"}</small></div>
     </div>
-    <ol className="gmd-pool-steps">
-      <li><b>Enter demo dollars.</b> Part buys USTX at the NAV, with no fee.</li>
-      <li><b>Press Add liquidity.</b> Your wallet asks you to confirm each step; the panel runs them in order.</li>
-      <li><b>Earn {FEE_PERCENT} of every trade.</b> Withdraw everything as demo dollars with one button, at any time.</li>
-    </ol>
-    <p className="gmd-caption">Demo dollars and USTX have no value. The pool’s price can move against the NAV; see the details below.</p>
+    {pool ? <LiquidityChart pool={pool} nav={nav} share={share} /> : <div className="gmd-lq is-loading" aria-busy="true"><Skeleton width="100%" className="gmd-lq-skeleton" /></div>}
+    <div className="gmd-pools-visuals">
+      <DepositPreview split={split && quote ? split : null} lpMicros={quote?.liquidity ?? null} shareAfter={shareAfter} />
+      <NavMoveChart amount={dollars !== null && dollars > 0n ? Number(dollars) / 1e6 : 1_000} />
+    </div>
+    <p className="gmd-caption">Demo dollars and USTX have no value. Every figure here is read from the pool on X Layer; the pool’s price can move against the NAV.</p>
   </section>;
 }
 
@@ -300,7 +308,7 @@ type Done =
   | { tab: "add"; added: LiquidityFill; invested: { dollarsMicros: bigint; sharesMicros: bigint } | null; hashes: string[]; block: number }
   | { tab: "remove"; removed: LiquidityFill; redeemed: { sharesMicros: bigint; dollarsMicros: bigint } | null; hashes: string[]; block: number };
 
-function LiquidityPanel({ provider, chain, owner, reader, onBusy }: { provider: Provider | null; chain: string | null; owner: string | null; reader: Reader; onBusy: (busy: boolean) => void }) {
+function LiquidityPanel({ provider, chain, owner, reader, onBusy, amount, onAmount }: { provider: Provider | null; chain: string | null; owner: string | null; reader: Reader; onBusy: (busy: boolean) => void; amount: string; onAmount: (text: string) => void }) {
   const { address } = useWalletAccount();
   const { day: activity } = useActivityDay();
   const { now } = useMarket();
@@ -311,7 +319,8 @@ function LiquidityPanel({ provider, chain, owner, reader, onBusy }: { provider: 
   const [mode, setMode] = useState<Mode>("dollars");
   // In a pair, the field last typed in; the other follows the pool's ratio.
   const [pair, setPair] = useState<{ anchor: "shares" | "dollars"; text: string }>({ anchor: "dollars", text: "" });
-  const [dollarsText, setDollarsText] = useState("");
+  const dollarsText = amount;
+  const setDollarsText = onAmount;
   const [removeText, setRemoveText] = useState("");
   const [receive, setReceive] = useState<"both" | "dollars">("both");
   const [phase, setPhase] = useState<"form" | "working" | "done">("form");

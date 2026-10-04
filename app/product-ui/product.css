@@ -1695,3 +1695,58 @@ a.gmd-pool-pair:hover b { text-decoration: underline; text-underline-offset: 3px
   .gmd-pools-summary-stats { grid-template-columns: 1fr; }
   .gmd-pools-more > :not(summary) { margin: 12px; }
 }
+
+/* Pools pictures: liquidity by price, the deposit, a NAV move. USTX #0f8f84 and dUSD #d9701f pass the palette checks. */
+.gmd-app { --gmd-ustx: #0f8f84; --gmd-dusd: #d9701f; }
+.gmd-lq, .gmd-navmove { margin: 0; display: grid; gap: 10px; }
+.gmd-lq-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 6px 16px; }
+.gmd-lq-head h3 { margin: 0; font-size: 16px; }
+.gmd-lq-legend { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12px; color: var(--gmd-copy); }
+.gmd-lq-legend li { display: inline-flex; align-items: center; gap: 6px; }
+.gmd-lq-legend i, .gmd-deposit-parts i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; }
+.gmd-lq-legend i.is-dollars, .gmd-deposit-parts i.is-dollars { background: var(--gmd-dusd); }
+.gmd-lq-legend i.is-shares, .gmd-deposit-parts i.is-shares { background: var(--gmd-ustx); }
+.gmd-lq-legend i.is-line-pool { height: 2px; width: 14px; border-radius: 1px; background: var(--gmd-ustx); }
+.gmd-lq-legend i.is-line-held { height: 2px; width: 14px; border-radius: 1px; background: #6b7c85; }
+.gmd-lq-plot { position: relative; }
+.gmd-lq-plot svg { display: block; width: 100%; height: auto; overflow: visible; }
+.gmd-lq-base { stroke: var(--gmd-line); stroke-width: 1; }
+.gmd-lq-bar path { transition: opacity 120ms; }
+.gmd-lq-bar.is-dollars path { fill: var(--gmd-dusd); }
+.gmd-lq-bar.is-shares path { fill: var(--gmd-ustx); }
+.gmd-lq-plot svg:hover .gmd-lq-bar:not(.is-active) path { opacity: .55; }
+.gmd-lq-hit { fill: transparent; cursor: crosshair; outline: none; }
+.gmd-lq-hit:focus-visible { stroke: var(--gmd-ink); stroke-width: 1; }
+.gmd-lq-marker line { stroke: var(--gmd-ink); stroke-width: 1.5; }
+.gmd-lq-marker text, .gmd-lq-tick, .gmd-navmove-label { font-size: 12px; fill: var(--gmd-copy); font-variant-numeric: tabular-nums; }
+.gmd-lq-marker text { fill: var(--gmd-ink); font-weight: 600; }
+.gmd-lq-skeleton { height: 180px; }
+.gmd-pools-visuals { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1.2fr); gap: 20px; align-items: start; }
+.gmd-deposit-preview { display: grid; gap: 12px; padding: 14px 16px; border-radius: 10px; background: var(--gmd-bg); }
+.gmd-deposit-preview h3 { margin: 0; font-size: 16px; }
+.gmd-deposit-bar { display: flex; gap: 2px; height: 14px; border-radius: 4px; overflow: hidden; }
+.gmd-deposit-bar i { display: block; min-width: 2px; background: var(--gmd-line); }
+.gmd-deposit-bar i.is-shares { background: var(--gmd-ustx); }
+.gmd-deposit-bar i.is-dollars { background: var(--gmd-dusd); }
+.gmd-deposit-parts { display: grid; gap: 8px; margin: 0; }
+.gmd-deposit-parts > div { display: flex; justify-content: space-between; gap: 12px; font-size: 14px; }
+.gmd-deposit-parts dt { display: inline-flex; align-items: center; gap: 6px; color: var(--gmd-copy); }
+.gmd-deposit-parts dd { margin: 0; text-align: end; color: var(--gmd-ink); font-weight: 600; font-variant-numeric: tabular-nums; }
+.gmd-deposit-parts dd small { display: block; font-weight: 400; color: var(--gmd-copy); font-size: 12px; }
+.gmd-navmove-pool { fill: none; stroke: var(--gmd-ustx); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.gmd-navmove-held { fill: none; stroke: #6b7c85; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.gmd-navmove-gap { fill: #d9701f1a; stroke: none; }
+.gmd-navmove-cross line { stroke: var(--gmd-copy); stroke-width: 1; }
+.gmd-navmove-cross circle { stroke: #fff; stroke-width: 2; }
+.gmd-navmove-cross circle.is-pool { fill: var(--gmd-ustx); }
+.gmd-navmove-cross circle.is-held { fill: #6b7c85; }
+.gmd-navmove svg { cursor: crosshair; touch-action: pan-y; }
+@media (max-width:860px) { .gmd-pools-visuals { grid-template-columns: 1fr; } }
+
+/* The order panel's route: from the wallet on X Layer, or from the demo balance, with the one action that changes it. */
+.gmd-invest-route { display: grid; gap: 4px; padding: 10px 12px; margin-bottom: 14px; border-radius: 8px; background: var(--gmd-bg); font-size: 13px; }
+.gmd-invest-route p { display: flex; align-items: center; gap: 8px; margin: 0; color: var(--gmd-copy); }
+.gmd-invest-route p i { flex: 0 0 8px; height: 8px; border-radius: 50%; background: #9aa9af; }
+.gmd-invest-route.is-chain p i { background: var(--gmd-accent); }
+.gmd-invest-route b { color: var(--gmd-ink); }
+.gmd-invest-route .gmd-text-button { justify-self: start; font-size: 13px; }
