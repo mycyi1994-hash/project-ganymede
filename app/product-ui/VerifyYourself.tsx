@@ -9,6 +9,7 @@ import TamperExperiment from "./TamperExperiment";
 import TokenContractsCheck from "./TokenContractsCheck";
 import { PoolCheckDetails, usePoolCheck } from "./PoolCheck";
 import VerificationFlow from "./VerificationFlow";
+import ContractControls from "./ContractControls";
 import { Icon } from "./Icons";
 
 // The technical checks behind the Transparency page, for developers and reviewers: the three
@@ -40,6 +41,7 @@ export default function VerifyYourself() {
     <VerificationFlow checks={checks} state={state} pools={poolCheck} detailed />
     <TokenContractsCheck canonical={checks?.canonical ?? null} />
     <PoolCheckDetails check={poolCheck} detailed />
+    <ContractControls />
     <div className="gmd-evidence-actions"><button className="gmd-small-button" type="button" onClick={downloadEvidence} disabled={!evidenceRecord}><Icon name="download" size={16} />Download evidence</button><span>Re-check the file anywhere with <code>npm run verify:evidence</code>.</span></div>
     <TamperExperiment canonical={checks?.canonical ?? null} record={checks?.record ?? null} />
     <details className="gmd-disclosure"><summary>OKX OnchainOS prices in this record <span>+</span></summary><div className="gmd-data-table-scroll"><p className="gmd-caption">Each row: token units × price, rounded down to USD micros, then summed to the NAV. Price timestamps come from OKX OnchainOS.</p><table className="gmd-table"><thead><tr><th>Token</th><th>Price / USD</th><th>Price timestamp</th></tr></thead><tbody>{composition?.holdings.map(h => <tr key={h.symbol}><th scope="row">{h.symbol}</th><td>{formatUsdMicros(h.priceMicros, 4)}</td><td>{shortTime(h.priceTime)}</td></tr>)}</tbody></table></div></details>

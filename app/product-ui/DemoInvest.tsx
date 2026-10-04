@@ -156,7 +156,7 @@ function DemoInvest({ tabs }: { tabs: ReactNode }) {
           <div><dt>Fee</dt><dd>None</dd></div>
         </dl>
         <button type="button" className="gmd-button" disabled={Boolean(problem) || !nav} onClick={() => setReview(crypto.randomUUID())}>Review {side === "buy" ? "investment" : "redemption"} <Icon name="arrow" size={17} /></button>
-        <p className="gmd-caption">Demo dollars only. No real money moves and no shares are issued on chain.</p>
+        <p className="gmd-caption">Demo dollars only. No real money moves. Your holdings stay in this demo account.</p>
       </>}
   </>;
 }
@@ -202,10 +202,10 @@ export function DemoPortfolio() {
     try { await demo.reset(); } finally { setResetting(false); }
   }
   return <section className="gmd-demo-portfolio" aria-labelledby="demo-title">
-    <header className="gmd-section-heading"><div><h2 id="demo-title">Your investments</h2><p>Held with your demo balance in this browser.</p></div><Link prefetch={false} className="gmd-button" href="/products/ustx#investment">Invest <Icon name="arrow" size={16} /></Link></header>
+    <header className="gmd-section-heading"><div><h2 id="demo-title">Your investments</h2><p>Your demo funds, available cash and returns.</p></div><Link prefetch={false} className="gmd-button" href="/products/ustx#investment">Invest <Icon name="arrow" size={16} /></Link></header>
     {demo.error ? <p className="gmd-inline-error" role="alert">{demo.error}</p> : !account ? <div className="gmd-portfolio-summary is-loading" role="status"><span className="gmd-sr-only">Opening your demo account…</span><div aria-hidden="true"><Skeleton width={90} /><Skeleton className="is-hero" /><Skeleton width="72%" /></div><div className="gmd-loading-facts" aria-hidden="true">{[0, 1, 2].map(item => <span key={item}><Skeleton width={96} /><Skeleton width={120} /></span>)}</div></div> : <>
       <div className="gmd-portfolio-summary">
-        <div><span className="gmd-label">Total value</span><strong className="gmd-value">{portfolio?.totalMicros == null ? "—" : formatUsdRounded(portfolio.totalMicros)}</strong><p>{portfolio?.totalMicros == null ? "Valuation pending: waiting for a NAV for every holding." : "Cash and all demo fund holdings at their latest recorded NAVs."}</p></div>
+        <div><span className="gmd-label">Total value</span><strong className="gmd-value">{portfolio?.totalMicros == null ? "—" : formatUsdRounded(portfolio.totalMicros)}</strong><p>{portfolio?.totalMicros == null ? "Updating prices for your holdings." : "Available cash and the current value of all your demo funds."}</p></div>
         <dl>
           <div><dt>Cash balance</dt><dd>{formatUsdMicros(cash, 2)}</dd></div>
           <div><dt>Invested</dt><dd>{formatUsdMicros(portfolio?.investedMicros ?? 0n, 2)}</dd></div>

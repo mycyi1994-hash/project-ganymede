@@ -124,7 +124,7 @@ function FundOrder({ fund, nav, account }: { fund: Pick<FundDetail, "id" | "tick
   }
   return <aside className="gmd-fund-order" aria-labelledby="fund-order-title">
     <h2 id="fund-order-title">Invest in {fund.ticker}</h2>
-    <p className="gmd-caption">With your demo balance: demo dollars with no value, shared with USTX. Orders fill at the NAV recorded on X Layer.</p>
+    <p className="gmd-caption">Use your shared demo balance to buy at this fund’s latest NAV.</p>
     <div className="gmd-wallet-balances"><div><span>Demo cash</span><b>{account ? formatUsdMicros(account.cashMicros, 2) : "—"}</b><small>no value</small></div><div><span>{fund.ticker} held</span><b>{formatShares(held)}</b><small>{navMicros && held > 0n ? formatUsdMicros(held * navMicros / 1_000_000n, 2) : "shares"}</small></div></div>
     <div className="gmd-segmented" role="group" aria-label="Order type">
       <button type="button" disabled={busy} aria-pressed={side === "buy"} onClick={() => { setSide("buy"); setAmount("1,000"); setMessage(null); }}>Buy</button>
@@ -167,10 +167,10 @@ export function FundScreen({ id }: { id: string }) {
         </section>
         <section className={`gmd-evidence-summary is-${check.result === "matched" ? "matched" : check.result === "failed" ? "failed" : "waiting"}`} aria-live="polite">
           <div className="gmd-evidence-icon"><Icon name={check.result === "matched" ? "check" : "info"} size={24} /></div>
-          <div><h2>{{ matched: "NAV verified on X Layer", failed: "This NAV could not be verified", unavailable: "Verification unavailable", checking: "Checking the latest NAV…" }[check.result]}</h2><p>{check.detail}</p>
-            {poolCheck && <p className="gmd-caption">{poolCheck.state === "agrees" ? "Prices agree with the X Layer pools. " : "Not compared with the X Layer pools: "}{poolCheck.detail}</p>}</div>
+          <div><h2>{{ matched: "NAV verified on X Layer", failed: "This NAV could not be verified", unavailable: "Verification unavailable", checking: "Checking the latest NAV…" }[check.result]}</h2><p>{{ matched: "The price and holdings match the published X Layer record.", failed: "The price could not be confirmed. Wait for an updated price before investing.", unavailable: "Price confirmation is temporarily unavailable. Please try again.", checking: "Confirming the latest price and holdings…" }[check.result]}</p>
+            {poolCheck && <p className="gmd-caption">{poolCheck.state === "agrees" ? "Pool comparison at publication: within 1% of the basket value." : "A complete pool price comparison was unavailable at publication."}</p>}</div>
         </section>
-        <section className="gmd-proof-history" aria-labelledby="fund-holdings-title"><header className="gmd-section-heading"><h2 id="fund-holdings-title">Holdings</h2><span>{definition.constituents.length} xStocks · equal weight at each fixing</span></header>
+        <section className="gmd-proof-history" aria-labelledby="fund-holdings-title"><header className="gmd-section-heading"><h2 id="fund-holdings-title">Holdings</h2><span>{definition.constituents.length} xStocks · equal weight each quarter</span></header>
           <div className="gmd-data-table-scroll"><table className="gmd-table gmd-fund-holdings"><thead><tr><th>Asset</th><th>Price</th><th>Value per share</th><th>Weight</th></tr></thead><tbody>
             {definition.constituents.map(symbol => universeToken(symbol)!).map(holding => {
               const row = composition?.holdings.find(item => item.symbol === holding.symbol);
@@ -185,11 +185,11 @@ export function FundScreen({ id }: { id: string }) {
           </tbody></table>{fund && !fund.history.some(entry => entry.status === "confirmed") && <p className="gmd-caption">No record yet: the first one is written within five minutes of the fund&rsquo;s launch.</p>}</div>
         </section>
         <section className="gmd-terms"><h2>About {definition.ticker}</h2><dl className="gmd-facts">
-          <div><dt>Method</dt><dd>Fixed token units per share, equal weight at each fixing, re-fixed each quarter at the prevailing NAV</dd></div>
+          <div><dt>Method</dt><dd>Equal weight at each quarterly rebalance; weights move with prices between rebalances</dd></div>
           <div><dt>Prices</dt><dd>OKX OnchainOS, xStocks on X Layer mainnet</dd></div>
-          <div><dt>Records</dt><dd>Every five minutes, in the NAV registry on X Layer Testnet under its own product key</dd></div>
+          <div><dt>Records</dt><dd>Price history published on X Layer Testnet every five minutes</dd></div>
           <div><dt>Investors</dt><dd>{fund ? `${fund.demo.investors} demo ${fund.demo.investors === 1 ? "balance" : "balances"}` : "—"}</dd></div>
-          <div><dt>How to invest</dt><dd>With a demo balance. Only USTX also has a share token for wallets, pools and lending</dd></div>
+          <div><dt>How to invest</dt><dd>Use your demo balance. Wallet investing, liquidity pools and borrowing are available with USTX</dd></div>
         </dl><p className="gmd-caption">A demo fund on X Layer Testnet. Demo dollars and fund shares have no value, and nothing here is an offer or investment advice.</p></section>
       </div>
       <FundOrder key={id} fund={definition} nav={nav} account={account} />
