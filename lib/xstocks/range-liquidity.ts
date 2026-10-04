@@ -1,9 +1,9 @@
 import { decodeAbiParameters } from "viem";
 import {
-  FUND_SELECTORS, addressWord, atBlock, call, fundErrorMessage, fundRpc, hexBlock, isRevert, readBlock, revertData, word, words,
+  FUND_SELECTORS, addressWord, atBlock, call, fundErrorMessage, fundRpc, hexBlock, isRevert, readBlock, word, words,
   type FundReceipt, type Rpc, type TransactionCall,
 } from "./fund";
-import { tickToUsd, v4PriceMicros, type V4Amounts, type V4Deployment } from "./v4-liquidity";
+import { hookRevert, tickToUsd, v4PriceMicros, type V4Amounts, type V4Deployment } from "./v4-liquidity";
 
 // The USTX/dUSD pool where every liquidity provider holds positions of their own
 // (contracts/GanymedeRangeLiquidityHook.sol), on the same Uniswap v4 PoolManager as the pool held
@@ -191,8 +191,9 @@ export function rangeFill(receipt: FundReceipt, deployment: RangeDeployment, acc
   return result;
 }
 
+/** A customer-facing reason for a failed request to the range pool, unwrapped from the pool manager's WrappedError when a swap carried it. */
 export function rangeErrorMessage(error: unknown): string {
-  const data = revertData(error);
+  const data = hookRevert(error);
   const known = data ? RANGE_ERRORS[data.slice(0, 10).toLowerCase()] : undefined;
   return known ?? fundErrorMessage(data ? { data } : error);
 }
