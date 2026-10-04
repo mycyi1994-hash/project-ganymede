@@ -1,5 +1,6 @@
 "use client";
 
+import { FundList } from "./Funds";
 import Link from "next/link";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { formatUsdMicros } from "@/lib/nav-display";
@@ -74,7 +75,7 @@ function NavValue() {
 }
 
 function ProductIdentity({ compact = false }: { compact?: boolean }) {
-  return <div className={`gmd-product-identity${compact ? " is-compact" : ""}`}><div className="gmd-product-monogram" aria-hidden="true"><i /><i /><i /><i /><i /><i /></div><div><span className="gmd-ticker">USTX <span>Equity basket</span></span>{compact ? <h2>US Tech Basket</h2> : <h1>US Tech Basket</h1>}<p>Apple, Microsoft, NVIDIA, Amazon, Meta and Tesla.</p></div></div>;
+  return <div className={`gmd-product-identity${compact ? " is-compact" : ""}`}><div className="gmd-product-monogram" aria-hidden="true"><i /><i /><i /><i /><i /><i /></div><div><span className="gmd-ticker">USTX <span>Equity basket</span></span>{compact ? <h2>US Tech Basket</h2> : <h1>US Tech Basket</h1>}<p>Apple, Microsoft, NVIDIA, Alphabet, Amazon, Meta, Tesla, Oracle and Palantir.</p></div></div>;
 }
 
 export function MarketScreen({ preview = false }: { preview?: boolean }) {
@@ -84,6 +85,7 @@ export function MarketScreen({ preview = false }: { preview?: boolean }) {
   const detail = preview ? designLink("product") : "/products/ustx";
   const screen = <><div className="gmd-page-heading"><div><h1>Markets</h1><p>Tokenized US stock baskets on X Layer, priced by OKX OnchainOS and verified in your browser.</p></div>{preview ? <span className="gmd-badge">Example account view</span> : <RecordCheckStatus />}</div><DataState />
     <section className="gmd-market-feature" aria-label="US Tech Basket"><div className="gmd-market-primary"><div className="gmd-feature-title"><ProductIdentity compact /><Link prefetch={false} className="gmd-button" href={preview ? detail : `${detail}#investment`}>Invest <Icon name="arrow" size={18} /></Link></div><NavValue />{!preview && <FundStats />}<MarketChart points={points} loading={loading} /><div className="gmd-feature-bottom"><span>Equal weight <i /> Rebalanced quarterly <i /> Min. $10</span><span className="gmd-badge">Demo fund</span></div></div><div className="gmd-market-composition"><Holdings composition={composition} compact loading={loading} /></div></section>
+    {!preview && <FundList />}
     {!preview && <MarketPulse />}
     <div className="gmd-market-foot"><div className="gmd-stock-row" aria-hidden="true">{assetSymbols.map(symbol => <AssetMark key={symbol} symbol={symbol} />)}</div><p>Market data by OKX OnchainOS · xStocks on X Layer · NAV records on X Layer Testnet</p><Link prefetch={false} href="/limitations">Risks <Icon name="external" size={14} /></Link></div>
   </>;

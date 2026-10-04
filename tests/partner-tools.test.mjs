@@ -174,7 +174,7 @@ test("the OpenAPI document lists every public read, and the OKX app link carries
   assert.equal(response.headers.get("access-control-allow-origin"), "*");
   const body = await response.json();
   assert.equal(body.openapi, OPENAPI.openapi);
-  for (const path of ["/api/v1/ustx", "/api/v1/ustx/pools", "/api/v1/ustx/activity", "/api/v1/ustx/usage", "/api/v1/ustx/dex-quotes", "/mcp"]) assert.ok(body.paths[path], path);
+  for (const path of ["/api/v1/ustx", "/api/v1/ustx/pools", "/api/v1/ustx/activity", "/api/v1/ustx/usage", "/api/v1/ustx/dex-quotes", "/api/v1/funds", "/mcp"]) assert.ok(body.paths[path], path);
   const link = new URL(okxAppUrl("https://example.test/products/ustx?a=1"));
   assert.equal(link.hostname, "www.okx.com");
   assert.equal(new URL(link.searchParams.get("deeplink")).searchParams.get("dappUrl"), "https://example.test/products/ustx?a=1");
