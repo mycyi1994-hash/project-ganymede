@@ -1,7 +1,7 @@
 "use client";
 
 import { FundList, FundMarketPreview } from "./Funds";
-import { IncomeShowcase } from "./Income";
+import { IncomeMarket } from "./Income";
 import { USTX_FUND, otherFund } from "@/lib/funds/catalog";
 import Link from "next/link";
 import { useEffect, useRef, useState, type ReactNode } from "react";
@@ -119,8 +119,7 @@ export function MarketScreen({ preview = false }: { preview?: boolean }) {
   const screen = <><div className="gmd-page-heading"><div><h1>Markets</h1><p>RWA baskets, covered-call income and structured notes on tokenized US stocks, priced by OKX and recorded on X Layer.</p></div>{preview ? <span className="gmd-badge">Example account view</span> : baskets && !selectedFund && <RecordCheckStatus />}</div>
     {!preview && <nav className="gmd-categories" aria-label="Product categories">{CATEGORIES.map(item => <button type="button" key={item.id} aria-pressed={category === item.id} onClick={() => { setCategory(item.id); window.history.replaceState(null, "", item.id === "all" ? "/" : `/?category=${item.id}`); }}><b>{item.label}</b><small>{item.note}</small></button>)}</nav>}
     {!preview && !baskets && <><div className="gmd-category-intro"><h2>{category === "income" ? "Covered-call income" : "Structured notes (ELS)"}</h2><p>{category === "income" ? "Hold the S&P 500 or the Nasdaq-100 and sell a call each month: income now, in exchange for the gains above the strike. Like XYLD and QYLD." : "A step-down autocallable note on the S&P 500 and the Nasdaq-100: 7% a year if both hold up, paid back early at six-monthly observations; capital at risk only after a 50% fall."}</p></div>
-      <IncomeShowcase kinds={category === "income" ? ["covered-call"] : ["autocall"]} />
-      <p className="gmd-caption">Demo products on X Layer Testnet, bought with demo dollars. Option premiums are modelled: there is no options market for xStocks on X Layer.</p></>}
+      <IncomeMarket key={category} kind={category === "income" ? "covered-call" : "autocall"} /></>}
     {baskets && <>{!selectedFund && <DataState />}
     <section ref={feature} id="market-fund-preview" tabIndex={-1} className="gmd-market-feature" aria-label={selectedFund?.name ?? USTX_FUND.name}>{selectedFund ? <FundMarketPreview key={selectedFund.id} definition={selectedFund} /> : <><div className="gmd-market-primary"><div className="gmd-feature-title"><ProductIdentity compact /><Link prefetch={false} className="gmd-button" href={preview ? detail : `${detail}#investment`}>Invest <Icon name="arrow" size={18} /></Link></div><NavValue />{!preview && <FundStats />}<MarketChart points={points} loading={loading} /><div className="gmd-feature-bottom"><span>Equal weight <i /> Rebalanced quarterly <i /> Min. $10</span><span className="gmd-badge">Demo fund</span></div></div><div className="gmd-market-composition"><Holdings composition={composition} compact loading={loading} /></div></>}</section>
     {!preview && !selectedFund && <PriceConfidence compact />}

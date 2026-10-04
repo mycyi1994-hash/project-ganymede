@@ -1824,16 +1824,6 @@ a.gmd-pool-pair:hover b { text-decoration: underline; text-underline-offset: 3px
 .gmd-category-intro { margin-bottom: 16px; }
 .gmd-category-intro h2 { margin: 0 0 6px; }
 .gmd-category-intro p { margin: 0; max-width: 72ch; color: var(--gmd-copy); }
-.gmd-income-showcase { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; margin-bottom: 14px; }
-.gmd-income-card { display: grid; gap: 10px; align-content: start; padding: 20px; border: 1px solid var(--gmd-line); border-radius: 14px; background: var(--gmd-surface); color: inherit !important; text-decoration: none; transition: border-color 160ms, transform 160ms var(--gmd-ease-out), box-shadow 160ms; }
-.gmd-income-card:hover { border-color: var(--gmd-accent); transform: translateY(-2px); box-shadow: 0 10px 28px #172b3514; }
-.gmd-income-card h3 { margin: 0; font-size: 20px; }
-.gmd-income-card p { margin: 0; font-size: 14px; color: var(--gmd-copy); }
-.gmd-income-card-marks { display: flex; gap: 6px; }
-.gmd-income-card dl { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 4px 0 0; }
-.gmd-income-card dt { font-size: 12px; color: var(--gmd-copy); }
-.gmd-income-card dd { margin: 2px 0 0; font-weight: 600; color: var(--gmd-ink); font-variant-numeric: tabular-nums; }
-.gmd-income-card-go { display: inline-flex; align-items: center; gap: 6px; color: var(--gmd-accent); font-weight: 600; font-size: 14px; }
 .gmd-income-section { display: grid; gap: 16px; padding: 20px; border: 1px solid var(--gmd-line); border-radius: 12px; background: var(--gmd-surface); }
 .gmd-income-tiles { grid-template-columns: repeat(4, minmax(0,1fr)); }
 .gmd-income-tiles strong { font-size: 20px; }
@@ -1848,9 +1838,33 @@ a.gmd-pool-pair:hover b { text-decoration: underline; text-underline-offset: 3px
 @media (prefers-reduced-motion: no-preference) {
   .gmd-income-knocked { stroke-dasharray: 1; animation: gmd-lq-draw 1100ms 200ms cubic-bezier(.3,.7,.2,1) both; }
   .gmd-income-dot { animation: gmd-lq-pulse 2.4s 900ms ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
-  .gmd-income-card { animation: gmd-lq-up 420ms cubic-bezier(.2,.8,.2,1) both; }
-  .gmd-income-card:nth-child(2) { animation-delay: 80ms; }
-  .gmd-income-card:nth-child(3) { animation-delay: 160ms; }
-}
+      }
 @media (max-width:860px) { .gmd-categories { grid-template-columns: repeat(2, minmax(0,1fr)); } .gmd-income-tiles { grid-template-columns: repeat(2, minmax(0,1fr)); } }
 @media (max-width:600px) { .gmd-income-tiles { grid-template-columns: 1fr; } .gmd-income-section { padding: 14px; } }
+
+/* The Income and Structured tabs on Markets: a feature card like the baskets', and a comparison. */
+.gmd-product-monogram.is-covered-call i { background: var(--gmd-ustx); }
+.gmd-product-monogram.is-covered-call i:nth-child(n+4) { background: #9fd3cd; }
+.gmd-product-monogram.is-autocall i { background: var(--gmd-dusd); }
+.gmd-product-monogram.is-autocall i:nth-child(2n) { background: #f0c49d; }
+.gmd-income-meter { position: relative; height: 34px; margin: 6px 0 14px; border-radius: 8px; background: var(--gmd-soft); overflow: hidden; }
+.gmd-income-meter span { position: absolute; inset: 0 auto 0 0; border-radius: 8px; background: linear-gradient(90deg, #0f8f8433, #0f8f84aa); }
+.gmd-income-meter.is-note span { background: linear-gradient(90deg, #d9701f33, #d9701faa); }
+.gmd-income-meter i { position: absolute; top: 0; bottom: 0; width: 2px; background: #6b7c85; }
+.gmd-income-meter b { position: absolute; inset-inline-end: 10px; top: 50%; transform: translateY(-50%); font-size: 12px; color: var(--gmd-ink); }
+.gmd-income-rows { list-style: none; margin: 0 0 12px; padding: 0; display: grid; }
+.gmd-income-rows li + li { border-top: 1px solid #e8ecee; }
+.gmd-income-row { display: grid; grid-template-columns: 32px minmax(0,1fr) auto; align-items: center; gap: 10px; padding: 11px 0; }
+.gmd-income-row-dot { width: 8px; height: 8px; margin-inline: auto; border-radius: 50%; background: #b9c6cb; }
+.gmd-income-row-label { display: grid; min-width: 0; }
+.gmd-income-row-label b { font-size: 14px; color: var(--gmd-ink); }
+.gmd-income-row-label small { font-size: 12px; color: var(--gmd-copy); overflow-wrap: anywhere; }
+.gmd-income-row-value { font-size: 15px; color: var(--gmd-ink); font-variant-numeric: tabular-nums; text-align: end; }
+.gmd-income-compare { display: grid; gap: 14px; }
+.gmd-market-primary .gmd-navmove { margin-top: 18px; }
+@media (prefers-reduced-motion: no-preference) {
+  .gmd-income-meter span { animation: gmd-income-fill 900ms cubic-bezier(.2,.8,.2,1) both; transform-origin: left; }
+  .gmd-income-rows li { animation: gmd-lq-up 380ms cubic-bezier(.2,.8,.2,1) both; }
+  .gmd-income-rows li:nth-child(2) { animation-delay: 50ms; } .gmd-income-rows li:nth-child(3) { animation-delay: 100ms; } .gmd-income-rows li:nth-child(4) { animation-delay: 150ms; } .gmd-income-rows li:nth-child(5) { animation-delay: 200ms; }
+}
+@keyframes gmd-income-fill { from { transform: scaleX(0); } to { transform: scaleX(1); } }
