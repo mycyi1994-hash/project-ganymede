@@ -201,9 +201,10 @@ npm run fork:range
 forks X Layer Testnet, impersonates the administrator, deploys both contracts on the recorded
 PoolManager, opens one position of each shape, buys $200 of USTX through the router, records a NAV 1%
 higher and runs the arbitrage, then closes the Bid-Ask position with its fees. `npm run deploy:range`
-does the same deployment and seeding on X Layer Testnet (approved by the user on 4 October 2026) and
-records both contracts; then pin the pool in `../lib/xstocks/range-liquidity.ts` and set
-`RANGE_ARBITRAGE_ADDRESS` for the keeper.
+did the same deployment and seeding on X Layer Testnet on 4 October 2026, with the user's approval, and
+recorded both contracts in `deployments/xlayer-testnet.json`; the app pins the pool in
+`../lib/xstocks/range-liquidity.ts` (checked by `test/AppRangeClient.test.ts`) and the keeper runs the
+arbitrage through `RANGE_ARBITRAGE_ADDRESS`.
 
 ## Uniswap v4 liquidity for USTX (fork of X Layer Testnet)
 

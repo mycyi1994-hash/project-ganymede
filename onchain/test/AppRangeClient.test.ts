@@ -4,7 +4,9 @@ import { time } from "@nomicfoundation/hardhat-network-helpers";
 import { getAddress, keccak256, maxUint256, toBytes, toEventSelector, toFunctionSelector, type AbiItem, type Address, type Hex } from "viem";
 import { productKey, toBytes32 } from "../../relayer/src/ids";
 import { type FundReceipt } from "../../lib/xstocks/fund";
-import { RANGE_ERRORS, RANGE_EVENTS, RANGE_SELECTORS, rangeCalls, rangeErrorMessage, rangeFill, readRangePool, type RangeDeployment } from "../../lib/xstocks/range-liquidity";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+import { RANGE_ERRORS, RANGE_EVENTS, RANGE_POOL_DEPLOYMENT, RANGE_SELECTORS, rangeCalls, rangeErrorMessage, rangeFill, readRangePool, type RangeDeployment } from "../../lib/xstocks/range-liquidity";
 import { binTicksFor, planRange } from "../../lib/xstocks/lp-strategy";
 import { CREATE2_PROXY, CREATE2_PROXY_CODE, DYNAMIC_FEE_FLAG, deployRangeLiquidity, deployRwaLiquidity, poolIdOf, poolStateSlot } from "../scripts/_v4";
 
@@ -108,5 +110,21 @@ describe("App range pool client", () => {
     expect(closed.closed?.id).to.equal(1n);
     expect(closed.closed!.amounts.sharesMicros + 2n >= position.amounts.sharesMicros).to.equal(true);
     expect((await readRangePool(deployment, provider.account.address, { rpc: appRpc })).account!.positions).to.deep.equal([]);
+  });
+
+  it("points at the recorded deployment", () => {
+    const record = JSON.parse(readFileSync(join(__dirname, "..", "deployments", "xlayer-testnet.json"), "utf8"));
+    const { GanymedeRangeLiquidityHook: hook, GanymedeRangeArbitrage: arbitrage, UniswapV4PoolManager: manager, GanymedeV4Router: router, GanymedeBasketFund: fund, GanymedeDemoDollar: dollar } = record.contracts;
+    const pin = RANGE_POOL_DEPLOYMENT!;
+    expect(pin.hook).to.equal(hook.address.toLowerCase());
+    expect(pin.arbitrage).to.equal(arbitrage.address.toLowerCase());
+    expect(pin.poolManager).to.equal(manager.address.toLowerCase());
+    expect(pin.router).to.equal(router.address.toLowerCase());
+    expect(pin.asset).to.equal(fund.address.toLowerCase());
+    expect(pin.dollar).to.equal(dollar.address.toLowerCase());
+    expect(pin.poolId).to.equal(hook.poolId.toLowerCase());
+    expect(pin.stateSlot).to.equal(poolStateSlot(hook.poolId));
+    expect(pin.assetIsCurrency0).to.equal(BigInt(fund.address) < BigInt(dollar.address));
+    expect(hook.seedTransaction).to.match(/^0x[0-9a-f]{64}$/);
   });
 });
