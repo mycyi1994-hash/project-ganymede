@@ -1,15 +1,17 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useId, useMemo, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import type { FundDetail, FundSummary } from "@/lib/funds/api";
-import { otherFund } from "@/lib/funds/catalog";
+import { otherFund, universeToken } from "@/lib/funds/catalog";
 import { formatUsdMicros } from "@/lib/nav-display";
 import { DEMO_ORDER_EVENT, formatShares, parseShares } from "@/lib/demo/format";
 import { parseUsd } from "@/lib/xstocks/wallet";
 import { shortTime } from "@/lib/product-market";
-import { PROOF_DEPLOYMENT, verifyFundComposition, type Check } from "@/lib/xstocks/proof";
-import { readLatestNav } from "@/lib/xstocks/onchain";
+import { PROOF_DEPLOYMENT } from "@/lib/xstocks/proof";
+import { verifyFundSnapshot, type FundVerification } from "@/lib/funds/verification";
+import type { FundPosition } from "@/lib/funds/demo";
+import { useFundResource } from "./useFundResource";
 import type { SeriesPoint } from "@/lib/xstocks/series";
 import { AssetMark, Icon } from "./Icons";
 import { OkxSource } from "./OkxSource";
@@ -21,13 +23,6 @@ import { OkxSource } from "./OkxSource";
 const txUrl = (hash: string | null | undefined) => hash && /^0x[0-9a-f]{64}$/i.test(hash) ? `${PROOF_DEPLOYMENT.explorerUrl}/tx/${hash}` : null;
 const percent = (value: number | null) => value === null ? "—" : `${value >= 0 ? "+" : "−"}${Math.abs(value).toFixed(2)}%`;
 const tone = (value: number | null) => value === null || Math.abs(value) < 0.005 ? "" : value > 0 ? " is-up" : " is-down";
-
-async function readJson<T>(url: string): Promise<T> {
-  const response = await fetch(url, { cache: "no-store", credentials: "same-origin" });
-  const body = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error((body as { error?: string }).error ?? "The funds could not be read just now.");
-  return body as T;
-}
 
 /** A line through the recorded NAVs, with the value under the pointer. */
 function NavLine({ series, label, compact = false }: { series: SeriesPoint[]; label: string; compact?: boolean }) {
@@ -56,13 +51,8 @@ function NavLine({ series, label, compact = false }: { series: SeriesPoint[]; la
 
 /** The six funds on Markets. */
 export function FundList() {
-  const [funds, setFunds] = useState<FundSummary[] | null>(null);
-  const [failed, setFailed] = useState(false);
-  useEffect(() => {
-    let cancelled = false;
-    readJson<{ funds: FundSummary[] }>("/api/v1/funds").then(body => { if (!cancelled) setFunds(body.funds); }).catch(() => { if (!cancelled) setFailed(true); });
-    return () => { cancelled = true; };
-  }, []);
+  const { data, error: failed } = useFundResource<{ funds: FundSummary[] }>("/api/v1/funds");
+  const funds = data?.funds;
   return <section className="gmd-fund-list" aria-labelledby="funds-title">
     <header className="gmd-section-heading"><div><h2 id="funds-title">All funds</h2><p>Baskets of xStocks, each priced by OKX OnchainOS and recorded on X Layer every five minutes.</p></div><span className="gmd-count">{funds ? `${funds.length} funds` : ""}</span></header>
     {failed && <p className="gmd-inline-error" role="status">The funds could not be read just now. Reload the page in a moment.</p>}
@@ -79,64 +69,57 @@ export function FundList() {
 
 type FundAccount = { cashMicros: string; positions: { fundId: string; sharesMicros: string; costMicros: string }[]; orders: { id: string; fundId: string; side: "subscribe" | "redeem"; usdMicros: string; sharesMicros: string; navMicros: string; createdAt: string }[]; minOrderMicros: string };
 
-function useFundAccount(fundId?: string) {
-  const [account, setAccount] = useState<FundAccount | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const load = useCallback(() => readJson<FundAccount>(`/api/funds/account${fundId ? `?fund=${fundId}` : ""}`).then(setAccount).catch(reason => setError(reason instanceof Error ? reason.message : "The demo balance could not be read.")), [fundId]);
-  useEffect(() => { void load(); }, [load]);
-  return { account, error, reload: load };
+function useFundAccount(fundId: string) {
+  return useFundResource<FundAccount>(`/api/funds/account?fund=${encodeURIComponent(fundId)}`);
 }
 
-/** The browser reads the fund's record on X Layer and checks the stored document against it. */
-function useFundCheck(fund: FundDetail | null) {
-  const [state, setState] = useState<{ result: "matched" | "failed" | "unavailable" | "checking"; detail: string; checks?: { hash: Check; nav: Check } }>({ result: "checking", detail: "Reading the record on X Layer…" });
+/** Never keep a successful badge when the API response or selected fund changes. */
+function useFundCheck(fund: FundDetail | null, fundId: string): FundVerification {
+  const [state, setState] = useState<{ fund: FundDetail; fundId: string; check: FundVerification } | null>(null);
   useEffect(() => {
     if (!fund) return;
     let cancelled = false;
-    (async () => {
-      try {
-        const record = await readLatestNav(PROOF_DEPLOYMENT.rpcUrl, PROOF_DEPLOYMENT.registry, { chainId: PROOF_DEPLOYMENT.chainId, productKey: fund.productKey });
-        if (!record.effectiveAt) { if (!cancelled) setState({ result: "unavailable", detail: "No record of this fund is on X Layer yet." }); return; }
-        const entry = fund.history.find(item => item.holdingsHash.toLowerCase() === record.holdingsHash.toLowerCase());
-        if (!entry) { if (!cancelled) setState({ result: "unavailable", detail: "A newer record is on X Layer than this page has; reload to check it." }); return; }
-        const checks = await verifyFundComposition(entry.canonical, record, fund.id);
-        const ok = checks.hash.state === "pass" && checks.nav.state === "pass";
-        if (!cancelled) setState({ result: ok ? "matched" : "failed", detail: ok ? "Your browser read this fund's record on X Layer, hashed its holdings document and recalculated the NAV: they match." : "The holdings document does not match the record on X Layer.", checks });
-      } catch {
-        if (!cancelled) setState({ result: "unavailable", detail: "X Layer Testnet could not be read from this browser just now." });
-      }
-    })();
+    verifyFundSnapshot(fund, fundId)
+      .then(check => { if (!cancelled) setState({ fund, fundId, check }); })
+      .catch(() => { if (!cancelled) setState({ fund, fundId, check: { result: "unavailable", detail: "X Layer Testnet could not be read from this browser just now." } }); });
     return () => { cancelled = true; };
-  }, [fund]);
-  return state;
+  }, [fund, fundId]);
+  return state?.fund === fund && state.fundId === fundId ? state.check : { result: "checking", detail: "Reading the record on X Layer…" };
 }
 
-function FundOrder({ fund, nav, account, onFilled }: { fund: FundDetail; nav: string | null; account: FundAccount | null; onFilled: () => void }) {
+function FundOrder({ fund, nav, account }: { fund: Pick<FundDetail, "id" | "ticker">; nav: string | null; account: FundAccount | null }) {
   const [side, setSide] = useState<"buy" | "sell">("buy");
   const [amount, setAmount] = useState("1,000");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
+  const [attempt, setAttempt] = useState<{ key: string; id: string } | null>(null);
   const held = BigInt(account?.positions.find(position => position.fundId === fund.id)?.sharesMicros ?? "0");
   const cash = BigInt(account?.cashMicros ?? "0");
   const usd = side === "buy" ? parseUsd(amount) : null;
   const shares = side === "sell" ? parseShares(amount) : null;
+  const order = side === "buy" ? { fundId: fund.id, side: "subscribe", usdMicros: usd?.toString() } : { fundId: fund.id, side: "redeem", sharesMicros: shares?.toString() };
+  const orderKey = JSON.stringify(order);
+  const retry = attempt?.key === orderKey;
   const navMicros = nav ? BigInt(nav) : null;
-  const problem = !navMicros ? "This fund has no NAV record yet." : side === "buy"
+  const problem = !navMicros ? "Waiting for a verified, current NAV." : side === "buy"
     ? (usd === null ? "Enter an amount in dollars, such as 1,000." : usd < 10_000_000n ? "The minimum order is $10." : usd > cash ? "That is more than your demo cash." : null)
     : (held === 0n ? "You hold none of this fund yet." : shares === null || shares === 0n ? "Enter a number of shares, up to six decimals." : shares > held ? "That is more than the shares you hold." : null);
   const estimate = navMicros && !problem ? (side === "buy" ? `${formatShares(usd! * 1_000_000n / navMicros)} ${fund.ticker}` : formatUsdMicros(shares! * navMicros / 1_000_000n, 2)) : "—";
   async function submit() {
+    if (busy || (!retry && (problem || !account))) return;
     setBusy(true); setMessage(null);
     try {
-      const response = await fetch("/api/funds/orders", { method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json" }, body: JSON.stringify(side === "buy" ? { fundId: fund.id, side: "subscribe", usdMicros: usd!.toString(), clientOrderId: crypto.randomUUID() } : { fundId: fund.id, side: "redeem", sharesMicros: shares!.toString(), clientOrderId: crypto.randomUUID() }) });
+      const current = retry ? attempt! : { key: orderKey, id: crypto.randomUUID() };
+      setAttempt(current);
+      const response = await fetch("/api/funds/orders", { method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...order, clientOrderId: current.id }) });
       const body = await response.json().catch(() => ({})) as { order?: { usdMicros: string; sharesMicros: string; navMicros: string }; error?: string };
       if (!response.ok || !body.order) throw new Error(body.error ?? "The order could not be filled.");
+      setAttempt(null);
       setMessage({ ok: true, text: side === "buy" ? `Bought ${formatShares(body.order.sharesMicros)} ${fund.ticker} for ${formatUsdMicros(body.order.usdMicros, 2)} at ${formatUsdMicros(body.order.navMicros, 4)}.` : `Redeemed ${formatShares(body.order.sharesMicros)} ${fund.ticker} for ${formatUsdMicros(body.order.usdMicros, 2)} at ${formatUsdMicros(body.order.navMicros, 4)}.` });
       setAmount(side === "buy" ? "1,000" : "");
-      onFilled();
       window.dispatchEvent(new Event(DEMO_ORDER_EVENT));
     } catch (error) {
-      setMessage({ ok: false, text: error instanceof Error ? error.message : "The order could not be filled." });
+      setMessage({ ok: false, text: `${error instanceof Error ? error.message : "The order could not be confirmed."} Retry the same order to check its result.` });
     } finally { setBusy(false); }
   }
   return <aside className="gmd-fund-order" aria-labelledby="fund-order-title">
@@ -144,16 +127,16 @@ function FundOrder({ fund, nav, account, onFilled }: { fund: FundDetail; nav: st
     <p className="gmd-caption">With your demo balance: demo dollars with no value, shared with USTX. Orders fill at the NAV recorded on X Layer.</p>
     <div className="gmd-wallet-balances"><div><span>Demo cash</span><b>{account ? formatUsdMicros(account.cashMicros, 2) : "—"}</b><small>no value</small></div><div><span>{fund.ticker} held</span><b>{formatShares(held)}</b><small>{navMicros && held > 0n ? formatUsdMicros(held * navMicros / 1_000_000n, 2) : "shares"}</small></div></div>
     <div className="gmd-segmented" role="group" aria-label="Order type">
-      <button type="button" aria-pressed={side === "buy"} onClick={() => { setSide("buy"); setAmount("1,000"); setMessage(null); }}>Buy</button>
-      <button type="button" aria-pressed={side === "sell"} onClick={() => { setSide("sell"); setAmount(""); setMessage(null); }}>Redeem</button>
+      <button type="button" disabled={busy} aria-pressed={side === "buy"} onClick={() => { setSide("buy"); setAmount("1,000"); setMessage(null); }}>Buy</button>
+      <button type="button" disabled={busy} aria-pressed={side === "sell"} onClick={() => { setSide("sell"); setAmount(""); setMessage(null); }}>Redeem</button>
     </div>
     <div className="gmd-order-input">
       <label htmlFor="fund-amount">{side === "buy" ? "You pay" : "Shares to redeem"}</label>
-      <div><input id="fund-amount" inputMode="decimal" autoComplete="off" value={amount} onChange={event => { setAmount(event.target.value); setMessage(null); }} aria-invalid={Boolean(problem)} aria-describedby="fund-help" /><span>{side === "buy" ? "USD" : fund.ticker}</span></div>
+      <div><input disabled={busy} id="fund-amount" inputMode="decimal" autoComplete="off" value={amount} onChange={event => { setAmount(event.target.value); setMessage(null); }} aria-invalid={Boolean(problem)} aria-describedby="fund-help" /><span>{side === "buy" ? "USD" : fund.ticker}</span></div>
       <p id="fund-help">{problem ?? (side === "buy" ? `Estimated: ${estimate}` : `Estimated proceeds: ${estimate}`)}</p>
     </div>
-    {side === "sell" && held > 0n && <div className="gmd-order-presets" aria-label="Amounts to redeem"><button type="button" onClick={() => setAmount(formatShares(held / 2n).replace(/,/g, ""))}>Half</button><button type="button" onClick={() => setAmount(formatShares(held).replace(/,/g, ""))}>All</button></div>}
-    <button type="button" className="gmd-button" disabled={busy || Boolean(problem) || !account} onClick={() => void submit()}>{busy ? "Placing the order…" : side === "buy" ? "Buy with demo dollars" : "Redeem shares"}</button>
+    {side === "sell" && held > 0n && <div className="gmd-order-presets" aria-label="Amounts to redeem"><button type="button" disabled={busy} onClick={() => setAmount(formatShares(held / 2n).replace(/,/g, ""))}>Half</button><button type="button" disabled={busy} onClick={() => setAmount(formatShares(held).replace(/,/g, ""))}>All</button></div>}
+    <button type="button" className="gmd-button" disabled={busy || (!retry && (Boolean(problem) || !account))} onClick={() => void submit()}>{busy ? "Placing the order…" : retry ? "Retry same order" : side === "buy" ? "Buy with demo dollars" : "Redeem shares"}</button>
     {message && <p className={message.ok ? "gmd-fund-filled" : "gmd-inline-error"} role={message.ok ? "status" : "alert"}>{message.text}</p>}
   </aside>;
 }
@@ -161,29 +144,24 @@ function FundOrder({ fund, nav, account, onFilled }: { fund: FundDetail; nav: st
 /** One fund's page: its NAV and record, its holdings, the browser's check and a demo order. */
 export function FundScreen({ id }: { id: string }) {
   const definition = otherFund(id);
-  const [fund, setFund] = useState<FundDetail | null>(null);
-  const [failed, setFailed] = useState(false);
-  const { account, reload } = useFundAccount(id);
-  useEffect(() => {
-    let cancelled = false;
-    readJson<{ fund: FundDetail }>(`/api/v1/funds?id=${encodeURIComponent(id)}`).then(body => { if (!cancelled) setFund(body.fund); }).catch(() => { if (!cancelled) setFailed(true); });
-    return () => { cancelled = true; };
-  }, [id]);
-  const check = useFundCheck(fund);
+  const { data, error: failed } = useFundResource<{ fund: FundDetail }>(`/api/v1/funds?id=${encodeURIComponent(id)}`);
+  const fund = data?.fund ?? null;
+  const { data: account, error: accountError } = useFundAccount(id);
+  const check = useFundCheck(fund, id);
   useEffect(() => { if (definition) document.title = `${definition.name} (${definition.ticker}) · Ganymede`; }, [definition]);
-  const record = fund?.history.find(entry => entry.status === "confirmed") ?? null;
-  const composition = useMemo(() => { try { return record ? JSON.parse(record.canonical) as { holdings: { symbol: string; priceMicros: string; valueMicros: string; unitsWad: string }[]; navPerShareMicros: string } : null; } catch { return null; } }, [record]);
-  const poolCheck = fund?.latest?.poolCheck;
+  const composition = check.composition;
+  const poolCheck = check.record && fund?.latest?.publication?.holdingsHash === check.record.holdingsHash ? fund.latest.poolCheck : null;
   if (!definition) return null;
-  const nav = fund?.nav?.perShareMicros ?? null;
+  const nav = check.record?.navPerShareMicros ?? null;
   return <>
     <Link className="gmd-breadcrumb" prefetch={false} href="/"><Icon name="back" size={16} />All funds</Link>
     <div className="gmd-page-heading"><div><span className="gmd-ticker">{definition.ticker} <span>Equity basket</span></span><h1>{definition.name}</h1><p>{definition.description}</p></div><span className="gmd-badge">Demo fund</span></div>
     {failed && <p className="gmd-inline-error" role="status">This fund could not be read just now. Reload the page in a moment.</p>}
+    {accountError && <p className="gmd-inline-error" role="status">{accountError}</p>}
     <div className="gmd-fund-layout">
       <div className="gmd-fund-main">
         <section className="gmd-fund-hero" aria-label={`${definition.name} NAV`}>
-          <div><span>NAV per share / USD</span><strong>{nav ? formatUsdMicros(nav, 4) : "—"}</strong><small className={tone(fund?.changePercent ?? null)}>{fund?.nav ? `${percent(fund.changePercent)} over 7 days · ${shortTime(fund.nav.asOf)}` : "The first record is on its way"}</small></div>
+          <div><span>NAV per share / USD</span><strong>{nav ? formatUsdMicros(nav, 4) : "—"}</strong><small className={tone(fund?.changePercent ?? null)}>{check.record ? `Recorded ${shortTime(check.record.effectiveAt)}` : "Waiting for a verified record"}</small></div>
           <div className="gmd-fund-hero-side"><OkxSource>Priced by OKX OnchainOS</OkxSource>{txUrl(fund?.nav?.txHash) && <a className="gmd-inline-tx" href={txUrl(fund?.nav?.txHash)!} target="_blank" rel="noreferrer">Recorded on X Layer<Icon name="external" size={12} /><span className="gmd-sr-only"> (opens in a new tab)</span></a>}</div>
           <NavLine series={fund?.series ?? []} label={`${definition.name} NAV over the last seven days`} />
         </section>
@@ -194,7 +172,7 @@ export function FundScreen({ id }: { id: string }) {
         </section>
         <section className="gmd-proof-history" aria-labelledby="fund-holdings-title"><header className="gmd-section-heading"><h2 id="fund-holdings-title">Holdings</h2><span>{definition.constituents.length} xStocks · equal weight at each fixing</span></header>
           <div className="gmd-data-table-scroll"><table className="gmd-table gmd-fund-holdings"><thead><tr><th>Asset</th><th>Price</th><th>Value per share</th><th>Weight</th></tr></thead><tbody>
-            {(fund?.holdings ?? definition.constituents.map(symbol => ({ symbol, name: symbol, kind: "stock" as const }))).map(holding => {
+            {definition.constituents.map(symbol => universeToken(symbol)!).map(holding => {
               const row = composition?.holdings.find(item => item.symbol === holding.symbol);
               const weight = row && composition ? Number(BigInt(row.valueMicros) * 10_000n / BigInt(composition.navPerShareMicros)) / 100 : null;
               return <tr key={holding.symbol}><th scope="row"><span className="gmd-fund-asset"><AssetMark symbol={holding.symbol} /><span><b>{holding.name}</b><small>{holding.symbol}</small></span></span></th><td>{row ? formatUsdMicros(row.priceMicros, 2) : "—"}</td><td>{row ? formatUsdMicros(row.valueMicros, 4) : "—"}</td><td>{weight === null ? "—" : `${weight.toFixed(2)}%`}</td></tr>;
@@ -214,24 +192,21 @@ export function FundScreen({ id }: { id: string }) {
           <div><dt>How to invest</dt><dd>With a demo balance. Only USTX also has a share token for wallets, pools and lending</dd></div>
         </dl><p className="gmd-caption">A demo fund on X Layer Testnet. Demo dollars and fund shares have no value, and nothing here is an offer or investment advice.</p></section>
       </div>
-      {fund && <FundOrder fund={fund} nav={nav} account={account} onFilled={() => { void reload(); readJson<{ fund: FundDetail }>(`/api/v1/funds?id=${encodeURIComponent(id)}`).then(body => setFund(body.fund)).catch(() => undefined); }} />}
+      <FundOrder key={id} fund={definition} nav={nav} account={account} />
     </div>
   </>;
 }
 
 /** The other funds held with this browser's demo balance, on Portfolio. */
-export function FundHoldings() {
-  const { account } = useFundAccount();
-  const [funds, setFunds] = useState<FundSummary[] | null>(null);
-  useEffect(() => { readJson<{ funds: FundSummary[] }>("/api/v1/funds").then(body => setFunds(body.funds)).catch(() => undefined); }, []);
-  const rows = (account?.positions ?? []).map(position => {
+export function FundHoldings({ positions, funds }: { positions: FundPosition[]; funds: FundSummary[] | null }) {
+  const rows = positions.map(position => {
     const fund = funds?.find(item => item.id === position.fundId);
     const value = fund?.nav ? BigInt(position.sharesMicros) * BigInt(fund.nav.perShareMicros) / 1_000_000n : null;
     return { position, fund, value };
   });
   if (!rows.length) return null;
-  const total = rows.reduce((sum, row) => sum + (row.value ?? 0n), 0n);
-  return <section className="gmd-proof-history gmd-fund-portfolio" aria-labelledby="fund-portfolio-title"><header className="gmd-section-heading"><div><h2 id="fund-portfolio-title">Other funds</h2><p>Held with your demo balance, valued at each fund&rsquo;s latest NAV on X Layer.</p></div><span className="gmd-count">{formatUsdMicros(total, 2)}</span></header>
+  const total = rows.some(row => row.value === null) ? null : rows.reduce((sum, row) => sum + row.value!, 0n);
+  return <section className="gmd-proof-history gmd-fund-portfolio" aria-labelledby="fund-portfolio-title"><header className="gmd-section-heading"><div><h2 id="fund-portfolio-title">Other funds</h2><p>Held with your demo balance, valued at each fund&rsquo;s latest NAV on X Layer.</p></div><span className="gmd-count">{total === null ? "Valuation pending" : formatUsdMicros(total, 2)}</span></header>
     <div className="gmd-data-table-scroll"><table className="gmd-table"><thead><tr><th>Fund</th><th>Shares</th><th>Value</th><th>Return</th></tr></thead><tbody>
       {rows.map(({ position, fund, value }) => { const cost = BigInt(position.costMicros); const change = value !== null && cost > 0n ? Number((value - cost) * 10_000n / cost) / 100 : null; return <tr key={position.fundId}><th scope="row"><Link prefetch={false} href={fund?.href ?? `/funds/${position.fundId}`}>{fund?.name ?? position.fundId}</Link></th><td>{formatShares(position.sharesMicros)} {fund?.ticker}</td><td>{value === null ? "—" : formatUsdMicros(value, 2)}</td><td className={tone(change)}>{percent(change)}</td></tr>; })}
     </tbody></table></div>
