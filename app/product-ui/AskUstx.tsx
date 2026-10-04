@@ -213,7 +213,7 @@ function useFacts(): Facts | null {
 }
 
 const dollars = (value: number, digits = 2) => `$${value.toLocaleString("en-US", { minimumFractionDigits: digits, maximumFractionDigits: digits })}`;
-const signed = (ratio: number) => `${ratio >= 0 ? "+" : "−"}${Math.abs(ratio * 100).toFixed(2)}%`;
+const signed = (ratio: number) => Math.abs(ratio) < 0.00005 ? "0.00%" : `${ratio > 0 ? "+" : "−"}${Math.abs(ratio * 100).toFixed(2)}%`;
 function ago(iso: string, now: number) {
   const minutes = Math.max(0, Math.round((now - Date.parse(iso)) / 60_000));
   return minutes === 0 ? "just now" : minutes === 1 ? "1 minute ago" : `${minutes} minutes ago`;

@@ -1256,6 +1256,12 @@ a.gmd-pool-pair:hover b { text-decoration: underline; text-underline-offset: 3px
 .gmd-ask-guide-form button { flex: 0 0 44px; min-height: 40px; border-radius: 8px; background: var(--gmd-ink) !important; color: #fff !important; display: inline-flex; align-items: center; justify-content: center; }
 .gmd-ask-guide-form button:disabled { opacity: .5; }
 @media (max-width:860px) { .gmd-ask-guide { grid-template-columns: 1fr; } }
+@media (max-width:600px) {
+  .gmd-ask-guide { padding: 12px; gap: 10px; margin-bottom: 16px; }
+  .gmd-ask-guide-head p { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+  .gmd-ask-guide-actions { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin-inline: -12px; padding-inline: 12px; }
+  .gmd-ask-guide-actions > * { flex: 0 0 auto; white-space: nowrap; }
+}
 .gmd-ask { position: fixed; z-index: 40; inset-inline-end: 24px; bottom: 24px; width: min(420px, calc(100vw - 32px)); height: min(620px, calc(100dvh - 48px)); display: flex; flex-direction: column; background: var(--gmd-surface); border: 1px solid var(--gmd-line); border-radius: 14px; box-shadow: 0 18px 48px #172b3533; overflow: hidden; }
 .gmd-ask > header { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 16px; background: var(--gmd-ink); color: #fff; }
 .gmd-ask > header strong { display: inline-flex; align-items: center; gap: 7px; font-family: "Instrument Sans", Arial, sans-serif; }
