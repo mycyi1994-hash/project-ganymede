@@ -78,7 +78,7 @@ function CoveredCallPayoff({ document }: { document: CoveredCallDocument }) {
         {[-0.15, 0, 0.15].map(move => <text key={move} className="gmd-lq-tick" x={x(move)} y={H - 8} textAnchor="middle">{move === 0 ? "ETF flat" : signed(move, 0)}</text>)}
         {at !== null && <g className="gmd-navmove-cross"><line x1={x(at)} x2={x(at)} y1={top} y2={H - bottom} /><circle className="is-held" cx={x(at)} cy={y(at)} r={4} /><circle className="is-pool" cx={x(at)} cy={y(covered(at))} r={4} /></g>}
       </svg>
-      {at !== null && <div className={`gmd-chart-tip${hover! > 30 ? " is-left" : ""}`} style={{ left: `${(x(at) / W) * 100}%`, top: "18%" }} role="status"><b>{signed(covered(at), 2)}</b><span>Covered call, ETF {signed(at, 1)}</span><small>Holding the ETF: {signed(at, 2)}</small></div>}
+      {at !== null && <div className={`gmd-chart-tip is-below${hover! > 30 ? " is-left" : ""}`} style={{ left: `${(x(at) / W) * 100}%`, top: "3%" }} role="status"><b>Covered call {signed(covered(at), 2)}</b><span>If the ETF moves {signed(at, 1)} by expiry</span><small>Holding the ETF: {signed(at, 2)}</small><small>{at > strikeMove ? `Gives up ${pct(at - strikeMove, 2)} above the strike, keeps the ${pct(yieldNow, 2)} premium` : `Gains the ${pct(yieldNow, 2)} premium over holding`}</small></div>}
     </div>
     <figcaption className="gmd-caption">Over this one-month call, before the next one is sold. The premium is modelled by Black–Scholes at {pct(document.terms.volatility, 0)} volatility: there is no options market for xStocks on X Layer.</figcaption>
   </figure>;
@@ -140,7 +140,7 @@ function AutocallPath({ document, terms, tall = false }: { document: AutocallDoc
         <text className="gmd-autocall-now" x={nowX + 12} y={nowY - 12}>Today: worse index {pct(document.worst)}</text>
         <text className="gmd-lq-tick" x={xi(0)} y={H - bottom + 18} textAnchor="start">{narrow ? "Start" : `Start ${day(document.state.fixedAt)}`}</text>
       </svg>
-      {active !== null && <div className={`gmd-chart-tip${active > n / 2 ? " is-left" : ""}`} style={{ left: `${(xi(active + 1) / W) * 100}%`, top: "12%" }} role="status">
+      {active !== null && <div className={`gmd-chart-tip is-below${active > n / 2 ? " is-left" : ""}`} style={{ left: `${(xi(active + 1) / W) * 100}%`, top: "3%" }} role="status">
         <b>{money(couponPayout(terms, active + 1))}</b><span>Observation {active + 1} · {day(dates[active + 1])}</span>
         <small>Paid back if the worse index is at or above {pct(terms.barriers[active], 0)}</small>
         {document.state.observations[active] && <small>Observed at {pct(document.state.observations[active].worst)}: {document.state.observations[active].called ? "called" : "not called"}</small>}
@@ -196,7 +196,7 @@ function AutocallPayoff({ terms }: { terms: AutocallTerms }) {
         {[0.5, 0.75, 1, 1.4].map(level => <text key={level} className="gmd-lq-tick" x={x(level)} y={H - 8} textAnchor="middle">{pct(level, 0)}</text>)}
         {at !== null && <g className="gmd-navmove-cross"><line x1={x(at)} x2={x(at)} y1={top} y2={H - bottom} /><circle className="is-pool" cx={x(at)} cy={y(notIn(at))} r={4} /><circle className="is-held" cx={x(at)} cy={y(knocked(at))} r={4} /></g>}
       </svg>
-      {at !== null && <div className={`gmd-chart-tip${hover! > 60 ? " is-left" : ""}`} style={{ left: `${(x(at) / W) * 100}%`, top: "18%" }} role="status"><b>{money(notIn(at))}</b><span>Worse index at {pct(at, 0)}, never knocked in</span><small>After a knock-in: {money(knocked(at))}</small></div>}
+      {at !== null && <div className={`gmd-chart-tip is-below${hover! > 60 ? " is-left" : ""}`} style={{ left: `${(x(at) / W) * 100}%`, top: "3%" }} role="status"><b>{money(notIn(at))}</b><span>Worse index at {pct(at, 0)}, never knocked in</span><small>After a knock-in: {money(knocked(at))}</small></div>}
     </div>
     <figcaption className="gmd-caption">Before maturity the note can pay back early at any six-month observation. Nothing hedges it: it pays from recorded prices, in demo dollars.</figcaption>
   </figure>;

@@ -1,24 +1,49 @@
 /**
- * Liquidity strategies on Pools, as Meteora offers shapes: one deposit of demo dollars split between
- * the two real USTX/dUSD pools on X Layer Testnet. The constant-product pool spreads liquidity over
- * every price (Spot); the Uniswap v4 pool's hook keeps it within about 2% of the NAV and moves it to
- * each NAV record (Curve). A strategy is the share that goes to each, so every shape here is one the
- * contracts actually hold. Shapes that need a position of one's own (Bid-Ask) are not offered: both
- * pools pool their providers' liquidity.
+ * Liquidity strategies on Pools, as Meteora offers shapes, each one a deposit the contracts on X
+ * Layer Testnet actually hold. Pooled strategies split demo dollars between the two pools that pool
+ * their providers' liquidity: the constant-product pool spreads it over every price (Spot), and the
+ * Uniswap v4 pool's hook keeps it within about 2% of the NAV and moves it to each NAV record (Curve).
+ * Bid-Ask and Custom open a position of one's own in the range pool
+ * (contracts/GanymedeRangeLiquidityHook.sol, lib/xstocks/range-liquidity.ts): bins either side of the
+ * price, shaped Spot, Curve or Bid-Ask, over a range and on the sides one chooses.
  */
 import { FUND_MIN_INVESTMENT_MICROS } from "./fund";
 
 const ONE = 1_000_000n;
 
-export type StrategyId = "spot" | "curve" | "spot-curve" | "custom";
-export type Strategy = { id: StrategyId; name: string; label: string; v4Percent: number; summary: string };
+export type StrategyId = "spot" | "curve" | "spot-curve" | "bid-ask" | "custom";
+export type Strategy = { id: StrategyId; name: string; label: string; pool: "pooled" | "range"; v4Percent: number; summary: string };
+export type RangeSides = "both" | "below" | "above";
+/** One's own position: its shape, how far either side of the price it reaches, its bins per side and which sides it fills. */
+export type OwnRange = { shape: "spot" | "curve" | "bid-ask"; rangePercent: number; bins: number; sides: RangeSides };
 
 export const LP_STRATEGIES: Strategy[] = [
-  { id: "spot", name: "Spot", label: "Even at every price", v4Percent: 0, summary: "All of it in the constant-product pool: liquidity at every price, so it earns on any trade and never leaves its range, but little of it works near the NAV." },
-  { id: "curve", name: "Curve", label: "Concentrated at the NAV", v4Percent: 100, summary: "All of it in the v4 pool: the hook keeps it within about 2% of the NAV and moves it to each NAV record, so far more of each dollar meets trades near the NAV." },
-  { id: "spot-curve", name: "Spot + Curve", label: "Half in each", v4Percent: 50, summary: "Half in each pool: a peak at the NAV from the v4 pool on a low, even base from the constant-product pool." },
-  { id: "custom", name: "Custom", label: "Your own split", v4Percent: 70, summary: "Choose how much goes to the v4 pool at the NAV; the rest goes to the constant-product pool." },
+  { id: "spot", name: "Spot", label: "Even at every price", pool: "pooled", v4Percent: 0, summary: "All of it in the constant-product pool: liquidity at every price, so it earns on any trade and never leaves its range, but little of it works near the NAV." },
+  { id: "curve", name: "Curve", label: "Concentrated at the NAV", pool: "pooled", v4Percent: 100, summary: "All of it in the v4 pool: the hook keeps it within about 2% of the NAV and moves it to each NAV record, so far more of each dollar meets trades near the NAV." },
+  { id: "spot-curve", name: "Spot + Curve", label: "Half in each", pool: "pooled", v4Percent: 50, summary: "Half in each pool: a peak at the NAV from the v4 pool on a low, even base from the constant-product pool." },
+  { id: "bid-ask", name: "Bid-Ask", label: "Heaviest at the ends", pool: "range", v4Percent: 0, summary: "A position of your own: demo dollars below the price and USTX above it, more in each bin the farther it is from the price, out to 3% either side. It buys more as the price falls and sells more as it rises, earning most from large moves that come back." },
+  { id: "custom", name: "Custom", label: "Your own range", pool: "range", v4Percent: 0, summary: "A position of your own, set as you like: its shape, how far it reaches either side of the price, how many bins, and whether it fills both sides or only one." },
 ];
+
+export const BID_ASK_RANGE: OwnRange = { shape: "bid-ask", rangePercent: 3, bins: 10, sides: "both" };
+
+/** The bin width in ticks for `bins` bins reaching `rangePercent` from the price: a whole number of 10-tick spacings, 10 to 500. */
+export function binTicksFor(rangePercent: number, bins: number): number {
+  const ticks = Math.log(1 + rangePercent / 100) / Math.log(1.0001) / Math.max(1, bins);
+  return Math.max(10, Math.min(500, Math.round(ticks / 10) * 10));
+}
+
+/**
+ * A deposit of demo dollars for a position of one's own: the part invested at the fund for the USTX
+ * above the price and the demo dollars kept for the bins below it. Both sides take half each. Null
+ * without a NAV, or when the part invested is under the fund's $10 minimum.
+ */
+export function planRange(dollarsMicros: bigint, navMicros: bigint | null, sides: RangeSides): { investMicros: bigint; sharesMicros: bigint; dollarsMicros: bigint } | null {
+  if (navMicros === null || navMicros <= 0n || dollarsMicros <= 0n) return null;
+  const investMicros = sides === "below" ? 0n : sides === "above" ? dollarsMicros : dollarsMicros / 2n;
+  if (investMicros > 0n && investMicros < FUND_MIN_INVESTMENT_MICROS) return null;
+  return { investMicros, sharesMicros: investMicros * ONE / navMicros, dollarsMicros: dollarsMicros - investMicros };
+}
 
 export const strategyById = (id: StrategyId) => LP_STRATEGIES.find(item => item.id === id) ?? LP_STRATEGIES[0];
 
