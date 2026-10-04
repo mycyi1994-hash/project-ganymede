@@ -119,30 +119,57 @@ export function PoolsScreen() {
   // The Uniswap v4 pool joins the list once its deployment is pinned.
   const v4 = useV4Pool(V4_POOL_DEPLOYMENT, owner, busy);
   const [selected, setSelected] = useState<"live" | "v4">("live");
+  const [more, setMore] = useState(false);
   const showV4 = V4_POOL_DEPLOYMENT !== null && selected === "v4";
+  // Choosing the v4 pool opens its own panel below, with the details.
+  const select = (pool: "live" | "v4") => { setSelected(pool); if (pool === "v4") setMore(true); };
   return <ActivityProvider>
-    <div className="gmd-page-heading"><div><h1>Pools</h1><p>Provide liquidity to USTX on X Layer and earn the fee on every trade.</p></div><span className="gmd-badge">X Layer Testnet</span></div>
-    <PoolList snapshot={reader.snapshot} failure={reader.failure} owner={owner} growth={growth} v4={V4_POOL_DEPLOYMENT ? v4 : null} selected={selected} onSelect={setSelected} busy={busy} />
-    {/* The panel comes first, as it shows on a phone; on a wide screen it sits beside the pool. */}
+    <div className="gmd-page-heading"><div><h1>Pools</h1><p>Provide liquidity to USTX and earn a fee on every trade: enter demo dollars and press one button.</p></div><span className="gmd-badge">X Layer Testnet</span></div>
+    {/* The panel comes first, as it shows on a phone; on a wide screen it sits beside the summary. */}
     <div className="gmd-detail-layout gmd-pools-layout">
-      {showV4 && V4_POOL_DEPLOYMENT ? <>
-        <div className="gmd-detail-aside" id="provide"><V4LiquidityPanel deployment={V4_POOL_DEPLOYMENT} provider={provider} chain={chain} owner={owner} reader={v4} onBusy={setBusy} /></div>
+      <div className="gmd-detail-aside" id="provide"><LiquidityPanel provider={provider} chain={chain} owner={owner} reader={reader} onBusy={setBusy} /></div>
+      <div className="gmd-detail-content"><PoolSummary snapshot={reader.snapshot} owner={owner} growth={growth} /></div>
+    </div>
+    <details className="gmd-pools-more" open={more} onToggle={event => setMore(event.currentTarget.open)}>
+      <summary><span><b>Pool details and more options</b><small>Both pools, the Uniswap v4 pool, figures, activity and how it works</small></span><Icon name="arrow" size={17} /></summary>
+      <PoolList snapshot={reader.snapshot} failure={reader.failure} owner={owner} growth={growth} v4={V4_POOL_DEPLOYMENT ? v4 : null} selected={selected} onSelect={select} busy={busy} />
+      {showV4 && V4_POOL_DEPLOYMENT ? <div className="gmd-detail-layout gmd-pools-layout">
+        <div className="gmd-detail-aside" id="provide-v4"><V4LiquidityPanel deployment={V4_POOL_DEPLOYMENT} provider={provider} chain={chain} owner={owner} reader={v4} onBusy={setBusy} /></div>
         <div className="gmd-detail-content">
           <V4PoolOverview deployment={V4_POOL_DEPLOYMENT} reader={v4} />
           <PoolActivitySection pool="v4" />
           <V4PoolGuide />
         </div>
-      </> : <>
-        <div className="gmd-detail-aside" id="provide"><LiquidityPanel provider={provider} chain={chain} owner={owner} reader={reader} onBusy={setBusy} /></div>
-        <div className="gmd-detail-content">
-          <PoolOverview snapshot={reader.snapshot} failure={reader.failure} retry={reader.retry} growth={growth} />
-          <PoolActivitySection />
-          <PoolGuide growth={growth.value} />
-        </div>
-      </>}
-    </div>
-    {V4_POOL_DEPLOYMENT && <PoolResults />}
+      </div> : <div className="gmd-pools-more-body">
+        <PoolOverview snapshot={reader.snapshot} failure={reader.failure} retry={reader.retry} growth={growth} />
+        <PoolActivitySection />
+        <PoolGuide growth={growth.value} />
+      </div>}
+      {V4_POOL_DEPLOYMENT && <PoolResults />}
+    </details>
   </ActivityProvider>;
+}
+
+/** What a provider needs before pressing the button: the fee APR, the pool's size, their own liquidity, and the three steps. */
+function PoolSummary({ snapshot, owner, growth }: { snapshot: Snapshot | null; owner: string | null; growth: { value: PoolYield | null; loaded: boolean } }) {
+  const pool = snapshot?.pool ?? null;
+  const nav = pool?.nav.navMicros ?? null;
+  const account = snapshot && snapshot.owner === owner ? snapshot.account : null;
+  const mine = account && pool ? liquidityPosition(account.lpMicros, pool, nav) : null;
+  return <section className="gmd-pool-summary" aria-labelledby="pool-summary-title">
+    <h2 id="pool-summary-title">USTX / dUSD pool</h2>
+    <div className="gmd-pool-summary-stats">
+      <div><span>Fee APR</span><strong>{growth.value ? formatYield(growth.value.aprWad) : growth.loaded ? "—" : <Skeleton width={56} />}</strong><small>{growth.value ? windowLabel(growth.value) : "From the pool’s fees"}</small></div>
+      <div><span>In the pool</span><strong>{pool && nav !== null ? formatUsdRounded(poolValueMicros(pool, nav)) : <Skeleton width={72} />}</strong><small>USTX and demo dollars</small></div>
+      <div><span>Your liquidity</span><strong>{!owner ? "—" : !account || !mine ? <Skeleton width={56} /> : account.lpMicros === 0n ? "None yet" : mine.valueMicros !== null ? formatUsdRounded(mine.valueMicros) : `${formatSharesShort(account.lpMicros, 4)} USTX-LP`}</strong><small>{owner ? "In this wallet" : "Connect OKX Wallet"}</small></div>
+    </div>
+    <ol className="gmd-pool-steps">
+      <li><b>Enter demo dollars.</b> Part buys USTX at the NAV, with no fee.</li>
+      <li><b>Press Add liquidity.</b> Your wallet asks you to confirm each step; the panel runs them in order.</li>
+      <li><b>Earn {FEE_PERCENT} of every trade.</b> Withdraw everything as demo dollars with one button, at any time.</li>
+    </ol>
+    <p className="gmd-caption">Demo dollars and USTX have no value. The pool’s price can move against the NAV; see the details below.</p>
+  </section>;
 }
 
 /** Every pool, in one table: a liquidity provider's first choice. Choosing one shows it below. */
@@ -279,7 +306,9 @@ function LiquidityPanel({ provider, chain, owner, reader, onBusy }: { provider: 
   const { now } = useMarket();
 
   const [tab, setTab] = useState<Tab>("add");
-  const [mode, setMode] = useState<Mode>("pair");
+  // The simple view: demo dollars in with one button, everything out as demo dollars with another.
+  const [expert, setExpert] = useState(false);
+  const [mode, setMode] = useState<Mode>("dollars");
   // In a pair, the field last typed in; the other follows the pool's ratio.
   const [pair, setPair] = useState<{ anchor: "shares" | "dollars"; text: string }>({ anchor: "dollars", text: "" });
   const [dollarsText, setDollarsText] = useState("");
@@ -379,8 +408,19 @@ function LiquidityPanel({ provider, chain, owner, reader, onBusy }: { provider: 
     } catch (error) { setClaim({ state: "failed", message: fundErrorMessage(error) }); }
   }
 
-  async function run() {
-    if (!provider || !account || !pool || problem || !needs) return;
+  /** Runs the form; with `all`, withdraws every LP token and has the USTX redeemed at the NAV. */
+  async function run(all = false) {
+    const action: Tab = all ? "remove" : tab;
+    const take = all ? "dollars" : receive;
+    const amount = all && account ? account.lpMicros : lpAmount;
+    const out = all && account && pool ? quoteRemoveLiquidity(account.lpMicros, pool) : removal;
+    const blocked = !all ? problem
+      : !fresh ? "Updating your balances…"
+      : !out ? "That amount is too small to withdraw."
+      : nav === null ? "Redeeming at the NAV reopens with the next NAV record. Use More options to take USTX and demo dollars instead."
+      : null;
+    if (all && blocked) { setFailure({ message: blocked, hash: null }); return; }
+    if (!provider || !account || !pool || blocked || !needs) return;
     const from = address;
     const state = pool;
     const wallet = account;
@@ -393,12 +433,12 @@ function LiquidityPanel({ provider, chain, owner, reader, onBusy }: { provider: 
       request: async () => { const least = minimums(); return liquidityCalls.add(shares(), dollars, least.shares, least.dollars, await orderDeadline()); },
       read: receipt => { const fill = liquidityFill(receipt); if (fill?.side !== "add") throw new Error("The deposit did not go through on X Layer Testnet."); result.added = fill; },
     });
-    if (tab === "add" && mode === "pair" && pairQuote) {
+    if (action === "add" && mode === "pair" && pairQuote) {
       const fixed = pairQuote;
       if (needs.shares) plan.push({ key: "approveShares", label: "Approve USTX for the pool", approval: true, request: async () => poolCalls.approveShares(fixed.sharesMicros) });
       if (needs.dollars) plan.push({ key: "approveDollars", label: "Approve demo dollars for the pool", approval: true, request: async () => poolCalls.approveDollars(fixed.dollarsMicros) });
       addStep(() => fixed.sharesMicros, fixed.dollarsMicros, () => ({ shares: withSlippage(fixed.sharesMicros), dollars: withSlippage(fixed.dollarsMicros) }));
-    } else if (tab === "add" && split) {
+    } else if (action === "add" && split) {
       const parts = split;
       if (needs.fund) plan.push({ key: "approveFund", label: "Approve demo dollars for the fund", approval: true, request: async () => fundCalls.approve(parts.investMicros) });
       plan.push({
@@ -420,16 +460,14 @@ function LiquidityPanel({ provider, chain, owner, reader, onBusy }: { provider: 
         const expected = quoteAddLiquidity(received(), parts.dollarsMicros, state);
         return { shares: withSlippage(expected?.sharesMicros ?? 0n), dollars: withSlippage(expected?.dollarsMicros ?? 0n) };
       });
-    } else if (tab === "remove" && removal && lpAmount !== null) {
-      const amount = lpAmount;
-      const out = removal;
+    } else if (action === "remove" && out && amount !== null) {
       const navAtForm = nav;
       plan.push({
         key: "remove", label: "Withdraw liquidity", approval: false,
         request: async () => liquidityCalls.remove(amount, withSlippage(out.sharesMicros), withSlippage(out.dollarsMicros), await orderDeadline()),
         read: receipt => { const fill = liquidityFill(receipt); if (fill?.side !== "remove") throw new Error("The withdrawal did not go through on X Layer Testnet."); result.removed = fill; },
       });
-      if (receive === "dollars" && navAtForm !== null) plan.push({
+      if (take === "dollars" && navAtForm !== null) plan.push({
         key: "redeem", label: "Redeem USTX at the NAV", approval: false,
         request: async () => {
           const shares = result.removed?.sharesMicros ?? 0n;
@@ -454,16 +492,16 @@ function LiquidityPanel({ provider, chain, owner, reader, onBusy }: { provider: 
       if (!finished) throw new Error("The transaction did not go through on X Layer Testnet.");
       setDone(finished);
       setPhase("done");
-      if (tab === "add") { setPair(current => ({ ...current, text: "" })); setDollarsText(""); } else setRemoveText("");
+      if (action === "add") { setPair(current => ({ ...current, text: "" })); setDollarsText(""); } else setRemoveText("");
     } catch (error) {
       // An earlier step may have gone through: say what is in the wallet now.
       const partial = result.invested && !result.added ? `Your investment went through: ${ustx(result.invested.sharesMicros)} are in your wallet, ready to deposit with demo dollars. `
-        : result.removed && !result.redeemed && receive === "dollars" ? `Your liquidity was withdrawn: ${ustx(result.removed.sharesMicros)} and ${usd(result.removed.dollarsMicros)} are in your wallet. You can redeem the USTX on the USTX page. `
+        : result.removed && !result.redeemed && take === "dollars" ? `Your liquidity was withdrawn: ${ustx(result.removed.sharesMicros)} and ${usd(result.removed.dollarsMicros)} are in your wallet. You can redeem the USTX on the USTX page. `
         : "";
       setFailure({ message: `${partial}${liquidityErrorMessage(error)}`, hash: progress.lastHash });
       // So that trying again does not repeat the step that went through: the bought USTX waits in the
       // pair form, and a withdrawal that came out is not withdrawn again.
-      if (result.invested && !result.added) { setMode("pair"); setPair({ anchor: "shares", text: plain(result.invested.sharesMicros) }); setDollarsText(""); }
+      if (result.invested && !result.added) { setExpert(true); setMode("pair"); setPair({ anchor: "shares", text: plain(result.invested.sharesMicros) }); setDollarsText(""); }
       if (result.removed) setRemoveText("");
       setPhase("form");
     } finally {
@@ -505,29 +543,63 @@ function LiquidityPanel({ provider, chain, owner, reader, onBusy }: { provider: 
         <div><dt>{done.hashes.length === 1 ? "Transaction" : "Transactions"}</dt><dd className="gmd-liquidity-hashes">{done.hashes.map((hash, index) => <TxLink key={hash} hash={hash}>{done.hashes.length === 1 ? "OKX Explorer" : `Step ${index + 1}`}</TxLink>)}</dd></div>
       </dl>
       <Link prefetch={false} className="gmd-button" href="/portfolio">View portfolio <Icon name="arrow" size={16} /></Link>
-      <button type="button" className="gmd-text-button" onClick={() => { setDone(null); setPhase("form"); requestAnimationFrame(() => headingRef.current?.focus()); }}>Done</button>
+      <button type="button" className="gmd-text-button" onClick={() => { setDone(null); setPhase("form"); if (!expert) { setTab("add"); setReceive("both"); } requestAnimationFrame(() => headingRef.current?.focus()); }}>Done</button>
     </div>);
   }
 
   const claimable = account.nextClaimAt * 1000 <= now;
   const feeShare = activity && position && pool.supply > 0n ? activity.poolFeesMicros * account.lpMicros / pool.supply : null;
+  const claimRow = <div className="gmd-wallet-claim">{claim?.state === "wallet" ? <span role="status">Confirm in your wallet…</span>
+    : claim?.state === "chain" ? <span role="status">Sending demo dollars on X Layer Testnet…</span>
+    : claimable ? <button type="button" className="gmd-small-button" disabled={!fresh} onClick={() => void claimDollars()}>Get {formatUsdRounded(FUND_CLAIM_MICROS)} demo dollars</button>
+    : <span>More demo dollars in {waitLabel(account.nextClaimAt, now)}</span>}
+    {claim?.state === "failed" && <p className="gmd-inline-error" role="alert">{claim.message}</p>}</div>;
+  const positionBlock = account.lpMicros > 0n && position && <div className="gmd-liquidity-position">
+    <span>Your liquidity</span>
+    <strong>{position.valueMicros !== null ? formatUsdRounded(position.valueMicros) : `${formatShares(account.lpMicros)} USTX-LP`}</strong>
+    <small>{formatSharePpm(position.sharePpm, true)} of the pool · {formatSharesShort(position.sharesMicros, 4)} USTX and {formatUsdRounded(position.dollarsMicros)}{feeShare !== null && feeShare > 0n ? ` · at your share, the last 24 hours’ fees came to about ${formatUsdMicros(feeShare, feeShare < 10_000n ? 4 : 2)}` : ""}</small>
+  </div>;
+  const failureLine = failure && <p ref={failureRef} tabIndex={-1} className="gmd-inline-error" role="alert">{failure.message}{failure.hash && <> <TxLink hash={failure.hash}>See the last transaction</TxLink></>}</p>;
+
+  if (!expert) {
+    const presets = [100n, 500n, 1_000n].map(value => value * ONE).filter(value => value <= account.dollarsMicros);
+    const addProblem = tab === "add" ? problem : null;
+    return shell(<>
+      {!fresh && <p className="gmd-caption" role="status">Updating your balances from X Layer Testnet…</p>}
+      {positionBlock}
+      <div className="gmd-wallet-balances">
+        <div><span>Demo dollars</span><b>{usd(account.dollarsMicros)}</b><small>dUSD, no value</small></div>
+        <div><span>USTX in wallet</span><b>{formatShares(account.sharesMicros)}</b><small>{nav !== null && account.sharesMicros > 0n ? formatUsdRounded(dollarsFor(account.sharesMicros, nav)) : "X Layer Testnet"}</small></div>
+      </div>
+      {account.dollarsMicros < 20n * ONE && claimRow}
+      <GasNotice address={address} gasWei={account.gasWei} onFunded={reader.retry} />
+      <div className="gmd-order-input">
+        <label htmlFor="liquidity-simple">Demo dollars to add</label>
+        <div><input id="liquidity-simple" inputMode="decimal" autoComplete="off" placeholder="0" value={tab === "add" ? dollarsText : ""} onChange={event => { setTab("add"); setMode("dollars"); setDollarsText(event.target.value); setFailure(null); }} aria-invalid={fresh && Boolean(dollarsText) && Boolean(addProblem)} aria-describedby="liquidity-simple-help" /><span>dUSD</span></div>
+        <p id="liquidity-simple-help">{dollarsText && addProblem ? addProblem : splitQuote ? `You receive ${formatShares(splitQuote.liquidity)} USTX-LP · ${confirmations} wallet ${confirmations === 1 ? "confirmation" : "confirmations"}` : `In your wallet: ${usd(account.dollarsMicros)}`}</p>
+      </div>
+      {(presets.length > 0 || account.dollarsMicros > 0n) && <div className="gmd-order-presets" role="group" aria-label="Amount">
+        {presets.map(value => <button type="button" key={String(value)} aria-pressed={dollarsOnly === value} onClick={() => { setTab("add"); setMode("dollars"); setDollarsText(plain(value)); setFailure(null); }}>{formatUsdRounded(value)}</button>)}
+        {account.dollarsMicros > 0n && <button type="button" aria-pressed={dollarsOnly === account.dollarsMicros} onClick={() => { setTab("add"); setMode("dollars"); setDollarsText(plain(account.dollarsMicros)); setFailure(null); }}>Max</button>}
+      </div>}
+      {failureLine}
+      <button type="button" className="gmd-button" disabled={tab !== "add" || Boolean(addProblem) || !splitQuote} onClick={() => void run()}>Add liquidity <Icon name="arrow" size={17} /></button>
+      {account.lpMicros > 0n && <button type="button" className="gmd-button is-secondary" disabled={!fresh} onClick={() => { setFailure(null); void run(true); }}>Withdraw all as demo dollars</button>}
+      <p className="gmd-caption">Part of your demo dollars buys USTX at the NAV, then both go into the pool. Your wallet asks you to confirm each step. Demo dollars and USTX have no value.</p>
+      <button type="button" className="gmd-text-button" onClick={() => { setExpert(true); setFailure(null); }}>More options: both tokens, or part of your liquidity</button>
+    </>);
+  }
+
   return shell(<>
+    <button type="button" className="gmd-text-button gmd-liquidity-simple-link" onClick={() => { setExpert(false); setTab("add"); setMode("dollars"); setReceive("both"); setFailure(null); }}>Back to the one-button view</button>
     {tabs}
     {!fresh && <p className="gmd-caption" role="status">Updating your balances from X Layer Testnet…</p>}
-    {account.lpMicros > 0n && position && <div className="gmd-liquidity-position">
-      <span>Your liquidity</span>
-      <strong>{position.valueMicros !== null ? formatUsdRounded(position.valueMicros) : `${formatShares(account.lpMicros)} USTX-LP`}</strong>
-      <small>{formatSharePpm(position.sharePpm, true)} of the pool · {formatSharesShort(position.sharesMicros, 4)} USTX and {formatUsdRounded(position.dollarsMicros)}{feeShare !== null && feeShare > 0n ? ` · at your share, the last 24 hours’ fees came to about ${formatUsdMicros(feeShare, feeShare < 10_000n ? 4 : 2)}` : ""}</small>
-    </div>}
+    {positionBlock}
     <div className="gmd-wallet-balances">
       <div><span>Demo dollars</span><b>{usd(account.dollarsMicros)}</b><small>dUSD, no value</small></div>
       <div><span>USTX in wallet</span><b>{formatShares(account.sharesMicros)}</b><small>{nav !== null && account.sharesMicros > 0n ? formatUsdRounded(dollarsFor(account.sharesMicros, nav)) : "X Layer Testnet"}</small></div>
     </div>
-    <div className="gmd-wallet-claim">{claim?.state === "wallet" ? <span role="status">Confirm in your wallet…</span>
-      : claim?.state === "chain" ? <span role="status">Sending demo dollars on X Layer Testnet…</span>
-      : claimable ? <button type="button" className="gmd-small-button" disabled={!fresh} onClick={() => void claimDollars()}>Get {formatUsdRounded(FUND_CLAIM_MICROS)} demo dollars</button>
-      : <span>More demo dollars in {waitLabel(account.nextClaimAt, now)}</span>}
-      {claim?.state === "failed" && <p className="gmd-inline-error" role="alert">{claim.message}</p>}</div>
+    {claimRow}
     <GasNotice address={address} gasWei={account.gasWei} onFunded={reader.retry} />
     {tab === "add" ? <>
       <div className="gmd-segmented gmd-liquidity-mode" role="group" aria-label="Deposit with">
@@ -585,7 +657,7 @@ function LiquidityPanel({ provider, chain, owner, reader, onBusy }: { provider: 
         <div><dt>Wallet confirmations</dt><dd>{removal ? confirmations : "—"}</dd></div>
       </dl>
     </>}
-    {failure && <p ref={failureRef} tabIndex={-1} className="gmd-inline-error" role="alert">{failure.message}{failure.hash && <> <TxLink hash={failure.hash}>See the last transaction</TxLink></>}</p>}
+    {failureLine}
     <button type="button" className="gmd-button" disabled={Boolean(problem) || (tab === "add" ? !quote : !removal)} onClick={() => void run()}>{tab === "add" ? "Add liquidity" : "Withdraw"} <Icon name="arrow" size={17} /></button>
     <p className="gmd-caption">{tab === "add"
       ? mode === "dollars" ? "Part of your demo dollars is invested at the fund at the NAV, then deposited with the rest. If the pool’s price moves more than 1% first, the deposit does not go through and the USTX stays in your wallet."

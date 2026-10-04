@@ -1240,10 +1240,28 @@ a.gmd-pool-pair:hover b { text-decoration: underline; text-underline-offset: 3px
   .gmd-lp-compare strong { font-size: 24px; }
 }
 
-/* Ask USTX: the assistant's launcher and panel, over every product screen. */
-.gmd-ask-launch { position: fixed; z-index: 40; inset-inline-end: 24px; bottom: 24px; display: inline-flex; align-items: center; gap: 8px; min-height: 48px; padding: 12px 20px; border-radius: 999px; background: var(--gmd-ink) !important; color: #fff !important; font-weight: 600; box-shadow: 0 10px 28px #172b3533; transition: transform 140ms var(--gmd-ease-out); }
-.gmd-ask-launch svg { color: #8cd3c7; }
-.gmd-ask-launch:active { transform: scale(.97); }
+/* Ask USTX: the AI guide at the top of every product screen, and the conversation panel it opens. */
+.gmd-ask-guide { display: grid; grid-template-columns: minmax(0,1.1fr) minmax(0,1fr); gap: 14px 20px; align-items: start; margin: 0 0 20px; padding: 16px 18px; border: 1px solid #cfe5e0; border-radius: 12px; background: linear-gradient(135deg, #f1faf8, #f7f9fb); }
+.gmd-ask-guide-head { display: flex; gap: 12px; align-items: flex-start; min-width: 0; }
+.gmd-ask-guide-mark { flex: 0 0 36px; height: 36px; display: inline-flex; align-items: center; justify-content: center; border-radius: 10px; background: var(--gmd-ink); color: #8cd3c7; }
+.gmd-ask-guide h2 { margin: 0; font-size: 16px; display: flex; align-items: center; gap: 8px; }
+.gmd-ask-guide h2 small { font-size: 11px; font-weight: 700; letter-spacing: .04em; padding: 2px 6px; border-radius: 999px; background: #d9efea; color: #1f5a50; }
+.gmd-ask-guide-head p { margin: 4px 0 0; font-size: 14px; color: var(--gmd-copy); overflow-wrap: anywhere; }
+.gmd-ask-guide-actions { display: flex; flex-wrap: wrap; gap: 8px; min-width: 0; }
+.gmd-ask-guide-actions button { padding: 7px 12px; min-height: 36px; border: 1px solid #cfe0e4 !important; border-radius: 999px; background: #fff !important; color: var(--gmd-ink); font-size: 13px; text-align: start; }
+.gmd-ask-guide-actions button:hover { border-color: var(--gmd-accent) !important; }
+.gmd-ask-guide-step { display: inline-flex; align-items: center; gap: 6px; padding: 7px 12px; min-height: 36px; border-radius: 999px; background: var(--gmd-accent); color: #fff !important; font-size: 13px; font-weight: 600; text-decoration: none; }
+.gmd-ask-guide-form { grid-column: 1 / -1; display: flex; gap: 8px; }
+.gmd-ask-guide-form input { flex: 1; min-width: 0; min-height: 40px; padding: 8px 12px; font: inherit; font-size: 15px; border: 1px solid #cfe0e4; border-radius: 8px; background: #fff; color: var(--gmd-ink); }
+.gmd-ask-guide-form button { flex: 0 0 44px; min-height: 40px; border-radius: 8px; background: var(--gmd-ink) !important; color: #fff !important; display: inline-flex; align-items: center; justify-content: center; }
+.gmd-ask-guide-form button:disabled { opacity: .5; }
+@media (max-width:860px) { .gmd-ask-guide { grid-template-columns: 1fr; } }
+@media (max-width:600px) {
+  .gmd-ask-guide { padding: 12px; gap: 10px; margin-bottom: 16px; }
+  .gmd-ask-guide-head p { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+  .gmd-ask-guide-actions { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin-inline: -12px; padding-inline: 12px; }
+  .gmd-ask-guide-actions > * { flex: 0 0 auto; white-space: nowrap; }
+}
 .gmd-ask { position: fixed; z-index: 40; inset-inline-end: 24px; bottom: 24px; width: min(420px, calc(100vw - 32px)); height: min(620px, calc(100dvh - 48px)); display: flex; flex-direction: column; background: var(--gmd-surface); border: 1px solid var(--gmd-line); border-radius: 14px; box-shadow: 0 18px 48px #172b3533; overflow: hidden; }
 .gmd-ask > header { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 16px; background: var(--gmd-ink); color: #fff; }
 .gmd-ask > header strong { display: inline-flex; align-items: center; gap: 7px; font-family: "Instrument Sans", Arial, sans-serif; }
@@ -1269,7 +1287,6 @@ a.gmd-pool-pair:hover b { text-decoration: underline; text-underline-offset: 3px
 .gmd-ask-note { padding: 0 16px 12px; font-size: 12px; }
 .gmd-ask-note a { color: var(--gmd-accent); text-decoration: underline; }
 @media (max-width:600px) {
-  .gmd-ask-launch { inset-inline-end: 16px; bottom: calc(75px + env(safe-area-inset-bottom)); min-height: 44px; padding: 10px 16px; }
   .gmd-ask { z-index: 45; inset: auto 0 0 0; width: 100%; height: min(88dvh, 640px); border-radius: 14px 14px 0 0; padding-bottom: env(safe-area-inset-bottom); }
 }
 .gmd-ask form button svg { width: 18px; height: 18px; }
@@ -1650,3 +1667,31 @@ a.gmd-pool-pair:hover b { text-decoration: underline; text-underline-offset: 3px
   .gmd-price-gauge { padding: 16px; }
 }
 @media (max-width: 600px) { .gmd-price-confidence { padding: 18px; margin-block: 20px; border-radius: 12px; } }
+
+/* Pools: the one-button view first, the pools' details and more options folded below. */
+.gmd-pool-summary { display: grid; gap: 16px; padding: 20px; border: 1px solid var(--gmd-line); border-radius: 12px; background: var(--gmd-surface); }
+.gmd-pool-summary h2 { margin: 0; font-size: 20px; }
+.gmd-pool-summary-stats { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 12px; }
+.gmd-pool-summary-stats > div { display: grid; gap: 4px; padding: 12px 14px; border-radius: 10px; background: var(--gmd-bg); min-width: 0; }
+.gmd-pool-summary-stats span { font-size: 13px; color: var(--gmd-copy); }
+.gmd-pool-summary-stats strong { font-size: 22px; font-family: "Instrument Sans", Arial, sans-serif; color: var(--gmd-ink); overflow-wrap: anywhere; }
+.gmd-pool-summary-stats small { font-size: 12px; color: var(--gmd-copy); }
+.gmd-pool-steps { margin: 0; padding-inline-start: 20px; display: grid; gap: 8px; }
+.gmd-pool-steps li { color: var(--gmd-copy); }
+.gmd-pool-steps b { color: var(--gmd-ink); }
+.gmd-pools-more { margin-top: 24px; border: 1px solid var(--gmd-line); border-radius: 12px; background: var(--gmd-surface); }
+.gmd-pools-more > summary { list-style: none; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 16px 20px; cursor: pointer; }
+.gmd-pools-more > summary::-webkit-details-marker { display: none; }
+.gmd-pools-more > summary span { display: grid; gap: 2px; }
+.gmd-pools-more > summary small { color: var(--gmd-copy); font-size: 13px; }
+.gmd-pools-more > summary svg { transform: rotate(90deg); transition: transform 160ms var(--gmd-ease-out); flex: 0 0 auto; }
+.gmd-pools-more[open] > summary svg { transform: rotate(-90deg); }
+.gmd-pools-more[open] > summary { border-bottom: 1px solid var(--gmd-line); }
+.gmd-pools-more > :not(summary) { margin: 16px 20px; }
+.gmd-pools-more-body { display: grid; gap: 24px; }
+.gmd-liquidity-panel .gmd-button.is-secondary { margin-top: 8px; }
+.gmd-liquidity-simple-link { justify-self: start; margin-bottom: 4px; }
+@media (max-width:600px) {
+  .gmd-pool-summary-stats { grid-template-columns: 1fr; }
+  .gmd-pools-more > :not(summary) { margin: 12px; }
+}
