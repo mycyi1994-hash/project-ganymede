@@ -138,11 +138,22 @@ test("transparency is a customer proof page that starts unverified and states it
   assert.equal(response.status, 200);
   assert.match(html, /Checking the latest NAV/);
   assert.match(html, /Priced by OKX OnchainOS/);
-  assert.match(html, /Recorded on X Layer/);
+  assert.match(html, /On-chain record/);
   assert.match(html, /Recent records/);
   assert.match(html, /What verification covers/);
   assert.match(html, /What it does not cover/);
   assert.match(html, /href="\/developers#verify"/);
+  assert.match(html, /Your browser does the checking/);
+  assert.match(html, /From our server/);
+  assert.match(html, /X Layer Testnet · 1952/);
+  assert.match(html, /X Layer mainnet · 196/);
+  assert.match(html, /Public RPC → your browser · direct/);
+  assert.match(html, /Computed on your device/);
+  assert.match(html, /What you still trust/);
+  assert.match(html, /Ganymede supplies this page/);
+  assert.match(html, /A separate market comparison; it does not set the proof badge/);
+  assert.match(html, /href="\/developers#experiment"/);
+  assert.doesNotMatch(html, /Record proof matches|Pool prices agree/, "the flow must not announce success before browser reads");
   // Who can do what to each contract, read by the browser.
   assert.match(html, /Who controls the contracts/);
   // Developer material lives on /developers, not on the customer page.
