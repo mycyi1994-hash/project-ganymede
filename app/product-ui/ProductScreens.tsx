@@ -1,6 +1,7 @@
 "use client";
 
-import { FundList } from "./Funds";
+import { FundList, FundMarketPreview } from "./Funds";
+import { USTX_FUND, otherFund } from "@/lib/funds/catalog";
 import Link from "next/link";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { formatUsdMicros } from "@/lib/nav-display";
@@ -82,14 +83,26 @@ function ProductIdentity({ compact = false }: { compact?: boolean }) {
 
 export function MarketScreen({ preview = false }: { preview?: boolean }) {
   const { data, loading } = useMarket();
+  const [selectedId, setSelectedId] = useState(USTX_FUND.id);
+  const selectedFund = otherFund(selectedId);
+  const feature = useRef<HTMLElement>(null);
+  const selectFund = (id: string) => {
+    if (id !== USTX_FUND.id && !otherFund(id)) return;
+    setSelectedId(id);
+    // Move focus with the preview so keyboard and screen-reader users land on the updated card.
+    requestAnimationFrame(() => {
+      feature.current?.focus({ preventScroll: true });
+      feature.current?.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth", block: "start" });
+    });
+  };
   const composition = data ? compositionForRecord(data) : null;
   const points = data ? publicationHistory(data) : [];
   const detail = preview ? designLink("product") : "/products/ustx";
-  const screen = <><div className="gmd-page-heading"><div><h1>Markets</h1><p>Explore US stock baskets. Compare funds, follow prices and invest in one place.</p></div>{preview ? <span className="gmd-badge">Example account view</span> : <RecordCheckStatus />}</div><DataState />
-    <section className="gmd-market-feature" aria-label="US Tech Basket"><div className="gmd-market-primary"><div className="gmd-feature-title"><ProductIdentity compact /><Link prefetch={false} className="gmd-button" href={preview ? detail : `${detail}#investment`}>Invest <Icon name="arrow" size={18} /></Link></div><NavValue />{!preview && <FundStats />}<MarketChart points={points} loading={loading} /><div className="gmd-feature-bottom"><span>Equal weight <i /> Rebalanced quarterly <i /> Min. $10</span><span className="gmd-badge">Demo fund</span></div></div><div className="gmd-market-composition"><Holdings composition={composition} compact loading={loading} /></div></section>
-    {!preview && <PriceConfidence compact />}
-    {!preview && <FundList />}
-    {!preview && <MarketPulse />}
+  const screen = <><div className="gmd-page-heading"><div><h1>Markets</h1><p>Explore US stock baskets. Compare funds, follow prices and invest in one place.</p></div>{preview ? <span className="gmd-badge">Example account view</span> : !selectedFund && <RecordCheckStatus />}</div>{!selectedFund && <DataState />}
+    <section ref={feature} id="market-fund-preview" tabIndex={-1} className="gmd-market-feature" aria-label={selectedFund?.name ?? USTX_FUND.name}>{selectedFund ? <FundMarketPreview key={selectedFund.id} definition={selectedFund} /> : <><div className="gmd-market-primary"><div className="gmd-feature-title"><ProductIdentity compact /><Link prefetch={false} className="gmd-button" href={preview ? detail : `${detail}#investment`}>Invest <Icon name="arrow" size={18} /></Link></div><NavValue />{!preview && <FundStats />}<MarketChart points={points} loading={loading} /><div className="gmd-feature-bottom"><span>Equal weight <i /> Rebalanced quarterly <i /> Min. $10</span><span className="gmd-badge">Demo fund</span></div></div><div className="gmd-market-composition"><Holdings composition={composition} compact loading={loading} /></div></>}</section>
+    {!preview && !selectedFund && <PriceConfidence compact />}
+    {!preview && <FundList selectedId={selectedId} onSelect={selectFund} controls="market-fund-preview" />}
+    {!preview && !selectedFund && <MarketPulse />}
     <div className="gmd-market-foot"><div className="gmd-stock-row" aria-hidden="true">{assetSymbols.map(symbol => <AssetMark key={symbol} symbol={symbol} />)}</div><p>Six funds. US stocks and ETFs. One portfolio.</p><Link prefetch={false} href="/limitations">Risks <Icon name="external" size={14} /></Link></div>
   </>;
   return preview ? screen : <ActivityProvider>{screen}</ActivityProvider>;

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useId, useState } from "react";
 import type { FundDetail, FundSummary } from "@/lib/funds/api";
-import { otherFund, universeToken } from "@/lib/funds/catalog";
+import { otherFund, universeToken, type FundDefinition } from "@/lib/funds/catalog";
 import { formatUsdMicros } from "@/lib/nav-display";
 import { DEMO_ORDER_EVENT, formatShares, parseShares } from "@/lib/demo/format";
 import { parseUsd } from "@/lib/xstocks/wallet";
@@ -13,8 +13,10 @@ import { verifyFundSnapshot, type FundVerification } from "@/lib/funds/verificat
 import type { FundPosition } from "@/lib/funds/demo";
 import { useFundResource } from "./useFundResource";
 import type { SeriesPoint } from "@/lib/xstocks/series";
-import { AssetMark, Icon } from "./Icons";
+import { AssetMark, Icon, assetStyle } from "./Icons";
 import { OkxSource } from "./OkxSource";
+import MarketChart from "./MarketChart";
+import { WeightMeter } from "./ConstituentDrawer";
 
 // The Ganymede funds: a list for Markets, a page for each fund other than USTX (which keeps its own
 // page), and the holdings of those funds on Portfolio. Every figure comes from GET /api/v1/funds,
@@ -50,20 +52,20 @@ function NavLine({ series, label, compact = false }: { series: SeriesPoint[]; la
 }
 
 /** The six funds on Markets. */
-export function FundList() {
+export function FundList({ selectedId, onSelect, controls }: { selectedId: string; onSelect: (id: string) => void; controls: string }) {
   const { data, error: failed } = useFundResource<{ funds: FundSummary[] }>("/api/v1/funds");
   const funds = data?.funds;
   return <section className="gmd-fund-list" aria-labelledby="funds-title">
     <header className="gmd-section-heading"><div><h2 id="funds-title">All funds</h2><p>Baskets of xStocks, each priced by OKX OnchainOS and recorded on X Layer every five minutes.</p></div><span className="gmd-count">{funds ? `${funds.length} funds` : ""}</span></header>
     {failed && <p className="gmd-inline-error" role="status">The funds could not be read just now. Reload the page in a moment.</p>}
-    <ul>{(funds ?? []).map(fund => <li key={fund.id}><Link prefetch={false} href={fund.href}>
-      <span className="gmd-fund-name"><b>{fund.name}</b><small>{fund.ticker} · {fund.holdings.length} {fund.holdings.length === 1 ? "holding" : "holdings"}</small></span>
+    <ul>{(funds ?? []).map(fund => <li key={fund.id} className={selectedId === fund.id ? "is-selected" : undefined}><div className="gmd-fund-row">
+      <button type="button" className="gmd-fund-name" aria-pressed={selectedId === fund.id} aria-controls={controls} onClick={() => onSelect(fund.id)}><b>{fund.name}</b><small>{fund.ticker} · {fund.holdings.length} {fund.holdings.length === 1 ? "holding" : "holdings"}</small></button>
       <span className="gmd-fund-marks" aria-hidden="true">{fund.holdings.slice(0, 5).map(holding => <AssetMark key={holding.symbol} symbol={holding.symbol} />)}{fund.holdings.length > 5 && <i>+{fund.holdings.length - 5}</i>}</span>
       <span className="gmd-fund-theme">{fund.theme}</span>
       <NavLine series={fund.series} label={`${fund.name} NAV`} compact />
       <span className="gmd-fund-nav"><b>{fund.nav ? formatUsdMicros(fund.nav.perShareMicros, 2) : "Starting"}</b><small className={tone(fund.changePercent)}>{fund.nav ? `${percent(fund.changePercent)} 7d` : "First record soon"}</small></span>
-      <Icon name="arrow" size={16} />
-    </Link></li>)}{!funds && !failed && Array.from({ length: 6 }, (_, index) => <li key={index} className="is-loading" aria-hidden="true"><span /></li>)}</ul>
+      <Link prefetch={false} href={fund.href} className="gmd-fund-open" aria-label={`View ${fund.name} details`}><Icon name="arrow" size={18} /></Link>
+    </div></li>)}{!funds && !failed && Array.from({ length: 6 }, (_, index) => <li key={index} className="is-loading" aria-hidden="true"><span /></li>)}</ul>
   </section>;
 }
 
@@ -85,6 +87,40 @@ function useFundCheck(fund: FundDetail | null, fundId: string): FundVerification
     return () => { cancelled = true; };
   }, [fund, fundId]);
   return state?.fund === fund && state.fundId === fundId ? state.check : { result: "checking", detail: "Reading the record on X Layer…" };
+}
+
+/** The selected fund on Markets uses its own record, history and holdings. */
+export function FundMarketPreview({ definition }: { definition: FundDefinition }) {
+  const { data, error, reload } = useFundResource<{ fund: FundDetail }>(`/api/v1/funds?id=${encodeURIComponent(definition.id)}`);
+  const fund = data?.fund ?? null;
+  const check = useFundCheck(fund, definition.id);
+  const composition = check.composition ?? null;
+  const record = check.record ?? null;
+  const loading = !fund && !error;
+  const value = record && fund ? BigInt(fund.demo.sharesMicros) * BigInt(record.navPerShareMicros) / 1_000_000n : null;
+  const status = error ? "Price unavailable" : { matched: "NAV checked on X Layer", checking: "Confirming the price…", failed: "Price needs attention", unavailable: "Price confirmation unavailable" }[check.result];
+  const points = (fund?.series ?? []).map(([at, micros]) => ({ at: new Date(at * 1_000).toISOString(), micros, hash: "" }));
+  const weights = new Map(composition?.holdings.map(row => [row.symbol, Number(BigInt(row.valueMicros) * 1_000_000n / BigInt(composition.navPerShareMicros)) / 10_000]));
+  return <>
+    <div className="gmd-market-primary">
+      <div className="gmd-feature-title"><div className="gmd-product-identity is-compact"><div className="gmd-product-monogram" aria-hidden="true"><i /><i /><i /><i /><i /><i /></div><div><span className="gmd-ticker">{definition.ticker} <span>Equity basket</span></span><h2>{definition.name}</h2><p>{definition.description}</p></div></div><Link prefetch={false} className="gmd-button" href={`${definition.href}#investment`}>Invest <Icon name="arrow" size={18} /></Link></div>
+      <div className="gmd-nav-summary"><div><span className="gmd-label">NAV per share <span>/ USD</span></span><strong className="gmd-value">{record ? formatUsdMicros(record.navPerShareMicros, 4) : loading ? <><i className="gmd-skeleton is-hero" aria-hidden="true" /><span className="gmd-sr-only">Loading</span></> : "—"}</strong></div><div className="gmd-nav-meta"><OkxSource>Priced by OKX OnchainOS</OkxSource><span role="status" className={`gmd-status ${check.result === "matched" ? "is-positive" : "is-waiting"}`}><i />{status}</span>{record && <time dateTime={record.effectiveAt ?? undefined}>{shortTime(record.effectiveAt)}</time>}</div></div>
+      {error && <div className="gmd-data-notice" role="status"><span>This fund could not be loaded just now.</span><button type="button" onClick={() => void reload()}>Try again</button></div>}
+      <dl className="gmd-fund-stats" aria-label={`${definition.ticker} fund figures`} aria-busy={loading}><div><dt>Fund size</dt><dd>{value === null ? "—" : formatUsdMicros(value.toString(), 2)}</dd></div><div><dt>Investors</dt><dd>{fund ? fund.demo.investors.toLocaleString("en-US") : "—"}</dd></div><div><dt>Assets</dt><dd>{definition.constituents.length}</dd></div></dl>
+      <MarketChart points={points} loading={loading} showActivity={false} historyLabel="Past 7 days" />
+      <div className="gmd-feature-bottom"><span>Equal weight <i /> Rebalanced quarterly <i /> Min. $10</span><span className="gmd-badge">Demo fund</span></div>
+    </div>
+    <div className="gmd-market-composition"><section className="gmd-holdings is-compact gmd-fund-basket" aria-label={`${definition.name} composition`}><header className="gmd-section-heading"><div><h2>The basket</h2><p>{composition ? "Weights at the latest OKX OnchainOS prices" : "Holdings in this fund"}</p></div><span className="gmd-count">{definition.constituents.length} assets</span></header>
+      {composition && <div className="gmd-composition-strip" aria-hidden="true">{definition.constituents.map(symbol => <span key={symbol} style={{ ...assetStyle(symbol), flexGrow: weights.get(symbol) ?? 0 }} />)}</div>}
+      <div className="gmd-constituents-head" aria-hidden="true"><span>Asset</span><span>Price</span><span>Weight</span></div>
+      <ul className="gmd-constituents" aria-label="The xStocks in the basket" aria-busy={loading}>{definition.constituents.map(symbol => {
+        const asset = universeToken(symbol)!;
+        const row = composition?.holdings.find(item => item.symbol === symbol);
+        const weight = weights.get(symbol);
+        return <li key={symbol} style={assetStyle(symbol)}><div className="gmd-constituent"><AssetMark symbol={symbol} /><span className="gmd-constituent-name"><b>{asset.name}</b><small>{symbol}</small></span><span className="gmd-constituent-price"><b><span className="gmd-sr-only">Price </span>{row ? formatUsdMicros(row.priceMicros, 2) : "—"}</b></span><span className="gmd-constituent-weight"><b><span className="gmd-sr-only">Weight </span>{weight === undefined ? "—" : `${weight.toFixed(2)}%`}</b>{weight !== undefined && <WeightMeter weight={weight} target={100 / definition.constituents.length} />}</span></div></li>;
+      })}</ul><p className="gmd-caption">Weights move with prices. The line under each weight marks the equal-weight target.</p>
+    </section></div>
+  </>;
 }
 
 function FundOrder({ fund, nav, account }: { fund: Pick<FundDetail, "id" | "ticker">; nav: string | null; account: FundAccount | null }) {
@@ -122,7 +158,7 @@ function FundOrder({ fund, nav, account }: { fund: Pick<FundDetail, "id" | "tick
       setMessage({ ok: false, text: `${error instanceof Error ? error.message : "The order could not be confirmed."} Retry the same order to check its result.` });
     } finally { setBusy(false); }
   }
-  return <aside className="gmd-fund-order" aria-labelledby="fund-order-title">
+  return <aside id="investment" className="gmd-fund-order" aria-labelledby="fund-order-title">
     <h2 id="fund-order-title">Invest in {fund.ticker}</h2>
     <p className="gmd-caption">Use your shared demo balance to buy at this fund’s latest NAV.</p>
     <div className="gmd-wallet-balances"><div><span>Demo cash</span><b>{account ? formatUsdMicros(account.cashMicros, 2) : "—"}</b><small>no value</small></div><div><span>{fund.ticker} held</span><b>{formatShares(held)}</b><small>{navMicros && held > 0n ? formatUsdMicros(held * navMicros / 1_000_000n, 2) : "shares"}</small></div></div>

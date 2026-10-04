@@ -25,7 +25,9 @@ export async function verifyFundSnapshot(fund: FundDetail, fundId: string, optio
   if (checks.hash.state !== "pass" || checks.nav.state !== "pass" || !checks.composition) {
     return { result: "failed", detail: "The holdings document does not match this fund's record on X Layer." };
   }
-  if (fund.nav?.perShareMicros !== record.navPerShareMicros || Date.parse(fund.nav.asOf) !== Date.parse(record.effectiveAt)) {
+  // The publisher stores ISO milliseconds; the registry stores Unix seconds.
+  // Require the same second, as the write to the registry does, without rounding forward.
+  if (fund.nav?.perShareMicros !== record.navPerShareMicros || Math.floor(Date.parse(fund.nav.asOf) / 1_000) !== Math.floor(Date.parse(record.effectiveAt) / 1_000)) {
     return { result: "failed", detail: "The page's NAV or timestamp differs from the record on X Layer. Waiting for a matching update." };
   }
   if ((options.now ?? Date.now()) - Date.parse(record.effectiveAt) > DEMO_NAV_MAX_AGE_MS) {

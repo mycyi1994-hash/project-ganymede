@@ -112,6 +112,8 @@
 .gmd-app .gmd-button:active { transform: scale(.98); }
 .gmd-app .gmd-button.is-secondary { color: var(--gmd-ink); background: #fff; border-color: var(--gmd-line); }
 .gmd-market-feature { display: grid; grid-template-columns: minmax(0,1.85fr) minmax(300px,1fr); background: #fff; border: 1px solid var(--gmd-line); border-radius: 12px; overflow: clip; }
+.gmd-market-feature { scroll-margin-top: 24px; }
+.gmd-market-feature:focus-visible { outline: 2px solid var(--gmd-accent); outline-offset: 4px; }
 .gmd-market-primary { padding: 28px; min-width: 0; }
 .gmd-feature-title { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; }
 .gmd-feature-title > .gmd-button { flex-shrink: 0; font-size: 13px; min-height: 42px; padding: 9px 14px; }
@@ -1304,9 +1306,19 @@ a.gmd-pool-pair:hover b { text-decoration: underline; text-underline-offset: 3px
 .gmd-fund-list ul { list-style: none; margin: 0; padding: 0; }
 .gmd-fund-list li { border-top: 1px solid #e8ecee; }
 .gmd-fund-list li.is-loading span { display: block; height: 56px; margin: 8px 0; border-radius: 6px; background: var(--gmd-soft); }
-.gmd-fund-list a { display: grid; grid-template-columns: minmax(150px,1.2fr) 160px minmax(0,1.3fr) 120px 110px 16px; gap: 16px; align-items: center; padding: 14px 4px; color: inherit; text-decoration: none; }
-.gmd-fund-list a:hover { background: #f8fafa; }
-.gmd-fund-list a:focus-visible { outline: 2px solid var(--gmd-accent); outline-offset: 2px; }
+.gmd-fund-row { display: grid; grid-template-columns: minmax(150px,1.2fr) 160px minmax(0,1.3fr) 120px 110px 44px; gap: 16px; align-items: center; padding: 14px 4px; }
+.gmd-fund-list li.is-selected { background: #eff7f5; box-shadow: inset 3px 0 var(--gmd-accent); }
+.gmd-fund-list .gmd-fund-name { text-align: left; min-height: 48px; padding: 4px 8px; color: inherit; border-radius: 4px; }
+.gmd-fund-name:hover b, .gmd-fund-name[aria-pressed=true] b { color: var(--gmd-accent); }
+.gmd-fund-name:hover b { text-decoration: underline; text-underline-offset: 3px; }
+.gmd-fund-list .gmd-fund-open { display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; color: var(--gmd-ink); border-radius: 6px; text-decoration: none; }
+.gmd-fund-open:hover { background: #e0ede9; }
+.gmd-fund-name:focus-visible, .gmd-fund-open:focus-visible { outline: 2px solid var(--gmd-accent); outline-offset: 2px; }
+.gmd-fund-basket .gmd-composition-strip span { flex-basis: 0; min-width: 0; background: var(--asset-color); border-radius: 2px; }
+.gmd-app .gmd-fund-basket .gmd-constituent { grid-template-columns: 32px minmax(0,1fr) 80px 72px; }
+.gmd-holdings.gmd-fund-basket .gmd-constituents-head { grid-template-columns: minmax(0,1fr) 80px 72px; }
+.gmd-app .gmd-fund-basket .gmd-constituent:hover { background: transparent; }
+.gmd-app .gmd-fund-basket .gmd-constituent:hover .gmd-constituent-name b { color: inherit; }
 .gmd-fund-name b, .gmd-fund-nav b { display: block; font-size: 15px; }
 .gmd-fund-name small, .gmd-fund-nav small { display: block; margin-top: 3px; font-size: 12px; color: var(--gmd-copy); }
 .gmd-fund-nav { text-align: right; }
@@ -1357,11 +1369,14 @@ a.gmd-pool-pair:hover b { text-decoration: underline; text-underline-offset: 3px
 @media (max-width: 960px) {
   .gmd-fund-layout { grid-template-columns: 1fr; }
   .gmd-fund-order { position: static; }
-  .gmd-fund-list a { grid-template-columns: minmax(0,1fr) 120px 16px; }
+  .gmd-fund-row { grid-template-columns: minmax(0,1fr) 110px 44px; gap: 8px; }
   .gmd-fund-list .gmd-fund-marks, .gmd-fund-list .gmd-fund-theme, .gmd-fund-list .gmd-fund-line { display: none; }
 }
 @media (max-width: 560px) {
   .gmd-fund-list { padding: 18px 16px; }
+  .gmd-fund-row { grid-template-columns: minmax(0,1fr) 80px 44px; gap: 4px; }
+  .gmd-app .gmd-fund-basket .gmd-constituent { grid-template-columns: 29px minmax(0,1fr) 64px 62px; }
+  .gmd-holdings.gmd-fund-basket .gmd-constituents-head { grid-template-columns: minmax(0,1fr) 64px 62px; }
   .gmd-fund-hero { grid-template-columns: 1fr; padding: 18px; }
   .gmd-fund-hero-side { align-items: flex-start; }
   .gmd-fund-hero strong { font-size: 32px; }

@@ -4,8 +4,8 @@ import { verifyFundSnapshot } from "../lib/funds/verification.ts";
 import { PROOF_DEPLOYMENT } from "../lib/xstocks/proof.ts";
 import { fundFixture } from "./fixtures/fund-record.mjs";
 
-async function setup() {
-  const fixture = await fundFixture();
+async function setup(at) {
+  const fixture = await fundFixture("ai-chips", at);
   const options = {
     now: Date.parse(fixture.record.effectiveAt) + 60_000,
     fetcher: async (url, init) => {
@@ -37,6 +37,15 @@ test("a valid $100 proof cannot endorse a $999 headline or a different timestamp
     assert.equal(checked.result, "failed");
     assert.equal(checked.record, undefined);
     assert.equal(checked.composition, undefined);
+  }
+});
+
+test("publication milliseconds match chain seconds, but a different second never does", async () => {
+  const { fund, record, options } = await setup("2026-10-04T03:00:00.157Z");
+  assert.equal(record.effectiveAt, "2026-10-04T03:00:00.000Z");
+  assert.equal((await verifyFundSnapshot(fund, "ai-chips", options)).result, "matched");
+  for (const asOf of ["2026-10-04T03:00:01.000Z", "2026-10-04T02:59:59.999Z", "not a date"]) {
+    assert.equal((await verifyFundSnapshot({ ...fund, nav: { ...fund.nav, asOf } }, "ai-chips", options)).result, "failed");
   }
 });
 
