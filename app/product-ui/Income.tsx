@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useState, type CSSProperties } from "react";
 import type { FundDetail } from "@/lib/funds/api";
 import { incomeFund, INCOME_FUNDS, type FundDefinition } from "@/lib/funds/catalog";
 import { formatUsdMicros } from "@/lib/nav-display";
@@ -84,34 +84,88 @@ function CoveredCallPayoff({ document }: { document: CoveredCallDocument }) {
   </figure>;
 }
 
-/** The note's barriers through its life, the worse index now and the knock-in level. */
-function AutocallPath({ document, terms }: { document: AutocallDocument; terms: AutocallTerms }) {
+/**
+ * The note's life on one time axis: the early-repayment zone above each observation's barrier, the
+ * knock-in zone below 50%, what each observation pays if the worse index is at or above its step,
+ * and where the worse index is now, at today's place between the start and maturity.
+ */
+function AutocallPath({ document, terms, tall = false }: { document: AutocallDocument; terms: AutocallTerms; tall?: boolean }) {
   const title = useId();
-  const [ref, W] = useWidth(640);
-  const H = 240, top = 18, bottom = 30, left = 44, right = 16;
+  const [hover, setHover] = useState<number | null>(null);
+  const [ref, W] = useWidth(tall ? 1100 : 640);
+  const narrow = W < 560;
+  const H = tall ? (narrow ? 340 : 420) : 300, top = 34, bottom = narrow ? 50 : 58, left = narrow ? 42 : 56, right = narrow ? 14 : 28;
   const n = terms.barriers.length;
-  const x = (index: number) => left + index / n * (W - left - right);
-  const y = (level: number) => top + (1.2 - level) / (1.2 - 0.3) * (H - top - bottom);
-  const steps = terms.barriers.map((barrier, index) => `${index ? "L" : "M"}${x(index).toFixed(1)},${y(barrier).toFixed(1)} L${x(index + 1).toFixed(1)},${y(barrier).toFixed(1)}`).join(" ");
-  const done = document.state.observations.length;
+  const start = Date.parse(document.state.fixedAt);
+  const dates = Array.from({ length: n + 1 }, (_, index) => index === 0 ? document.state.fixedAt : observationDate(terms, document.state.fixedAt, index));
+  const end = Date.parse(dates[n]);
+  const x = (at: number) => left + (at - start) / (end - start) * (W - left - right);
+  const xi = (index: number) => x(Date.parse(dates[index]));
+  const lo = 0.3, hi = 1.15;
+  const y = (level: number) => top + (hi - level) / (hi - lo) * (H - top - bottom);
+  const steps = terms.barriers.map((barrier, index) => `${index ? "L" : "M"}${xi(index).toFixed(1)},${y(barrier).toFixed(1)} L${xi(index + 1).toFixed(1)},${y(barrier).toFixed(1)}`).join(" ");
+  const zone = `${steps} L${xi(n).toFixed(1)},${y(hi).toFixed(1)} L${xi(0).toFixed(1)},${y(hi).toFixed(1)} Z`;
+  const nowAt = Math.min(end, Math.max(start, Date.parse(document.asOf)));
+  const nowX = x(nowAt), nowY = y(Math.max(lo, Math.min(hi, document.worst)));
+  const elapsed = (nowAt - start) / (end - start);
+  const active = hover === null ? null : hover;
   const question = `Explain this autocallable note (ELS) in plain words. It started on ${day(document.state.fixedAt)}; the worse of the S&P 500 and the Nasdaq-100 is at ${pct(document.worst)} of its start. ${document.nextObservation ? `At the next observation on ${day(document.nextObservation.date)} it pays back ${money(document.nextObservation.payIfCalled)} per $100 if the worse index is at or above ${pct(document.nextObservation.barrier, 0)}.` : ""} The knock-in is at ${pct(terms.knockIn, 0)}${document.state.knockedIn ? " and has been hit" : " and has not been hit"}. When would I get my money back, and what could I lose?`;
-  return <figure className="gmd-navmove gmd-income-chart" aria-labelledby={title}>
+  return <figure className={`gmd-navmove gmd-income-chart gmd-autocall-path${tall ? " is-tall" : ""}`} aria-labelledby={title}>
     <ChartHead id={title} title="Barriers and where the note stands" question={question} />
-    <ul className="gmd-lq-legend"><li><i className="is-line-pool" aria-hidden="true" />Early-repayment barrier</li><li><i className="is-dollars" aria-hidden="true" />Worse index now</li><li><i className="is-line-held" aria-hidden="true" />Knock-in</li></ul>
+    <ul className="gmd-lq-legend"><li><i className="is-zone-call" aria-hidden="true" />Paid back early here</li><li><i className="is-line-pool" aria-hidden="true" />Barrier at each observation</li><li><i className="is-dollars" aria-hidden="true" />Worse index now</li><li><i className="is-zone-loss" aria-hidden="true" />Knock-in zone, below {pct(terms.knockIn, 0)}</li></ul>
     <div className="gmd-lq-plot" ref={ref}>
-      <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`Barriers ${terms.barriers.map(b => pct(b, 0)).join(", ")} at six-monthly observations; the worse index is at ${pct(document.worst)}; knock-in ${pct(terms.knockIn, 0)}.`}>
-        {[1, 0.75, 0.5].map(level => <g key={level}><line className="gmd-lq-base" x1={left} x2={W - right} y1={y(level)} y2={y(level)} /><text className="gmd-lq-tick" x={left - 6} y={y(level) + 4} textAnchor="end">{pct(level, 0)}</text></g>)}
-        <rect className="gmd-income-done" x={x(0)} y={top} width={Math.max(0, x(done) - x(0))} height={H - top - bottom} />
-        <path className="gmd-navmove-pool" d={steps} pathLength={1} />
+      <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`Over three years from ${day(document.state.fixedAt)}: barriers ${terms.barriers.map(b => pct(b, 0)).join(", ")} at six-monthly observations, paying ${terms.barriers.map((_, index) => money(couponPayout(terms, index + 1))).join(", ")} per $100; knock-in ${pct(terms.knockIn, 0)}; the worse index is at ${pct(document.worst)} today.`}>
+        <path className="gmd-autocall-zone" d={zone} />
+        <rect className="gmd-autocall-loss" x={xi(0)} y={y(terms.knockIn)} width={xi(n) - xi(0)} height={y(lo) - y(terms.knockIn)} />
+        <rect className="gmd-income-done" x={xi(0)} y={top} width={Math.max(0, nowX - xi(0))} height={H - top - bottom} />
+        {[1, 0.9, 0.75, 0.5].map(level => <g key={level}><line className="gmd-lq-base" x1={left} x2={W - right} y1={y(level)} y2={y(level)} /><text className="gmd-lq-tick" x={left - 8} y={y(level) + 4} textAnchor="end">{pct(level, 0)}</text></g>)}
         <line className="gmd-income-ki" x1={left} x2={W - right} y1={y(terms.knockIn)} y2={y(terms.knockIn)} />
-        <line className="gmd-income-now" x1={left} x2={W - right} y1={y(document.worst)} y2={y(document.worst)} />
-        <circle className="gmd-income-dot" cx={x(done)} cy={y(document.worst)} r={6} />
-        <text className="gmd-flow-label" x={x(done) + 10} y={y(document.worst) - 8}>Now {pct(document.worst)}</text>
-        {terms.barriers.map((barrier, index) => <text key={index} className="gmd-lq-tick" x={x(index + 1)} y={H - 8} textAnchor="end">{index + 1 === n ? "3 yrs" : `${(index + 1) * 6} mo`}</text>)}
+        <text className="gmd-autocall-ki-label" x={W - right - 4} y={y(terms.knockIn) + 16} textAnchor="end">Knock-in {pct(terms.knockIn, 0)}: below it, capital at risk at maturity</text>
+        <path className="gmd-navmove-pool gmd-autocall-steps" d={steps} pathLength={1} />
+        {terms.barriers.map((barrier, index) => {
+          const cx = xi(index + 1), seen = document.state.observations[index];
+          return <g key={index} className={`gmd-autocall-obs${active === index ? " is-active" : ""}${seen ? seen.called ? " is-called" : " is-missed" : ""}`}>
+            <line x1={cx} x2={cx} y1={y(barrier)} y2={H - bottom} />
+            <circle cx={cx} cy={y(barrier)} r={5} />
+            <text className="gmd-autocall-barrier" x={cx - 6} y={y(barrier) - 8} textAnchor="end">{pct(barrier, 0)}</text>
+            <text className="gmd-lq-tick" x={cx} y={H - bottom + 18} textAnchor={index + 1 === n ? "end" : "middle"}>{narrow ? `${(index + 1) * terms.observationMonths}m` : index + 1 === n ? "3 years" : `${(index + 1) * terms.observationMonths} months`}</text>
+            <text className="gmd-autocall-pay" x={cx} y={H - bottom + 36} textAnchor={index + 1 === n ? "end" : "middle"}>{money(couponPayout(terms, index + 1), narrow ? 0 : 2)}</text>
+            <rect className="gmd-lq-hit" x={xi(index)} y={top} width={xi(index + 1) - xi(index)} height={H - top - bottom} tabIndex={0} aria-label={`Observation ${index + 1}, ${day(dates[index + 1])}: barrier ${pct(barrier, 0)}, pays ${money(couponPayout(terms, index + 1))} per $100 if the worse index is at or above it`}
+              onPointerEnter={() => setHover(index)} onPointerLeave={() => setHover(null)} onFocus={() => setHover(index)} onBlur={() => setHover(null)} />
+          </g>;
+        })}
+        <line className="gmd-income-now-trail" x1={xi(0)} x2={nowX} y1={nowY} y2={nowY} />
+        <line className="gmd-income-now-mark" x1={nowX} x2={nowX} y1={top - 8} y2={H - bottom} />
+        <circle className="gmd-income-dot" cx={nowX} cy={nowY} r={7} />
+        <text className="gmd-autocall-now" x={nowX + 12} y={nowY - 12}>Today: worse index {pct(document.worst)}</text>
+        <text className="gmd-lq-tick" x={xi(0)} y={H - bottom + 18} textAnchor="start">{narrow ? "Start" : `Start ${day(document.state.fixedAt)}`}</text>
       </svg>
+      {active !== null && <div className={`gmd-chart-tip${active > n / 2 ? " is-left" : ""}`} style={{ left: `${(xi(active + 1) / W) * 100}%`, top: "12%" }} role="status">
+        <b>{money(couponPayout(terms, active + 1))}</b><span>Observation {active + 1} · {day(dates[active + 1])}</span>
+        <small>Paid back if the worse index is at or above {pct(terms.barriers[active], 0)}</small>
+        {document.state.observations[active] && <small>Observed at {pct(document.state.observations[active].worst)}: {document.state.observations[active].called ? "called" : "not called"}</small>}
+      </div>}
     </div>
-    <figcaption className="gmd-caption">At each six-month observation the note pays back early if the worse index is at or above that step. Below the dashed knock-in at {pct(terms.knockIn, 0)}, capital is at risk at maturity.</figcaption>
+    <figcaption className="gmd-caption">{pct(elapsed, 1)} of the term has passed. At each six-month observation the note pays back early if the worse index is at or above that step; the steps fall from {pct(terms.barriers[0], 0)} to {pct(terms.barriers[n - 1], 0)}. Below {pct(terms.knockIn, 0)}, capital is at risk at maturity.</figcaption>
   </figure>;
+}
+
+/** The six observations as steps: each one's barrier, what it pays, and whether it is next, called or passed. */
+function AutocallSteps({ document, terms }: { document: AutocallDocument; terms: AutocallTerms }) {
+  const next = document.nextObservation?.index ?? null;
+  return <ol className="gmd-autocall-stepper" aria-label="Observations">
+    {terms.barriers.map((barrier, index) => {
+      const seen = document.state.observations[index];
+      const state = seen ? seen.called ? "is-called" : "is-missed" : next === index + 1 ? "is-next" : "";
+      return <li key={index} className={state} style={{ "--gmd-step": `${Math.round((barrier - 0.4) / 0.6 * 100)}%`, "--gmd-delay": `${index * 70}ms` } as CSSProperties}>
+        <span className="gmd-autocall-stepper-bar" aria-hidden="true"><i /></span>
+        <b>{pct(barrier, 0)}</b>
+        <small>{(index + 1) * terms.observationMonths} months</small>
+        <strong>{money(couponPayout(terms, index + 1))}</strong>
+        <em>{seen ? seen.called ? "Called" : `Observed ${pct(seen.worst)}` : next === index + 1 ? day(observationDate(terms, document.state.fixedAt, index + 1)) : "\u00a0"}</em>
+      </li>;
+    })}
+  </ol>;
 }
 
 /** What the note pays at maturity by the worse index's level, with and without a knock-in. */
@@ -214,7 +268,7 @@ export function IncomeScreen({ id }: { id: string }) {
             <Tile label="Knock-in" value={note.state.knockedIn ? "Hit" : "Not hit"} note={note.state.knockedIn ? `On ${day(note.state.knockedInAt!)}` : `The worse index is ${pct(note.worst - terms.knockIn)} above ${pct(terms.knockIn, 0)}`} />
             <Tile label={note.state.status === "live" ? "Next observation" : note.state.status === "called" ? "Called" : "Matured"} value={note.nextObservation ? day(note.nextObservation.date) : money(note.state.payout ?? 0)} note={note.nextObservation ? `Pays ${money(note.nextObservation.payIfCalled)} if at or above ${pct(note.nextObservation.barrier, 0)}` : "Paid to holders' demo balances"} />
           </div>
-          <AutocallPath document={note} terms={terms} />
+          <AutocallPath document={note} terms={terms} tall />
           <div className="gmd-data-table-scroll"><table className="gmd-table"><caption className="gmd-sr-only">Observation schedule</caption><thead><tr><th>Observation</th><th>Date</th><th>Barrier</th><th>Pays per $100 if called</th><th>Result</th></tr></thead><tbody>
             {terms.barriers.map((barrier, index) => { const seen = note.state.observations[index]; return <tr key={index}><th scope="row">{index + 1}</th><td>{day(observationDate(terms, note.state.fixedAt, index + 1))}</td><td>{pct(barrier, 0)}</td><td>{money(couponPayout(terms, index + 1))}</td><td>{seen ? (seen.called ? `Called at ${pct(seen.worst)}` : `Not called (${pct(seen.worst)})`) : "—"}</td></tr>; })}
           </tbody></table></div>
@@ -288,7 +342,7 @@ function IncomeMarketPreview({ definition }: { definition: FundDefinition }) {
           : <div><dt>Coupon</dt><dd>{pct(terms.couponPerYear, 0)} a year · knock-in {pct(terms.knockIn, 0)}</dd></div>}
       </dl>
       {terms.kind === "covered-call" ? <MarketChart points={points} loading={loading} showActivity={false} historyLabel="Past 7 days" />
-        : note ? <AutocallPath document={note} terms={terms} /> : <div className="gmd-lq is-loading" aria-busy="true"><i className="gmd-skeleton gmd-lq-skeleton" aria-hidden="true" /></div>}
+        : note && terms.kind === "autocall" ? <AutocallSteps document={note} terms={terms} /> : <div className="gmd-lq is-loading" aria-busy="true"><i className="gmd-skeleton gmd-lq-skeleton" aria-hidden="true" /></div>}
       <div className="gmd-feature-bottom">{terms.kind === "covered-call"
         ? <span>Monthly call <i /> {pct(terms.moneyness, 0)} above the price <i /> {pct(terms.volatility, 0)} volatility <i /> Min. $10</span>
         : <span>Three years <i /> Observed every {terms.observationMonths} months <i /> Barriers {terms.barriers.map(b => pct(b, 0)).join("·")} <i /> ${terms.face} a note</span>}<span className="gmd-badge">Demo product</span></div>
@@ -317,6 +371,7 @@ function IncomeMarketPreview({ definition }: { definition: FundDefinition }) {
         <p className="gmd-caption">Pays from recorded prices of SPYx and QQQx; nothing hedges it. Demo dollars only.</p>
       </> : <p className="gmd-caption" role="status">{loading ? "Reading the latest record…" : "The first record is written within five minutes of launch."}</p>}
     </section></div>
+    {terms.kind === "autocall" && <div className="gmd-market-wide">{note ? <AutocallPath document={note} terms={terms} tall /> : <div className="gmd-lq is-loading" aria-busy="true"><i className="gmd-skeleton gmd-lq-skeleton is-tall" aria-hidden="true" /></div>}</div>}
   </>;
 }
 
