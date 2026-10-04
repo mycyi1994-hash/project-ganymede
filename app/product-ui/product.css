@@ -1975,3 +1975,25 @@ a.gmd-pool-pair:hover b { text-decoration: underline; text-underline-offset: 3px
 .gmd-liquidity-panel .gmd-strategy-options { grid-template-columns: repeat(2, minmax(0,1fr)); }
 .gmd-liquidity-panel .gmd-strategy-options button { grid-template-columns: auto minmax(0,1fr); grid-template-rows: auto auto; justify-items: start; text-align: start; column-gap: 8px; padding: 9px 10px; }
 .gmd-liquidity-panel .gmd-strategy-icon { grid-row: 1 / span 2; width: 36px; height: 18px; align-self: center; }
+/* Tooltips that open below the pointer's row, so they stay inside the plot and never cover the chart's heading. */
+.gmd-chart-tip.is-below { transform: translate(12px, 0); }
+.gmd-chart-tip.is-below.is-left { transform: translate(calc(-100% - 12px), 0); }
+
+/* Five strategies, and Custom's own-position settings. */
+.gmd-strategy-options.is-5 { grid-template-columns: repeat(5, minmax(0,1fr)); }
+.gmd-liquidity-panel .gmd-strategy-options.is-5 .is-custom { grid-column: 1 / -1; }
+.gmd-strategy-custom { display: grid; gap: 10px; padding: 12px; border-radius: 10px; background: var(--gmd-soft); }
+.gmd-strategy-row { display: grid; grid-template-columns: 96px minmax(0,1fr); align-items: center; gap: 8px; font-size: 12px; color: var(--gmd-copy); }
+.gmd-strategy-row b { color: var(--gmd-ink); font-variant-numeric: tabular-nums; }
+.gmd-strategy-row .gmd-segmented { margin: 0; }
+.gmd-strategy-row .gmd-segmented button { min-height: 32px; padding: 4px 8px; font-size: 12px; }
+.gmd-strategy-row input[type="range"] { width: 100%; accent-color: var(--gmd-ustx); }
+.gmd-strategy-custom .gmd-caption { margin: 0; }
+.gmd-range-positions ul { list-style: none; margin: 6px 0 0; padding: 0; display: grid; gap: 8px; }
+.gmd-range-positions li { display: grid; grid-template-columns: minmax(0,1fr) auto auto; align-items: center; gap: 10px; padding-top: 8px; border-top: 1px solid #e3eaec; }
+.gmd-range-positions li > div { display: grid; min-width: 0; }
+.gmd-range-positions li b, .gmd-range-positions li strong { font-size: 13px; color: var(--gmd-ink); }
+.gmd-range-positions li small { font-size: 11px; color: var(--gmd-copy); }
+.gmd-range-positions li > div:nth-child(2) { text-align: end; }
+@media (max-width:860px) { .gmd-strategy-options.is-5 { grid-template-columns: repeat(3, minmax(0,1fr)); } }
+@media (max-width:600px) { .gmd-strategy-options.is-5 { grid-template-columns: repeat(2, minmax(0,1fr)); } .gmd-strategy-options.is-5 .is-custom { grid-column: 1 / -1; } .gmd-range-positions li { grid-template-columns: minmax(0,1fr) auto; } .gmd-range-positions li button { grid-column: 1 / -1; } }

@@ -111,7 +111,7 @@ export function LiquidityChart({ pool, nav, share, tall = false }: { pool: PoolL
         {navInside && marker(navPrice!, `NAV ${money(navPrice!)}`, navPrice! <= price, 1, "nav")}
         {ticks.map(move => <text key={move} className="gmd-lq-tick" x={x(price * (1 + move))} y={H - 8} textAnchor={move === -range ? "start" : move === range ? "end" : "middle"}>{move === 0 ? "now" : percent(move)}</text>)}
       </svg>
-      {active && <div className={`gmd-chart-tip${hover! > bins.length / 2 ? " is-left" : ""}`} style={{ left: `${((hover! + 0.5) / bins.length) * 100}%`, top: "30%" }} role="status">
+      {active && <div className={`gmd-chart-tip is-below${hover! > bins.length / 2 ? " is-left" : ""}`} style={{ left: `${((hover! + 0.5) / bins.length) * 100}%`, top: "3%" }} role="status">
         <b>{money(active.value, 0)}</b>
         <span>{active.side === "dollars" ? `${money(active.amount, 0)} dUSD` : `${active.amount.toLocaleString("en-US", { maximumFractionDigits: 4 })} USTX`}</span>
         <small>{money(active.from)} – {money(active.to)}</small>
@@ -197,7 +197,7 @@ export function NavMoveChart({ amount, aprPercent }: { amount: number; aprPercen
         {[-30, 0, 25, 50].map(move => <text key={move} className="gmd-lq-tick" x={x(move)} y={H - 8} textAnchor="middle">{move === 0 ? "0%" : `${move > 0 ? "+" : "−"}${Math.abs(move)}%`}</text>)}
         {at !== null && <g className="gmd-navmove-cross"><line x1={x(at)} x2={x(at)} y1={top} y2={H - bottom} /><circle className="is-held" cx={x(at)} cy={y(held(at))} r={4} /><circle className="is-pool" cx={x(at)} cy={y(pooled(at))} r={4} /></g>}
       </svg>
-      {at !== null && <div className={`gmd-chart-tip${hover! > 50 ? " is-left" : ""}`} style={{ left: `${(x(at) / W) * 100}%`, top: "20%" }} role="status">
+      {at !== null && <div className={`gmd-chart-tip is-below${hover! > 50 ? " is-left" : ""}`} style={{ left: `${(x(at) / W) * 100}%`, top: "3%" }} role="status">
         <b>{money(pooled(at))}</b><span>In the pool, NAV {at > 0 ? "+" : at < 0 ? "−" : ""}{Math.abs(at)}%</span>
         <small>Holding both: {money(held(at))}</small><small>Difference: {money(pooled(at) - held(at))}</small>
       </div>}
