@@ -12,7 +12,15 @@
  * sends what is left back when it finishes. No transaction is sent in the first 45 seconds after
  * each five-minute mark, when the NAV record is written.
  *
- * Run: npm run stress:lending   (STRESS_WALLETS=100, STRESS_CONCURRENCY=10, STRESS_CYCLES=5, STRESS_REPORT=path)
+ * A wallet without demo dollars or approvals first claims and approves. Keys missing from the file
+ * are generated and added to it. The administrator's transfers are sent back to back without waiting
+ * for each to confirm, and stop while its balance is under STRESS_ADMIN_RESERVE_OKB until it is
+ * topped up; STRESS_FROM skips the wallets an interrupted run finished.
+ *
+ * Run: npm run stress:lending   (STRESS_WALLETS=100, STRESS_CONCURRENCY=10, STRESS_CYCLES=5, STRESS_GAS_OKB=0.0004,
+ *      STRESS_EXTRA_ROUND_EVERY=0, STRESS_FROM=0, STRESS_ADMIN_RESERVE_OKB=0.005, STRESS_REPORT=path). Each round
+ *      is ten transactions a wallet, about 0.000012 testnet OKB of gas; every STRESS_EXTRA_ROUND_EVERY-th wallet
+ *      runs one more round.
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -21,11 +29,12 @@ import {
   BaseError, ContractFunctionRevertedError, createPublicClient, createWalletClient, encodeFunctionData, formatEther, http,
   maxUint256, parseEther, type Abi, type Address, type Hash, type Hex,
 } from "viem";
-import { privateKeyToAccount } from "viem/accounts";
+import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 import { loadDeployment, railFor } from "./_deployment";
 
 const ONE = 1_000_000n;
-const GAS_FUND = parseEther("0.0004");
+const GAS_FUND = parseEther(process.env.STRESS_GAS_OKB ?? "0.0004");
+const ADMIN_RESERVE = parseEther(process.env.STRESS_ADMIN_RESERVE_OKB ?? "0.005");
 const KEYS_FILE = path.join(__dirname, "..", ".stress", "keys.json");
 
 type Step = { wallet: number; address: Address; step: string; hash?: Hash; status: "success" | "reverted" | "failed" | "expected-revert" | "unexpected"; gasUsed?: string; ms: number; error?: string };
@@ -87,9 +96,17 @@ async function main() {
   const count = Number(process.env.STRESS_WALLETS ?? "100");
   const concurrency = Number(process.env.STRESS_CONCURRENCY ?? "10");
   const cycles = Number(process.env.STRESS_CYCLES ?? "5");
-  if (!(count >= 1 && count <= 100) || !(concurrency >= 1 && concurrency <= 12) || !(cycles >= 1 && cycles <= 10)) throw new Error("STRESS_WALLETS must be 1–100, STRESS_CONCURRENCY 1–12 and STRESS_CYCLES 1–10.");
-  const keys: Hex[] = JSON.parse(fs.readFileSync(KEYS_FILE, "utf8"));
-  if (keys.length < count) throw new Error(`${KEYS_FILE} holds ${keys.length} keys; run npm run stress:testnet first.`);
+  const extraEvery = Number(process.env.STRESS_EXTRA_ROUND_EVERY ?? "0");
+  const from = Number(process.env.STRESS_FROM ?? "0");
+  if (!(count >= 1 && count <= 3_000) || !(concurrency >= 1 && concurrency <= 32) || !(cycles >= 1 && cycles <= 20) || !(from >= 0 && from < count)) {
+    throw new Error("STRESS_WALLETS must be 1–3000, STRESS_CONCURRENCY 1–32, STRESS_CYCLES 1–20 and STRESS_FROM under STRESS_WALLETS.");
+  }
+  const keys: Hex[] = fs.existsSync(KEYS_FILE) ? JSON.parse(fs.readFileSync(KEYS_FILE, "utf8")) : [];
+  if (keys.length < count) {
+    keys.push(...Array.from({ length: count - keys.length }, () => generatePrivateKey()));
+    fs.mkdirSync(path.dirname(KEYS_FILE), { recursive: true });
+    fs.writeFileSync(KEYS_FILE, JSON.stringify(keys), { mode: 0o600 });
+  }
   const accounts = keys.slice(0, count).map(key => privateKeyToAccount(key));
   const steps: Step[] = [];
   const started = new Date();
@@ -105,23 +122,43 @@ async function main() {
     reserves: (await read<bigint>(C.lending, "reserves")).toString(),
   });
   const before = await market();
-  console.log(`${count} wallets, ${concurrency} at a time, ${cycles} rounds each · NAV ${usd(nav)} (${navAge} s old) · market cash ${usd(BigInt(before.cash))}`);
+  console.log(`wallets ${from}–${count - 1}, ${concurrency} at a time, ${cycles} rounds each${extraEvery ? ` (+1 every ${extraEvery}th)` : ""} · NAV ${usd(nav)} (${navAge} s old) · market cash ${usd(BigInt(before.cash))}`);
 
-  // The administrator's transfers go one at a time, so its nonces never collide.
+  // The administrator's transfers are sent one at a time with nonces counted here, without waiting
+  // for each to confirm; a failed send recounts them. Every 20 transfers its balance is checked, and
+  // under the reserve the transfers wait until it is topped up.
   let adminQueue: Promise<unknown> = Promise.resolve();
+  let adminNonce: number | undefined;
+  let adminSends = 0;
   let funded = 0n;
   let returned = 0n;
-  const fundGas = (to: Address) => {
+  const fundGas = async (to: Address) => {
+    const balance = await reader.getBalance({ address: to });
+    if (balance >= GAS_FUND / 2n) return;
+    let hash: Hash | undefined;
     const job = adminQueue.then(async () => {
-      const balance = await reader.getBalance({ address: to });
-      if (balance >= GAS_FUND / 2n) return;
+      if (adminSends++ % 20 === 0) {
+        for (let waited = false; ; waited = true) {
+          const left = await reader.getBalance({ address: admin.account.address });
+          if (left >= ADMIN_RESERVE) { if (waited) console.log(`  administrator topped up: ${formatEther(left)} OKB`); break; }
+          if (!waited) console.log(`  administrator has ${formatEther(left)} OKB, under the reserve; waiting for a top-up`);
+          await sleep(30_000);
+        }
+      }
       await outsideNavWindow();
-      const hash = await admin.sendTransaction({ to, value: GAS_FUND - balance, gas: 21_000n });
-      await reader.waitForTransactionReceipt({ hash });
-      funded += GAS_FUND - balance;
+      adminNonce ??= await reader.getTransactionCount({ address: admin.account.address, blockTag: "pending" });
+      try {
+        hash = await admin.sendTransaction({ to, value: GAS_FUND - balance, gas: 21_000n, nonce: adminNonce });
+        adminNonce += 1;
+      } catch (error) {
+        adminNonce = undefined;
+        throw error;
+      }
     });
     adminQueue = job.catch(() => undefined);
-    return job;
+    await job;
+    await reader.waitForTransactionReceipt({ hash: hash!, timeout: 120_000 });
+    funded += GAS_FUND - balance;
   };
 
   async function runWallet(index: number) {
@@ -132,7 +169,17 @@ async function main() {
     const record = (step: Omit<Step, "wallet" | "address">) => { steps.push({ wallet: index, address: account.address, ...step }); };
     const at = () => (lastBlock ? lastBlock : undefined);
 
-    await fundGas(account.address);
+    for (let attempt = 0; ; attempt += 1) {
+      try {
+        await fundGas(account.address);
+        break;
+      } catch (error) {
+        if (attempt < 3) { await sleep(3_000); continue; }
+        record({ step: "gas from the administrator", status: "failed", ms: 0, error: errorName(error) });
+        console.log(`  wallet ${index} skipped: no gas (${errorName(error)})`);
+        return;
+      }
+    }
     let nonce = await reader.getTransactionCount({ address: account.address, blockTag: "pending" });
 
     async function send(step: string, contract: { address: Address; abi: Abi }, functionName: string, args: unknown[], gas: bigint) {
@@ -183,7 +230,7 @@ async function main() {
       const [navNow] = await read<[bigint, bigint]>(C.fund, "currentNav", [], at());
       await send(`invest ${usd(investDollars)} at the fund`, C.fund, "invest", [investDollars, investDollars * ONE / navNow * 99n / 100n], 200_000n);
 
-      for (let round = 0; round < cycles; round += 1) {
+      for (let round = 0; round < cycles + (extraEvery && index % extraEvery === 0 ? 1 : 0); round += 1) {
         const held = await shares();
         const collateral = held * BigInt(40 + Math.floor(random() * 21)) / 100n;
         if (round === 0) await refuses("borrow with no collateral", "borrow", [10n * ONE], "InsufficientCollateral");
@@ -239,7 +286,7 @@ async function main() {
     console.log(`  wallet ${String(index).padStart(2)} ${account.address} · ${sent} transactions · ${steps.filter(step => step.hash).length} in all`);
   }
 
-  let next = 0;
+  let next = from;
   await Promise.all(Array.from({ length: Math.min(concurrency, count) }, async () => {
     while (next < count) await runWallet(next++);
   }));
