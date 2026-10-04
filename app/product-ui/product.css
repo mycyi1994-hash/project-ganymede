@@ -1750,3 +1750,66 @@ a.gmd-pool-pair:hover b { text-decoration: underline; text-underline-offset: 3px
 .gmd-invest-route.is-chain p i { background: var(--gmd-accent); }
 .gmd-invest-route b { color: var(--gmd-ink); }
 .gmd-invest-route .gmd-text-button { justify-self: start; font-size: 13px; }
+
+/* Pools pictures, second pass: zoom, explain with AI, the deposit flow, the full-width view and their motion. */
+.gmd-lq-head { align-items: center; }
+.gmd-lq-head h3 { margin-inline-end: auto; }
+.gmd-lq-range { display: inline-flex; gap: 2px; padding: 2px; border-radius: 8px; background: var(--gmd-soft); }
+.gmd-lq-range button { min-height: 30px; padding: 4px 10px; border-radius: 6px; font-size: 12px; color: var(--gmd-copy); font-variant-numeric: tabular-nums; }
+.gmd-lq-range button[aria-pressed="true"] { background: #fff; color: var(--gmd-ink); font-weight: 600; box-shadow: 0 1px 3px #172b351f; }
+.gmd-lq-explain { display: inline-flex; align-items: center; gap: 5px; min-height: 30px; padding: 4px 10px; border-radius: 999px; border: 1px solid #cfe5e0 !important; background: #f1faf8 !important; color: #1f5a50; font-size: 12px; font-weight: 600; }
+.gmd-lq-explain:hover { border-color: var(--gmd-accent) !important; }
+.gmd-lq-explain svg { color: var(--gmd-accent); }
+.gmd-lq-marker.is-pool circle { fill: var(--gmd-ink); }
+.gmd-lq-marker.is-nav line { stroke: #6b7c85; }
+.gmd-lq-marker.is-nav circle { fill: #6b7c85; }
+.gmd-lq-bar path { transform-box: fill-box; transform-origin: 50% 100%; }
+.gmd-lq-bar.is-active path { filter: brightness(.88); }
+.gmd-flow svg { display: block; width: 100%; height: auto; overflow: visible; }
+.gmd-flow-path { fill: none; stroke-linecap: round; opacity: .9; transition: stroke-width 420ms var(--gmd-ease-out); }
+.gmd-flow-path.is-shares { stroke: var(--gmd-ustx); }
+.gmd-flow-path.is-dollars { stroke: var(--gmd-dusd); }
+.gmd-deposit-preview.is-empty .gmd-flow-path { stroke: var(--gmd-line); }
+.gmd-flow-dot { fill: #fff; stroke-width: 2.5; }
+.gmd-flow-dot.is-shares { stroke: var(--gmd-ustx); }
+.gmd-flow-dot.is-dollars { stroke: var(--gmd-dusd); }
+.gmd-flow-node { fill: var(--gmd-dusd); stroke: #fff; stroke-width: 3; }
+.gmd-flow-node.is-pool { fill: var(--gmd-ink); }
+.gmd-deposit-preview.is-empty .gmd-flow-node { fill: #b9c6cb; }
+.gmd-flow-label { font-size: 12px; fill: var(--gmd-ink); font-weight: 600; font-variant-numeric: tabular-nums; }
+.gmd-flow-end { font-size: 12px; fill: var(--gmd-copy); font-variant-numeric: tabular-nums; }
+.gmd-pools-summary-foot { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px 20px; }
+.gmd-pools-expand { flex: 0 0 auto; }
+.gmd-pool-ask { flex: 1 1 420px; display: flex; gap: 12px; align-items: flex-start; padding: 14px 16px; border: 1px solid #cfe5e0; border-radius: 12px; background: linear-gradient(135deg, #f1faf8, #f7f9fb); }
+.gmd-pool-ask b { color: var(--gmd-ink); }
+.gmd-pool-ask p { margin: 2px 0 10px; font-size: 13px; color: var(--gmd-copy); }
+.gmd-pool-dialog { position: fixed; inset: 0; z-index: 60; display: flex; align-items: flex-start; justify-content: center; padding: 24px; overflow-y: auto; background: #0f1d24a6; backdrop-filter: blur(3px); }
+.gmd-pool-dialog-body { width: min(1440px, 100%); display: grid; gap: 22px; padding: 22px 26px 28px; border-radius: 14px; background: var(--gmd-surface); box-shadow: 0 24px 64px #0f1d2459; }
+.gmd-pool-dialog-body > header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.gmd-pool-dialog-body > header h2 { margin: 0; font-size: 22px; }
+.gmd-pool-dialog-body > header button { min-width: 40px; min-height: 40px; display: inline-flex; align-items: center; justify-content: center; border-radius: 8px; border: 1px solid var(--gmd-line) !important; }
+@media (max-width:600px) { .gmd-pool-dialog { padding: 0; } .gmd-pool-dialog-body { border-radius: 0; padding: 16px; min-height: 100%; } }
+
+@media (prefers-reduced-motion: no-preference) {
+  .gmd-lq-bar path { animation: gmd-lq-rise 620ms cubic-bezier(.2,.8,.2,1) both; animation-delay: var(--gmd-delay, 0ms); }
+  .gmd-lq-marker { animation: gmd-lq-fade 500ms 380ms ease-out both; }
+  .gmd-lq-marker.is-pool circle { animation: gmd-lq-pulse 2.4s 900ms ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+  .gmd-navmove-pool, .gmd-navmove-held { stroke-dasharray: 1; animation: gmd-lq-draw 1100ms cubic-bezier(.3,.7,.2,1) both; }
+  .gmd-navmove-held { animation-delay: 120ms; }
+  .gmd-navmove-gap { animation: gmd-lq-fade 600ms 900ms ease-out both; }
+  .gmd-navmove-label { animation: gmd-lq-fade 400ms 1000ms ease-out both; }
+  .gmd-deposit-parts dd { transition: color 200ms; }
+  .gmd-pool-dialog { animation: gmd-lq-fade 200ms ease-out both; }
+  .gmd-pool-dialog-body { animation: gmd-lq-up 320ms cubic-bezier(.2,.8,.2,1) both; }
+}
+@media (prefers-reduced-motion: reduce) { .gmd-flow-dot { display: none; } }
+@keyframes gmd-lq-rise { from { transform: scaleY(0); opacity: .2; } to { transform: scaleY(1); opacity: 1; } }
+@keyframes gmd-lq-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes gmd-lq-draw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
+@keyframes gmd-lq-pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.6); } }
+@keyframes gmd-lq-up { from { opacity: 0; transform: translateY(16px) scale(.985); } to { opacity: 1; transform: none; } }
+.gmd-pools-summary, .gmd-pools-summary > *, .gmd-pool-ask > div, .gmd-pools-visuals > * { min-width: 0; }
+@media (max-width:600px) { .gmd-pool-ask { padding: 12px; } .gmd-pool-ask .gmd-ask-guide-actions { margin-inline: 0; padding-inline: 0; } .gmd-pools-expand { width: 100%; justify-content: center; } }
+.gmd-pool-ask { min-width: 0; }
+.gmd-pool-ask .gmd-ask-guide-actions { flex-wrap: wrap; overflow: visible; }
+.gmd-pool-ask .gmd-ask-guide-actions > * { white-space: normal; flex: 0 1 auto; }

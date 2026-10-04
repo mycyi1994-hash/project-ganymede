@@ -24,6 +24,9 @@ const TOOL_LABELS: Record<string, string> = {
 type AskApi = { ask: (question: string) => void };
 const AskContext = createContext<AskApi | null>(null);
 
+/** Asks Ask USTX a question from anywhere on a product screen, opening the conversation; null outside the shell. */
+export function useAsk(): AskApi | null { return useContext(AskContext); }
+
 /** Holds the conversation for the whole page, so the guide on any screen can start or continue it. */
 export function AskProvider({ children }: { children: ReactNode }) {
   const [open, setOpen] = useState(false);

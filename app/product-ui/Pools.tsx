@@ -27,7 +27,7 @@ import { TxSteps, WalletGate, orderDeadline, runPlan, useUnmountSignal, type Pla
 import { V4_POOL_DEPLOYMENT, formatFeePips, v4ValueMicros } from "@/lib/xstocks/v4-liquidity";
 import { V4LiquidityPanel, V4PoolGuide, V4PoolOverview, useV4Pool, v4Position, type V4Reader } from "./PoolsV4";
 import { PoolResults } from "./PoolResults";
-import { DepositPreview, LiquidityChart, NavMoveChart } from "./PoolVisuals";
+import { DepositFlow, LiquidityChart, NavMoveChart, PoolAsk, PoolVisualsDialog } from "./PoolVisuals";
 
 // Providing liquidity to the USTX/dUSD pool on X Layer Testnet from OKX Wallet: deposit USTX and
 // demo dollars at the pool's ratio (or demo dollars alone, half invested at the fund at the NAV),
@@ -164,6 +164,18 @@ function PoolSummary({ snapshot, owner, growth, amount }: { snapshot: Snapshot |
   const quote = pool && split ? quoteAddLiquidity(split.sharesMicros, split.dollarsMicros, pool) : null;
   const shareAfter = pool && quote ? ((account?.lpMicros ?? 0n) + quote.liquidity) * ONE / (pool.supply + quote.liquidity) : null;
   const share = account && pool && pool.supply > 0n ? Number(account.lpMicros) / Number(pool.supply) : null;
+  const [expanded, setExpanded] = useState(false);
+  const deposit = dollars !== null && dollars > 0n ? Number(dollars) / 1e6 : 1_000;
+  const aprPercent = growth.value ? Number(growth.value.aprWad) / 1e16 : null;
+  const visuals = <div className="gmd-pools-visuals">
+    <DepositFlow split={split && quote ? split : null} lpMicros={quote?.liquidity ?? null} shareAfter={shareAfter} />
+    <NavMoveChart amount={deposit} aprPercent={aprPercent !== null ? Math.round(aprPercent * 100) / 100 : null} />
+  </div>;
+  const questions = [
+    { label: "What is a liquidity pool, simply?", question: "Explain in plain words what the USTX/dUSD liquidity pool on Pools is, who trades with it, and how a provider earns the fee. Use the pool's figures now." },
+    { label: `Is $${deposit.toLocaleString("en-US", { maximumFractionDigits: 2 })} a lot for this pool?`, question: `If I add ${formatUsdRounded(BigInt(Math.round(deposit * 1e6)))} of demo dollars to the USTX/dUSD pool on Pools, how big is that against the pool, what share do I get, and what could I earn in fees at the current APR?` },
+    { label: "What could go wrong?", question: "What are the risks of providing liquidity to the USTX/dUSD pool on Pools: impermanent loss, the pool's price moving away from the NAV, and anything else? Explain simply, with the pool's figures now." },
+  ];
   return <section className="gmd-pools-summary" aria-labelledby="pool-summary-title">
     <h2 id="pool-summary-title">USTX / dUSD pool</h2>
     <div className="gmd-pools-summary-stats">
@@ -172,10 +184,16 @@ function PoolSummary({ snapshot, owner, growth, amount }: { snapshot: Snapshot |
       <div><span>Your liquidity</span><strong>{!owner ? "—" : !account || !mine ? <Skeleton width={56} /> : account.lpMicros === 0n ? "None yet" : mine.valueMicros !== null ? formatUsdRounded(mine.valueMicros) : `${formatSharesShort(account.lpMicros, 4)} USTX-LP`}</strong><small>{owner ? "In this wallet" : "Connect OKX Wallet"}</small></div>
     </div>
     {pool ? <LiquidityChart pool={pool} nav={nav} share={share} /> : <div className="gmd-lq is-loading" aria-busy="true"><Skeleton width="100%" className="gmd-lq-skeleton" /></div>}
-    <div className="gmd-pools-visuals">
-      <DepositPreview split={split && quote ? split : null} lpMicros={quote?.liquidity ?? null} shareAfter={shareAfter} />
-      <NavMoveChart amount={dollars !== null && dollars > 0n ? Number(dollars) / 1e6 : 1_000} />
+    {visuals}
+    <div className="gmd-pools-summary-foot">
+      <PoolAsk questions={questions} />
+      <button type="button" className="gmd-button is-secondary gmd-pools-expand" disabled={!pool} onClick={() => setExpanded(true)}>See the charts full width <Icon name="arrow" size={16} /></button>
     </div>
+    {expanded && pool && <PoolVisualsDialog onClose={() => setExpanded(false)}>
+      <LiquidityChart pool={pool} nav={nav} share={share} tall />
+      {visuals}
+      <PoolAsk questions={questions} />
+    </PoolVisualsDialog>}
     <p className="gmd-caption">Demo dollars and USTX have no value. Every figure here is read from the pool on X Layer; the pool’s price can move against the NAV.</p>
   </section>;
 }
