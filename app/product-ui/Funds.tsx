@@ -54,15 +54,15 @@ export function NavLine({ series, label, compact = false }: { series: SeriesPoin
 export const KIND_LABELS: Record<FundKind, string> = { basket: "Equity basket", "covered-call": "Covered call fund", autocall: "Autocallable note (ELS)" };
 
 /** The products on Markets, or those of one kind. */
-export function FundList({ selectedId, onSelect, controls, kinds }: { selectedId: string; onSelect: (id: string) => void; controls: string; kinds?: FundKind[] }) {
+export function FundList({ selectedId, onSelect, controls, kinds, selectable = false }: { selectedId: string; onSelect: (id: string) => void; controls: string; kinds?: FundKind[]; selectable?: boolean }) {
   const { data, error: failed } = useFundResource<{ funds: FundSummary[] }>("/api/v1/funds");
   const funds = data?.funds?.filter(fund => !kinds || kinds.includes(fundKind(fund.id)));
   return <section className="gmd-fund-list" aria-labelledby="funds-title">
-    <header className="gmd-section-heading"><div><h2 id="funds-title">{kinds?.length === 1 && kinds[0] === "basket" ? "RWA baskets" : "All products"}</h2><p>Each priced from xStocks by OKX OnchainOS and recorded on X Layer every five minutes.</p></div><span className="gmd-count">{funds ? `${funds.length} products` : ""}</span></header>
+    <header className="gmd-section-heading"><div><h2 id="funds-title">{kinds?.length === 1 ? { basket: "RWA baskets", "covered-call": "Covered-call funds", autocall: "Structured notes" }[kinds[0]] : "All products"}</h2><p>Each priced from xStocks by OKX OnchainOS and recorded on X Layer every five minutes.</p></div><span className="gmd-count">{funds ? `${funds.length} ${funds.length === 1 ? "product" : "products"}` : ""}</span></header>
     {failed && <p className="gmd-inline-error" role="status">The funds could not be read just now. Reload the page in a moment.</p>}
     <ul>{(funds ?? []).map(fund => <li key={fund.id} className={selectedId === fund.id ? "is-selected" : undefined}><div className="gmd-fund-row">
-      {fundKind(fund.id) === "basket"
-        ? <button type="button" className="gmd-fund-name" aria-pressed={selectedId === fund.id} aria-controls={controls} onClick={() => onSelect(fund.id)}><b>{fund.name}</b><small>{fund.ticker} · {fund.holdings.length} {fund.holdings.length === 1 ? "holding" : "holdings"}</small></button>
+      {selectable || fundKind(fund.id) === "basket"
+        ? <button type="button" className="gmd-fund-name" aria-pressed={selectedId === fund.id} aria-controls={controls} onClick={() => onSelect(fund.id)}><b>{fund.name}</b><small>{fund.ticker} · {fundKind(fund.id) === "basket" ? `${fund.holdings.length} ${fund.holdings.length === 1 ? "holding" : "holdings"}` : KIND_LABELS[fundKind(fund.id)]}</small></button>
         : <Link prefetch={false} className="gmd-fund-name" href={fund.href}><b>{fund.name}</b><small>{fund.ticker} · {KIND_LABELS[fundKind(fund.id)]}</small></Link>}
       <span className="gmd-fund-marks" aria-hidden="true">{fund.holdings.slice(0, 5).map(holding => <AssetMark key={holding.symbol} symbol={holding.symbol} />)}{fund.holdings.length > 5 && <i>+{fund.holdings.length - 5}</i>}</span>
       <span className="gmd-fund-theme">{fund.theme}</span>
