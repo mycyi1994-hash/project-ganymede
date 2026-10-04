@@ -4,7 +4,7 @@
 //
 // Flows (E2E_FLOW): default buys $60 at the fund, the constant-product pool and the v4 pool and
 // sells everything at the fund; "lending" posts collateral, borrows, repays, withdraws, lends and
-// withdraws; "pools" adds liquidity from demo dollars and withdraws it (SKIP_ADD=1 only withdraws).
+// withdraws; "pools" adds liquidity from demo dollars and withdraws it all with the one-button view (SKIP_ADD=1 only withdraws).
 // READ_ONLY=1 only visits the pages. It reports page errors, console errors and HTTP errors.
 //
 // Run from onchain/: ADMIN_PRIVATE_KEY=… node scripts/e2e-wallet.mjs
@@ -130,27 +130,22 @@ if (process.env.E2E_FLOW === "lending") {
       if (!(await provide.count())) await page.getByText(/Constant product|USTX\/dUSD/).first().click();
       const connect = page.locator("#provide").getByRole("button", { name: "Connect OKX Wallet" });
       if (await connect.isVisible().catch(() => false)) await connect.click();
-      await page.locator("#provide").getByRole("button", { name: "Add", exact: true }).waitFor({ timeout: 60000 });
+      await page.locator("#liquidity-simple").waitFor({ timeout: 60000 });
     });
-    if (!process.env.SKIP_ADD) await step("add $40 of liquidity from demo dollars", async () => {
+    // The one-button view: an amount of demo dollars and Add liquidity; Withdraw all returns everything as demo dollars.
+    if (!process.env.SKIP_ADD) await step("add $40 of liquidity from demo dollars with one button", async () => {
       const provide = page.locator("#provide");
-      await provide.getByRole("button", { name: "Add", exact: true }).click();
-      await provide.getByRole("button", { name: "dUSD only" }).first().click();
-      await provide.locator("#liquidity-dollars-only").fill("40");
+      await provide.locator("#liquidity-simple").fill("40");
       await page.waitForFunction(() => { const b = [...document.querySelectorAll("#provide button.gmd-button")].find(x => /Add liquidity/.test(x.textContent)); return b && !b.disabled; }, null, { timeout: 60000 });
       await provide.getByRole("button", { name: /Add liquidity/ }).click();
       await page.getByText("Liquidity added").first().waitFor({ timeout: 240000 });
       await page.getByRole("button", { name: "Done", exact: true }).first().click();
     });
-    await step("withdraw all liquidity as demo dollars", async () => {
+    await step("withdraw all liquidity as demo dollars with one button", async () => {
       const provide = page.locator("#provide");
-      await provide.getByRole("button", { name: "Withdraw", exact: true }).first().click();
-      await page.waitForFunction(() => { const b = [...document.querySelectorAll('#provide [aria-label="Part of your liquidity"] button')].find(x => x.textContent === "All"); return b && !b.disabled; }, null, { timeout: 90000 });
-      await provide.locator('[aria-label="Part of your liquidity"]').getByRole("button", { name: "All" }).click();
-      await provide.locator('[aria-label="Receive"]').getByRole("button", { name: "dUSD only" }).click();
-      await page.waitForFunction(() => { const b = [...document.querySelectorAll("#provide button.gmd-button")].find(x => /^Withdraw/.test(x.textContent.trim())); return b && !b.disabled; }, null, { timeout: 60000 });
-      await provide.locator("button.gmd-button", { hasText: /^Withdraw/ }).click();
-      await page.getByText(/Liquidity withdrawn|Withdrawn/).first().waitFor({ timeout: 240000 });
+      await page.waitForFunction(() => { const b = [...document.querySelectorAll("#provide button.gmd-button")].find(x => /Withdraw all as demo dollars/.test(x.textContent)); return b && !b.disabled; }, null, { timeout: 120000 });
+      await provide.getByRole("button", { name: "Withdraw all as demo dollars" }).click();
+      await page.getByText(/Liquidity withdrawn/).first().waitFor({ timeout: 240000 });
     });
   } catch {}
 } else try {
