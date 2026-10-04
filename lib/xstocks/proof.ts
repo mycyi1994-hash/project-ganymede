@@ -1,6 +1,7 @@
 import { DEFAULT_SETTLEMENT_CHAIN } from "../chains";
 import { sha256Hex } from "../engine/fixed";
 import { XSTOCKS_PRODUCT, XSTOCKS_CONSTITUENTS, type Composition } from "./basket";
+import { otherFund, universeToken } from "../funds/catalog";
 import type { OnchainNav } from "./onchain";
 
 // Public deployment pinned in the browser bundle; never accepted from an API response.
@@ -61,6 +62,19 @@ export function parseReport(canonical: string, profile: ReportProfile): Composit
 
 export async function verifyComposition(canonical: string, record: OnchainNav): Promise<{ hash: Check; nav: Check; composition: Composition | null }> {
   return verifyReport(canonical, record, ustxProfile(canonical), "chain");
+}
+
+/** The pinned profile of one of the other Ganymede funds: its id, its constituents and their tokens. */
+export function fundProfile(fundId: string): ReportProfile {
+  const fund = otherFund(fundId);
+  if (!fund) throw new Error(`Unknown fund ${fundId}`);
+  return { productId: fund.id, pricingChainIndex: "196", symbols: fund.constituents, addresses: Object.fromEntries(fund.constituents.map((symbol) => [symbol, universeToken(symbol)!.address])) };
+}
+
+export const parseFundComposition = (canonical: string, fundId: string): Composition => parseReport(canonical, fundProfile(fundId));
+
+export function verifyFundComposition(canonical: string, record: OnchainNav, fundId: string): Promise<{ hash: Check; nav: Check; composition: Composition | null }> {
+  return verifyReport(canonical, record, fundProfile(fundId), "chain");
 }
 
 /** Shared arithmetic and byte checks. Offline records are explicitly not chain evidence. */

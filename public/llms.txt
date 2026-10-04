@@ -14,6 +14,7 @@
 - [Latest NAV record](https://ganymede-xlayer.gana003.workers.dev/api/v1/ustx): NAV per share, validity window, contracts and how to verify it.
 - [Pools](https://ganymede-xlayer.gana003.workers.dev/api/v1/ustx/pools): the constant-product and Uniswap v4 USTX/dUSD pools and their results for liquidity providers.
 - [Market activity](https://ganymede-xlayer.gana003.workers.dev/api/v1/ustx/activity): the latest orders, trades, arbitrage and loans, with 24-hour figures.
+- [Funds](https://ganymede-xlayer.gana003.workers.dev/api/v1/funds): all six funds (USTX, M7X, AIX, CRYX, CORX, RTLX) with their latest NAV records; add ?id=<fund id> for one fund's holdings document and recent records.
 - [Usage](https://ganymede-xlayer.gana003.workers.dev/api/v1/ustx/usage): usage since launch, with the team's and test wallets counted apart.
 - [OKX DEX quotes](https://ganymede-xlayer.gana003.workers.dev/api/v1/ustx/dex-quotes): what building the basket by hand costs on X Layer mainnet, quoted hourly by the OKX OnchainOS DEX aggregator.
 

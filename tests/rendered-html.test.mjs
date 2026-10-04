@@ -257,3 +257,21 @@ test("issuer, developer and embed pages render for partners", async () => {
   assert.match(visible(await basket.text()), /Loading the basket/);
   assert.match(visible(await (await render("/embed/basket?config=https://other.example/basket.json")).text()), /No basket configured/);
 });
+
+test("Markets lists every fund, and each fund other than USTX has its own page", async () => {
+  const markets = visible(await (await render("/")).text());
+  assert.match(markets, /All funds/);
+  for (const [id, name, ticker] of [["magnificent-7", "Magnificent 7", "M7X"], ["ai-chips", "AI &amp; Semiconductors", "AIX"], ["crypto-economy", "Crypto Economy", "CRYX"], ["us-core", "US Core Index", "CORX"], ["retail-favorites", "Retail Favorites", "RTLX"]]) {
+    const response = await render(`/funds/${id}`);
+    assert.equal(response.status, 200, id);
+    const html = visible(await response.text());
+    assert.match(html, new RegExp(name), id);
+    assert.match(html, new RegExp(ticker), id);
+    assert.match(html, /Demo fund/);
+    assert.doesNotMatch(html, /KRW|paper portfolio/i);
+  }
+  assert.equal((await render("/funds/nope")).status, 404);
+  const ustx = await render("/funds/us-tech-x");
+  assert.equal(ustx.status, 307);
+  assert.match(ustx.headers.get("location"), /\/products\/ustx$/);
+});

@@ -78,6 +78,21 @@ export const OPENAPI = {
         },
       },
     },
+    "/api/v1/funds": {
+      get: {
+        operationId: "getFunds",
+        summary: "Every Ganymede fund and its latest NAV record, or one fund",
+        description: "USTX and five more funds of xStocks on X Layer, each recorded every five minutes in the NAV registry under productKey = keccak256(id). With ?id=, one fund with its recent records (each with its canonical holdings document), how its prices compared with the X Layer pools and its demo holders.",
+        parameters: [{ name: "id", in: "query", required: false, schema: { type: "string", enum: ["us-tech-x", "magnificent-7", "ai-chips", "crypto-economy", "us-core", "retail-favorites"] } }],
+        responses: {
+          200: { description: "The funds, or one fund", content: { "application/json": { schema: { type: "object", properties: {
+            funds: { type: "array", items: { type: "object", properties: { id: { type: "string" }, ticker: { type: "string" }, name: { type: "string" }, productKey: { type: "string" }, holdings: { type: "array", items: { type: "object" } }, nav: { type: ["object", "null"] }, changePercent: { type: ["number", "null"] }, series: { type: "array", items: { type: "array" } } } } },
+            fund: { type: "object" },
+          } } } } },
+          404: { description: "No fund has that id", content: { "application/json": { schema: error } } },
+        },
+      },
+    },
     "/api/v1/ustx/usage": {
       get: {
         operationId: "getUstxUsage",

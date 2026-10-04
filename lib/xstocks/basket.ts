@@ -129,6 +129,7 @@ export function fixBasket(
   prices: Map<string, bigint>,
   navMicros: bigint,
   fixedAt: string,
+  productId: string = XSTOCKS_PRODUCT.id,
 ): Basket {
   const weights = equalWeightsBps(constituents.length);
   const holdings = constituents.map((constituent, index) => {
@@ -142,7 +143,7 @@ export function fixBasket(
       unitsWad: (navMicros * BigInt(weightBps) * WAD) / (BPS * price),
     };
   });
-  return { productId: XSTOCKS_PRODUCT.id, fixedAt, navAtFixingMicros: navMicros, holdings };
+  return { productId, fixedAt, navAtFixingMicros: navMicros, holdings };
 }
 
 export function basketNavMicros(basket: Basket, prices: Map<string, bigint>): bigint {
@@ -208,6 +209,8 @@ export type EvaluateInput = {
   previous: Basket | null;
   now: string;
   maxQuoteAgeMinutes: number;
+  /** The fund being priced; USTX when absent. */
+  product?: { id: string; inceptionNavMicros: bigint };
 };
 
 /**
@@ -264,8 +267,9 @@ export async function evaluateBasket(input: EvaluateInput): Promise<Evaluation> 
   let rebalanced = false;
   const sameConstituents = basket !== null && basket.holdings.length === constituents.length
     && basket.holdings.every((holding) => constituents.some((constituent) => constituent.symbol === holding.symbol));
+  const product = input.product ?? XSTOCKS_PRODUCT;
   if (!basket) {
-    basket = fixBasket(constituents, prices, XSTOCKS_PRODUCT.inceptionNavMicros, asOf);
+    basket = fixBasket(constituents, prices, product.inceptionNavMicros, asOf, product.id);
   } else if (!sameConstituents) {
     // A constituent added or removed re-fixes at the prevailing NAV, like the quarterly re-fix, so
     // the NAV holders own stays continuous. That NAV needs a live price for every holding being
@@ -275,12 +279,12 @@ export async function evaluateBasket(input: EvaluateInput): Promise<Evaluation> 
       blockers.push(`Cannot re-fix without a live price for ${unpriced.join(", ")}`);
       return { status: "awaiting_prices", basket: input.previous, rebalanced: false, composition: null, canonical: null, holdingsHash: null, publishable: false, blockers };
     }
-    basket = fixBasket(constituents, prices, basketNavMicros(basket, prices), asOf);
+    basket = fixBasket(constituents, prices, basketNavMicros(basket, prices), asOf, product.id);
     rebalanced = true;
   } else if (addressesChanged || rebalanceDue(basket, input.now)) {
     // A corrected or migrated token address re-fixes at the prevailing value, like the
     // quarterly re-fix, so the published NAV stays continuous and the change is evidenced.
-    basket = fixBasket(constituents, prices, basketNavMicros(basket, prices), asOf);
+    basket = fixBasket(constituents, prices, basketNavMicros(basket, prices), asOf, product.id);
     rebalanced = true;
   }
 
@@ -298,7 +302,7 @@ export async function evaluateBasket(input: EvaluateInput): Promise<Evaluation> 
     };
   });
   const composition: Composition = {
-    productId: XSTOCKS_PRODUCT.id,
+    productId: product.id,
     asOf,
     pricingChainIndex: XSTOCKS_CHAIN.chainIndex,
     basketFixedAt: basket.fixedAt,

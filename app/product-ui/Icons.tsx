@@ -31,7 +31,7 @@ export const assetNames: Record<string, string> = { AAPLx: "Apple", MSFTx: "Micr
 export const assetSymbols = Object.keys(assetNames);
 
 export function AssetMark({ symbol }: { symbol: string }) {
-  const brand = ({ AAPLx: "apple", MSFTx: "microsoft", NVDAx: "nvidia", AMZNx: "amazon", METAx: "meta", TSLAx: "tesla", GOOGLx: "google", ORCLx: "oracle", PLTRx: "palantir" } as Record<string, string>)[symbol];
+  const brand = ({ AAPLx: "apple", MSFTx: "microsoft", NVDAx: "nvidia", AMZNx: "amazon", METAx: "meta", TSLAx: "tesla", GOOGLx: "google", ORCLx: "oracle", PLTRx: "palantir", AMDx: "amd", INTCx: "intel", COINx: "coinbase", MSTRx: "microstrategy", CRCLx: "circle", HOODx: "robinhood" } as Record<string, string>)[symbol];
   return <span className="gmd-asset-mark" aria-hidden="true">{brand === "microsoft" ? <span className="gmd-ms"><i /><i /><i /><i /></span> : brand ? <img src={`/brands/${brand}.svg`} alt="" width="24" height="24" /> : symbol.slice(0, 1)}</span>;
 }
 
