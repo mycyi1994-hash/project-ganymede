@@ -17,7 +17,7 @@ const money = (value: number, digits = 2) => `$${value.toLocaleString("en-US", {
 const percent = (ratio: number) => `${ratio > 0 ? "+" : ratio < 0 ? "−" : ""}${Math.abs(Math.round(ratio * 1000) / 10)}%`;
 
 /** The plot's width in CSS pixels, so the chart draws at its real size and its text stays 12px on a phone too. */
-function useWidth(initial: number) {
+export function useWidth(initial: number) {
   const ref = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(initial);
   useEffect(() => {
@@ -31,7 +31,7 @@ function useWidth(initial: number) {
 }
 
 /** A chart's heading, with the button that asks Ask USTX to explain it with the figures on screen. */
-function ChartHead({ id, title, question, children }: { id: string; title: string; question: string; children?: ReactNode }) {
+export function ChartHead({ id, title, question, children }: { id: string; title: string; question: string; children?: ReactNode }) {
   const assistant = useAsk();
   return <div className="gmd-lq-head">
     <h3 id={id}>{title}</h3>

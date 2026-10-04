@@ -1813,3 +1813,44 @@ a.gmd-pool-pair:hover b { text-decoration: underline; text-underline-offset: 3px
 .gmd-pool-ask { min-width: 0; }
 .gmd-pool-ask .gmd-ask-guide-actions { flex-wrap: wrap; overflow: visible; }
 .gmd-pool-ask .gmd-ask-guide-actions > * { white-space: normal; flex: 0 1 auto; }
+
+/* Markets categories, and the income and structured products. */
+.gmd-categories { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 8px; margin: -8px 0 22px; padding: 6px; border-radius: 12px; background: var(--gmd-soft); }
+.gmd-categories button { display: grid; gap: 2px; justify-items: start; justify-content: start; text-align: left; padding: 10px 14px; border-radius: 9px; text-align: start; color: var(--gmd-copy); transition: background 160ms, box-shadow 160ms; }
+.gmd-categories button b { color: var(--gmd-ink); font-size: 15px; }
+.gmd-categories button small { font-size: 12px; }
+.gmd-categories button[aria-pressed="true"] { background: #fff; box-shadow: 0 1px 4px #172b3524; }
+.gmd-categories button[aria-pressed="true"] b { color: var(--gmd-accent); }
+.gmd-category-intro { margin-bottom: 16px; }
+.gmd-category-intro h2 { margin: 0 0 6px; }
+.gmd-category-intro p { margin: 0; max-width: 72ch; color: var(--gmd-copy); }
+.gmd-income-showcase { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; margin-bottom: 14px; }
+.gmd-income-card { display: grid; gap: 10px; align-content: start; padding: 20px; border: 1px solid var(--gmd-line); border-radius: 14px; background: var(--gmd-surface); color: inherit !important; text-decoration: none; transition: border-color 160ms, transform 160ms var(--gmd-ease-out), box-shadow 160ms; }
+.gmd-income-card:hover { border-color: var(--gmd-accent); transform: translateY(-2px); box-shadow: 0 10px 28px #172b3514; }
+.gmd-income-card h3 { margin: 0; font-size: 20px; }
+.gmd-income-card p { margin: 0; font-size: 14px; color: var(--gmd-copy); }
+.gmd-income-card-marks { display: flex; gap: 6px; }
+.gmd-income-card dl { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 4px 0 0; }
+.gmd-income-card dt { font-size: 12px; color: var(--gmd-copy); }
+.gmd-income-card dd { margin: 2px 0 0; font-weight: 600; color: var(--gmd-ink); font-variant-numeric: tabular-nums; }
+.gmd-income-card-go { display: inline-flex; align-items: center; gap: 6px; color: var(--gmd-accent); font-weight: 600; font-size: 14px; }
+.gmd-income-section { display: grid; gap: 16px; padding: 20px; border: 1px solid var(--gmd-line); border-radius: 12px; background: var(--gmd-surface); }
+.gmd-income-tiles { grid-template-columns: repeat(4, minmax(0,1fr)); }
+.gmd-income-tiles strong { font-size: 20px; }
+.gmd-income-chart { margin-top: 4px; }
+.gmd-income-strike { stroke: var(--gmd-ink); stroke-width: 1; stroke-dasharray: 4 4; }
+.gmd-income-ki { stroke: #6b7c85; stroke-width: 1.5; stroke-dasharray: 5 4; }
+.gmd-income-now { stroke: var(--gmd-dusd); stroke-width: 2; }
+.gmd-income-dot { fill: var(--gmd-dusd); stroke: #fff; stroke-width: 2; }
+.gmd-income-done { fill: #0f8f8412; }
+.gmd-income-knocked { fill: none; stroke: var(--gmd-dusd); stroke-width: 2; stroke-linejoin: round; }
+.gmd-fund-main > .gmd-pool-ask { margin: 0; }
+@media (prefers-reduced-motion: no-preference) {
+  .gmd-income-knocked { stroke-dasharray: 1; animation: gmd-lq-draw 1100ms 200ms cubic-bezier(.3,.7,.2,1) both; }
+  .gmd-income-dot { animation: gmd-lq-pulse 2.4s 900ms ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+  .gmd-income-card { animation: gmd-lq-up 420ms cubic-bezier(.2,.8,.2,1) both; }
+  .gmd-income-card:nth-child(2) { animation-delay: 80ms; }
+  .gmd-income-card:nth-child(3) { animation-delay: 160ms; }
+}
+@media (max-width:860px) { .gmd-categories { grid-template-columns: repeat(2, minmax(0,1fr)); } .gmd-income-tiles { grid-template-columns: repeat(2, minmax(0,1fr)); } }
+@media (max-width:600px) { .gmd-income-tiles { grid-template-columns: 1fr; } .gmd-income-section { padding: 14px; } }
