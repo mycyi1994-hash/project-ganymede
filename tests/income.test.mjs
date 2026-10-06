@@ -213,6 +213,10 @@ test("a record passes only with its product's published terms, not other terms w
   const beforeDate = copy(called.document);
   beforeDate.state.observations[0].observedAt = "2027-04-01T12:00:00.000Z";
   assert.equal(recomputeIncomeNav("spy-qqq-autocall-1", beforeDate), null, "observed before its date");
+  // A live record dated past its next observation skipped it: the note would have been observed then.
+  const skipped = copy(unknocked.document);
+  skipped.asOf = "2027-04-05T12:00:00.000Z";
+  assert.equal(recomputeIncomeNav("spy-qqq-autocall-1", skipped), null, "a live note past its observation date");
 });
 
 test("three income products beside the baskets, recorded under their own product keys", () => {

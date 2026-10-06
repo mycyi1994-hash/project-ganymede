@@ -100,6 +100,8 @@ export function incomeTermsHold(productId: string, document: IncomeDocument): bo
   const status = last?.called ? "called" : count === terms.barriers.length ? "matured" : "live";
   if (state.status !== status || state.payout !== payout) return false;
   const next = status === "live" ? count + 1 : null;
+  // A live note is observed at its first record on or after the date, so a record past the next date skipped it.
+  if (next && Date.parse(observationDate(terms, state.fixedAt, next)) <= asOf) return false;
   return same(document.nextObservation, next ? { index: next, date: observationDate(terms, state.fixedAt, next), barrier: terms.barriers[next - 1], payIfCalled: couponPayout(terms, next) } : null);
 }
 

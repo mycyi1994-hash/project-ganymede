@@ -12,7 +12,9 @@ import { GET as readNavApi } from "../api/v1/ustx/route";
 import { GET as readPoolsApi } from "../api/v1/ustx/pools/route";
 import { GET as readActivityApi } from "../api/v1/ustx/activity/route";
 import { FUNDS, type FundDefinition } from "@/lib/funds/catalog";
-import { fundDetail, fundSummaries, type FundDetail } from "@/lib/funds/api";
+import { fundDetail, fundSummaries } from "@/lib/funds/api";
+import { fundStateKey } from "@/lib/funds/cycle";
+import { sha256Hex } from "@/lib/engine/fixed";
 import { coveredCallReturn, premiumYield, type CoveredCallDocument } from "@/lib/income/covered-call";
 import { couponPayout, observationDate, type AutocallDocument } from "@/lib/income/autocall";
 import { autocallTerms } from "@/lib/income/terms";
@@ -76,10 +78,19 @@ function fundByName(value: unknown): FundDefinition {
   return fund;
 }
 
-/** The latest confirmed record's document, as the product's page reads it. */
-function latestDocument(detail: FundDetail): unknown {
-  const entry = detail.history.find(item => item.status === "confirmed") ?? detail.history[0];
-  try { return entry ? JSON.parse(entry.canonical) : null; } catch { return null; }
+/**
+ * The document of the product's latest confirmed record, the one its NAV comes from, whatever the
+ * records after it did; null if there is none or it does not hash to that record.
+ */
+async function confirmedDocument(repo: EngineRepository, fund: FundDefinition): Promise<unknown> {
+  const stored = await repo.getState(fundStateKey(fund.id, "confirmed"));
+  try {
+    const record = stored ? JSON.parse(stored.value) as Publication : null;
+    if (!record?.canonical || (await sha256Hex(record.canonical)).toLowerCase() !== record.holdingsHash.toLowerCase()) return null;
+    return JSON.parse(record.canonical);
+  } catch {
+    return null;
+  }
 }
 
 /** What a product's latest document says, in a customer's terms: holdings, the month's call, or the note's levels. */
@@ -311,7 +322,8 @@ export function ustxTools(origin: string): McpTool[] {
       inputSchema: { type: "object", properties: { id: { type: "string", description: "a product's id or ticker from list_funds, such as spy-qqq-autocall-1 or ELS1" } }, required: ["id"], additionalProperties: false },
       run: async (args) => {
         const fund = fundByName(args.id);
-        const detail = await fundDetail(new EngineRepository(engineEnv().DB), fund);
+        const repo = new EngineRepository(engineEnv().DB);
+        const [detail, document] = await Promise.all([fundDetail(repo, fund), fund.onchainShares ? Promise.resolve(null) : confirmedDocument(repo, fund)]);
         const base = {
           id: fund.id, ticker: fund.ticker, name: fund.name, kind: fund.kind ?? "basket", description: fund.description,
           navUsd: detail.nav ? usd(detail.nav.perShareMicros) : null, asOf: detail.nav?.asOf ?? null,
@@ -320,7 +332,7 @@ export function ustxTools(origin: string): McpTool[] {
           investable: fund.onchainShares, page: page(fund.href),
         };
         if (fund.onchainShares) return { ...base, seeAlso: "get_ustx_nav, get_ustx_holdings and quote_ustx_order give USTX's record, holdings and quotes.", environment: DEMO };
-        return { ...base, ...describeDocument(fund, latestDocument(detail), Date.now()), notOpen: "Investing in this product is not open yet: it has no share token. Its value is recorded on X Layer every five minutes.", environment: DEMO };
+        return { ...base, ...describeDocument(fund, document, Date.now()), notOpen: "Investing in this product is not open yet: it has no share token. Its value is recorded on X Layer every five minutes.", environment: DEMO };
       },
     },
   ];

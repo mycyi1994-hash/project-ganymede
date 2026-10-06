@@ -181,6 +181,18 @@ test("Ask USTX and MCP agents read every product: the list, a basket's weights, 
     assert.equal(note.nextObservation.paysPer100IfCalled, 103.5);
     assert.equal(note.schedule.length, 6);
     assert.equal(note.documentConsistent, true);
+    // Records the relayer has not confirmed do not replace the confirmed record's document, which the NAV is from.
+    db.readOnly = false;
+    const key = fundStateKey("spy-covered-call", "history");
+    const queued = JSON.parse(sql.prepare("SELECT value FROM engine_state WHERE key = ?").get(key).value);
+    const moved = JSON.parse(queued[0].canonical);
+    moved.underlying.price = 700;
+    queued.unshift({ ...queued[0], asOf: "2026-10-04T03:10:00.000Z", canonical: JSON.stringify(moved), status: "failed", txHash: null });
+    sql.prepare("UPDATE engine_state SET value = ? WHERE key = ?").run(JSON.stringify(queued.map((entry) => ({ ...entry, status: entry.txHash ? "failed" : entry.status }))), key);
+    db.readOnly = true;
+    const confirmedCall = await run("get_fund", { id: "SPYC" });
+    assert.equal(confirmedCall.etf.priceUsd, 668.9, "the confirmed record's ETF price, not a newer unconfirmed one");
+    assert.equal(confirmedCall.asOf, at);
     const ustx = await run("get_fund", { id: "USTX" });
     assert.match(ustx.seeAlso, /get_ustx_holdings/);
     await assert.rejects(run("get_fund", { id: "nope" }), /id must be one of/);
