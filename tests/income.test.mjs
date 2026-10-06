@@ -145,6 +145,25 @@ test("a record passes only with its product's published terms, not other terms w
   const mark = copy(later.document);
   mark.call.value = mark.call.value + 1;
   assert.equal(recomputeIncomeNav("spy-covered-call", mark), null, "the call's value is the one its inputs give");
+  // The call was sold at $650: its strike is 2% above that and its premium is Black–Scholes's. A lower
+  // strike with a richer premium, the call's value and the NAV made to agree, is not this product's call.
+  assert.equal(later.document.call.spot, 650);
+  const remade = (document) => { const marked = coveredCallNav(document); document.call.value = marked.callValue; document.navPerShareMicros = marked.navMicros.toString(); return document; };
+  const lowStrike = copy(later.document);
+  lowStrike.call.strike = 600;
+  lowStrike.call.premium = 100;
+  assert.equal(recomputeIncomeNav("spy-covered-call", remade(lowStrike)), null, "the strike and premium of a call sold at $650");
+  const resold = copy(later.document);
+  resold.call.spot = 600;
+  assert.equal(recomputeIncomeNav("spy-covered-call", remade(resold)), null, "the strike follows the price it was sold at");
+  // A call sold before its price was recorded is held to the premium its strike gives, within the cent.
+  const legacy = copy(later.document);
+  delete legacy.call.spot;
+  assert.equal(recomputeIncomeNav("spy-covered-call", legacy), BigInt(later.document.navPerShareMicros));
+  const legacyRich = copy(legacy);
+  legacyRich.call.strike = 600;
+  legacyRich.call.premium = 100;
+  assert.equal(recomputeIncomeNav("spy-covered-call", remade(legacyRich)), null, "a premium its strike does not give");
   // The note: its terms, observations and payout are the published ones.
   const terms = INCOME_TERMS["spy-qqq-autocall-1"];
   const fixed = stepAutocall("spy-qqq-autocall-1", terms, null, { SPYx: 650, QQQx: 590 }, "2026-10-04T12:00:00.000Z");
@@ -160,9 +179,18 @@ test("a record passes only with its product's published terms, not other terms w
   early.state.observations[0].barrier = 0.8;
   assert.equal(recomputeIncomeNav("spy-qqq-autocall-1", early), null, "each observation against its own barrier");
   const unknocked = stepAutocall("spy-qqq-autocall-1", terms, fixed.state, { SPYx: 640, QQQx: 283.2 }, "2026-11-04T12:00:00.000Z");
+  assert.equal(recomputeIncomeNav("spy-qqq-autocall-1", copy(unknocked.document)), 100_000_000n);
   const hidden = copy(unknocked.document);
   hidden.state.knockedIn = false;
   assert.equal(recomputeIncomeNav("spy-qqq-autocall-1", hidden), null, "a knock-in cannot be hidden");
+  // Nor by raising the lowest level above this record's worse index, which is at 48%.
+  const raised = copy(unknocked.document);
+  Object.assign(raised.state, { lowestWorst: 1, knockedIn: false, knockedInAt: null });
+  assert.equal(raised.worst, 0.48);
+  assert.equal(recomputeIncomeNav("spy-qqq-autocall-1", raised), null, "the lowest level is at or below today's");
+  const untimed = copy(unknocked.document);
+  untimed.state.knockedInAt = null;
+  assert.equal(recomputeIncomeNav("spy-qqq-autocall-1", untimed), null, "a knock-in has its time");
 });
 
 test("three income products beside the baskets, recorded under their own product keys", () => {

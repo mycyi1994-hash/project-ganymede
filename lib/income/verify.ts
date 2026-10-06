@@ -11,12 +11,31 @@ import { PROOF_DEPLOYMENT } from "../xstocks/proof";
 import { NAV_MAX_AGE_MS } from "../funds/verification";
 import { autocallNav, couponPayout, maturityPayout, observationDate, subscriptionEnd, type AutocallDocument } from "./autocall";
 import { coveredCallNav, type CoveredCallDocument } from "./covered-call";
+import { callPrice } from "./options";
 import { autocallTerms, coveredCallTerms } from "./terms";
 
 export type IncomeDocument = CoveredCallDocument | AutocallDocument;
 export type IncomeVerification =
   | { result: "matched"; detail: string; record: OnchainNav; document: IncomeDocument }
   | { result: "failed" | "unavailable" | "checking"; detail: string; record?: never; document?: never };
+
+/**
+ * A call sold on the product's terms: the strike 2% above the ETF price it was sold at, rounded to the
+ * cent, and the premium Black–Scholes gives at the stated volatility and rate for the tenor. A call
+ * records that price from 6 October 2026; an earlier one is held to its strike's premium within what
+ * the cent rounding of the strike leaves open (a price within half a cent of strike / (1 + moneyness)).
+ */
+function callSoldOnTerms(call: CoveredCallDocument["call"], terms: { moneyness: number; tenorDays: number; volatility: number; rate: number }): boolean {
+  if (!(call.strike > 0) || !(call.premium > 0)) return false;
+  const years = terms.tenorDays / 365;
+  if (typeof call.spot === "number") {
+    if (!(call.spot > 0)) return false;
+    const strike = Number((call.spot * (1 + terms.moneyness)).toFixed(2));
+    return call.strike === strike && call.premium === Number(callPrice(call.spot, strike, years, terms.volatility, terms.rate).toFixed(6));
+  }
+  if (call.spot !== undefined) return false;
+  return Math.abs(call.premium - callPrice(call.strike / (1 + terms.moneyness), call.strike, years, terms.volatility, terms.rate)) <= 0.006;
+}
 
 /** Deep equality of plain JSON values, whatever the order of their keys. */
 function same(a: unknown, b: unknown): boolean {
@@ -45,14 +64,19 @@ export function incomeTermsHold(productId: string, document: IncomeDocument): bo
       && same(document.terms, { moneyness: terms.moneyness, tenorDays: terms.tenorDays, volatility: terms.volatility, rate: terms.rate })
       && call.expiresAt === isoPlusDays(call.soldAt, terms.tenorDays)
       && Date.parse(document.startedAt) <= Date.parse(call.soldAt) && Date.parse(call.soldAt) <= Date.parse(document.asOf) && Date.parse(document.asOf) < Date.parse(call.expiresAt)
-      && call.strike > 0 && call.premium > 0 && call.value === coveredCallNav(document).callValue;
+      && callSoldOnTerms(call, terms) && call.value === coveredCallNav(document).callValue;
   }
   const terms = autocallTerms(productId);
   if (!terms) return false;
   const { state } = document;
   if (!same(document.terms, { underlyings: terms.underlyings, face: terms.face, subscriptionDays: terms.subscriptionDays, observationMonths: terms.observationMonths, barriers: terms.barriers, knockIn: terms.knockIn, couponPerYear: terms.couponPerYear })) return false;
   if (Date.parse(state.fixedAt) < Date.parse(terms.fixingFrom) || document.subscriptionEndsAt !== subscriptionEnd(terms, state.fixedAt)) return false;
-  if (state.knockedIn !== state.lowestWorst < terms.knockIn) return false;
+  // The lowest level is a minimum over every record, so it is at or below this record's (while the
+  // note is live) and every observation's; a knock-in follows from it and has its time.
+  if (state.status === "live" && state.lowestWorst > document.worst) return false;
+  if (state.observations.some(observation => state.lowestWorst > observation.worst)) return false;
+  if (state.knockedIn !== state.lowestWorst < terms.knockIn || state.knockedIn !== (state.knockedInAt !== null)) return false;
+  if (state.knockedInAt !== null && (Date.parse(state.knockedInAt) < Date.parse(state.fixedAt) || Date.parse(state.knockedInAt) > Date.parse(document.asOf))) return false;
   // Each observation is the next one on the schedule, against its own barrier, and only the last may call the note.
   const count = state.observations.length;
   if (count > terms.barriers.length) return false;
