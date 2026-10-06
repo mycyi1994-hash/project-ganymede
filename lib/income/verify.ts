@@ -67,6 +67,11 @@ const isoPlusDays = (iso: string, days: number) => new Date(Date.parse(iso) + da
  * Whether a document follows its product's pinned terms (lib/income/terms.ts), so a record cannot
  * pass with other terms whose NAV merely holds together: a covered call's underlying, strike rule
  * inputs, tenor and the call's mark; a note's barriers, coupon, knock-in, observations and payout.
+ *
+ * One record shows what was decided at it: the fixing, a sale, an observation or a knock-in taken
+ * then is held to that record's own prices. What an earlier record decided (a knock-in or an
+ * observation before this one, the units after a roll) is held to the terms and to this record's
+ * levels, but its own prices are only in that record's document, which a later page may not have.
  */
 export function incomeTermsHold(productId: string, document: IncomeDocument): boolean {
   if (document.product !== productId) return false;
