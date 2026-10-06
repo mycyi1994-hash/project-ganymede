@@ -2051,6 +2051,15 @@ a.gmd-pool-pair:hover b { text-decoration: underline; text-underline-offset: 3px
 .gmd-wallet-help .gmd-button { justify-content: center; }
 .gmd-wallet-help .gmd-inline-link { justify-self: start; }
 
+/* Phones: the holdings table's cells and marks shrink so its weight column fits (390, 375 and 360px wide). */
+@media (max-width: 420px) {
+  .gmd-basket-table .gmd-table :is(th,td) { padding-inline: 4px; }
+  .gmd-basket-table .gmd-basket-asset { gap: 8px; }
+  .gmd-basket-table .gmd-asset-mark { width: 26px; height: 26px; }
+  .gmd-basket-table .gmd-asset-mark img { width: 18px; height: 18px; }
+}
+@media (max-width: 370px) { .gmd-basket-table .gmd-table { font-size: 12px; } }
+
 /* Phones: the constituent rows' fixed columns shrink so the weight is not cut off. */
 @media (max-width: 420px) {
   .gmd-constituents-head, .gmd-holdings.is-compact .gmd-constituents-head { grid-template-columns: minmax(0,1fr) 84px 72px 12px; gap: 8px; }
