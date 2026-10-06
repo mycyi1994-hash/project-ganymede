@@ -145,6 +145,13 @@ test("a record passes only with its product's published terms, not other terms w
   const mark = copy(later.document);
   mark.call.value = mark.call.value + 1;
   assert.equal(recomputeIncomeNav("spy-covered-call", mark), null, "the call's value is the one its inputs give");
+  // The roll count and the start agree with the call: none yet, sold at the start.
+  const rolled = copy(later.document);
+  rolled.rolls = 3;
+  assert.equal(recomputeIncomeNav("spy-covered-call", rolled), null, "no roll before the first call expires");
+  const relaunched = copy(later.document);
+  relaunched.startedAt = "2026-09-01T12:00:00.000Z";
+  assert.equal(recomputeIncomeNav("spy-covered-call", relaunched), null, "the first call is sold at the start");
   // The call was sold at $650: its strike is 2% above that and its premium is Black–Scholes's. A lower
   // strike with a richer premium, the call's value and the NAV made to agree, is not this product's call.
   assert.equal(later.document.call.spot, 650);

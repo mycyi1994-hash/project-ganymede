@@ -64,6 +64,9 @@ export function incomeTermsHold(productId: string, document: IncomeDocument): bo
       && same(document.terms, { moneyness: terms.moneyness, tenorDays: terms.tenorDays, volatility: terms.volatility, rate: terms.rate })
       && call.expiresAt === isoPlusDays(call.soldAt, terms.tenorDays)
       && Date.parse(document.startedAt) <= Date.parse(call.soldAt) && Date.parse(call.soldAt) <= Date.parse(document.asOf) && Date.parse(document.asOf) < Date.parse(call.expiresAt)
+      // The first call is sold at the start, and each roll at least a tenor after the sale before it.
+      && Number.isInteger(document.rolls) && document.rolls >= 0 && (document.rolls === 0) === (call.soldAt === document.startedAt)
+      && Date.parse(call.soldAt) >= Date.parse(document.startedAt) + document.rolls * terms.tenorDays * 86_400_000
       && callSoldOnTerms(call, terms) && call.value === coveredCallNav(document).callValue;
   }
   const terms = autocallTerms(productId);
