@@ -15,7 +15,7 @@ material out of those screens: the technical checks, the tamper experiment and
 the evidence download (re-checked by `npm run verify:evidence`) live on
 `/developers`, which with `/issuers`, the `/embed/ustx` badge (and `/embed/basket` for a basket
 defined by a file under `public/baskets/`, such as the MAG3 demo in its own registry) and the public
-`GET /api/v1/ustx` (with `GET /api/v1/ustx/activity` `GET /api/v1/ustx/pools`, `GET /api/v1/funds` (every fund's latest record, or one fund with ?id=), `GET /api/v1/ustx/usage` (usage since launch, the team's wallets in `lib/xstocks/team-wallets.ts` apart) and `GET /api/v1/ustx/dex-quotes` (hourly OKX DEX aggregator quotes for buying the nine xStocks by hand, `lib/xstocks/dex-quotes.ts`), described in `/api/v1/openapi.json`, with `/llms.txt` for agents) and the read-only MCP server at `/mcp` (`lib/mcp/server.ts`, tools in `app/mcp/tools.ts`) form the partner surface linked from the footer. The
+`GET /api/v1/ustx` (with `GET /api/v1/ustx/activity` `GET /api/v1/ustx/pools`, `GET /api/v1/funds` (every fund's latest record, or one fund with ?id=), `GET /api/v1/ustx/usage` (usage since launch, the team's wallets in `lib/xstocks/team-wallets.ts` apart) and `GET /api/v1/ustx/dex-quotes` (hourly OKX DEX aggregator quotes for buying the nine xStocks by hand, `lib/xstocks/dex-quotes.ts`), described in `/api/v1/openapi.json`, with `/llms.txt` for agents) and the MCP server at `/mcp` (`lib/mcp/server.ts`, nine tools in `app/mcp/tools.ts`, all reads: `prepare_ustx_order` returns unsigned transactions for the user's wallet, and Ask USTX gets every tool but that one; about 30 tool calls a minute per address) form the partner surface linked from the footer. The
 earlier work is retired from the public site: the won-denominated paper Lab (`/lab`, `/lab/*`, `/etfs/*`,
 `/?app=portfolio`) and the GMDCORE test share ledger (`/activity`, `/activity/*`) redirect to the dollar product,
 the old operator console (`/?app=operations`) is not served (the operator API remains), and public pages show US dollars only (tested in `tests/rendered-html.test.mjs`). Production is the `ganymede-xlayer` Worker; the
@@ -24,7 +24,7 @@ settlement relayer is `ganymede-settlement-relayer`, and the arbitrage keeper is
 crons: the USTX NAV record every five minutes (`runUstxNavCycle`; the earlier engine's
 paper strategies run only through the operator API, so the record stays small in CPU time),
 and the market activity index (`lib/xstocks/activity-index.ts`, with the pools' results for their
-providers as a second job) four minutes past, apart so it never holds up the NAV, and snapshots of both pools and the latest NAV record every minute
+providers as a second job) four minutes past, apart so it never holds up the NAV, and snapshots of the pools and the latest NAV record every minute
 (`runPoolsSnapshot` in `lib/xstocks/pools-api.ts`, `runNavSnapshot` in `lib/xstocks/nav-api.ts`) that `GET /api/v1/ustx/pools` and `GET /api/v1/ustx` serve while under 90 seconds old. The fund and the lending market refuse a NAV older than one hour,
 so a stalled record stops wallet orders and loans; check the cron's outcome after each deploy.
 `docs/PRODUCT_RELEASE.md` records the current source and Worker version.

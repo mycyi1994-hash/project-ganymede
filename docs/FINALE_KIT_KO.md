@@ -78,115 +78,141 @@
 5. Ask USTX 질문은 미리 정한 두 개만: "What is USTX's NAV right now, and is it verified?", "Where would $500 buy the most USTX?"
 6. 네트워크가 끊기면 녹화 영상으로 넘어가 같은 대본을 말한다.
 
-## 3. 예상 질문과 답
+## 3. 킬링 질문 30개와 답 (심사위원 5인 × 6)
 
-답은 짧게 하고, 숫자는 0절 표에서만 쓴다. "EN"은 영어로 물을 때의 첫 문장이다.
+답은 짧게 하고, 숫자는 0절 표에서만 쓴다. "EN"은 영어로 물을 때의 첫 문장이다. 각 질문의 근거와 10월 7일 새벽에 고친 빈틈은 `docs/JUDGE_REVIEW_KO.md`의 "킬링 질문 30개" 절에 있다.
 
-### 신뢰와 검증
+### A. X Layer 생태계 리드 (OKX)
 
-**Q1. 왜 당신들 가격을 믿어야 하나?**
-믿지 않아도 됩니다. 기록마다 가격 문서가 공개돼 있고 그 SHA-256이 X Layer에 있어서, 브라우저가 지문과 NAV를 직접 다시 계산합니다. 입력 가격은 X Layer 풀 9개와 비교해 1% 넘게 다르면 기록하지 않습니다.
-EN: You don't have to: your browser recomputes every record from its public document and the fingerprint on X Layer.
+**A1. OnchainOS를 가격 하나에만 쓰는 것 아닌가?**
+두 API를 씁니다. Market API가 5분마다 9종목 가격을 주고(NAV의 입력), DEX 집계기 견적 API가 한 시간마다 같은 9종목을 직접 살 때의 비용을 X Layer 메인넷에서 견적합니다(`/api/v1/ustx/dex-quotes`). 지갑은 OKX Wallet을 먼저 연결하고, 모든 기록은 OKX 탐색기로 연결됩니다.
+EN: Two OnchainOS APIs: market prices every five minutes for the NAV, and the DEX aggregator's hourly quotes for buying the nine by hand.
 
-**Q2. OnchainOS 가격과 풀 가격이 같이 틀리면?**
-그러면 통과합니다. 둘 다 X Layer 시장이라 함께 틀린 가격은 못 잡고, Limitations 페이지에 그렇게 적었습니다. 메인넷 전에 거래소의 원주 가격을 세 번째 기준으로 더합니다.
-EN: Then it passes; both are X Layer markets, which our limitations page states, and an exchange reference is the next step.
+**A2. 메인넷에는 아무것도 없는데 X Layer에 무엇을 더하나?**
+메인넷의 xStocks 9종 가격과 풀을 직접 읽어 NAV를 만들고, 그 NAV를 테스트넷 레지스트리·펀드·대출·풀 3개가 씁니다. 실제 돈이 없는 단계라 메인넷 배포는 의도적으로 하지 않았고, 다음 단계가 메인넷에 NAV를 가격 피드로만 기록하는 것입니다. X Layer의 xStocks는 9월 12일 기준 시가총액 약 9,150만 달러, 토큰화 주식 시장의 약 3.1%입니다(Crypto Briefing).
+EN: It prices the nine xStocks from X Layer mainnet and records a NAV others can verify; mainnet comes as a price feed only, before any money.
 
-**Q3. NAV 기록이 멈추면? (지금 멈춰 있는 이유)**
-펀드와 대출은 1시간 넘은 NAV를 거부해서 오래된 가격으로 체결하지 않고 멈춥니다. 10월 6일 14:23 UTC에 X Layer Testnet이 블록 42,837,767에서 멈췄고, 15:50에 다시 블록을 만들었지만 정지 중에 보낸 저희 거래가 처리되지 않아 기록이 14:20에서 멈췄습니다. 설계대로 주문은 막혔고 손실은 없습니다.
-EN: The fund and the lending market refuse a NAV older than an hour, so a stall stops orders instead of filling them at an old price.
-※ 그 전에 릴레이어가 풀리면 "테스트넷이 멈췄을 때 설계대로 멈췄다가 다시 이어졌다"로 바꿔 말한다.
+**A3. 오늘 테스트넷이 멈췄을 때 서비스가 몇 시간 멈췄다. 메인넷이면?**
+10월 6일 14:23 UTC에 X Layer Testnet이 블록 생성을 멈췄고, 재개 뒤에도 정지 중 보낸 릴레이어·키퍼 거래가 처리되지 않아 기록이 14:20에서 멈췄습니다. 설계대로 펀드·대출·두 NAV 풀이 멈췄고 손실은 없습니다. 고칠 점은 막힌 논스를 자동으로 다시 보내는 복구이고, 지금은 사람이 판단해 처리합니다. 메인넷에서는 발행 키를 여러 개 두고 상태를 공개 경보로 냅니다.
+EN: The testnet stalled; our contracts stopped trading on the old NAV as designed, and automatic nonce recovery is the fix we are adding.
+※ 그 전에 릴레이어가 풀려 재개됐으면 "멈췄다가 다시 이어졌다"로 말한다.
 
-**Q4. 기록하는 키(릴레이어)가 털리면?**
-털린 키는 잘못된 NAV를 기록할 수 있고, 관리자가 레지스트리를 멈추고 새 기록자를 지정할 때까지 펀드와 대출이 그 값을 씁니다. 기록은 지울 수 없어 잘못된 값은 계속 보이고, 브라우저 검증과 풀 비교가 경보 역할을 합니다. 관리자는 지금 단일 EOA라서 메인넷 전에 멀티시그와 타임락으로 옮깁니다.
-EN: A stolen publisher key could record a wrong NAV until the administrator pauses the registry; records can't be rewritten, and multisig and a timelock come before mainnet.
+**A4. OKX Wallet 앱(모바일)에서 실제로 써 봤나?**
+휴대폰에서 지갑이 없으면 OKX 앱으로 여는 링크가 뜨고, 주입형 지갑으로 청구·승인·투자·환매 전체 흐름을 브라우저에서 돌렸습니다. 실제 OKX Wallet 확장 프로그램을 자동 시험으로 몰지는 못했고, 공개 한계에 그렇게 적었습니다.
+EN: The whole flow ran with an injected test wallet in a browser; driving the real OKX Wallet extension in tests is a stated limit.
 
-**Q5. 감사(audit) 받았나?**
-아니요, 외부 감사는 없습니다. Slither를 전 컨트랙트에 돌려 High·Medium을 모두 분류했고(코드 변경이 필요한 것 0), v4 훅 1,000단계·대출 2,000단계 불변식 퍼즈, 컨트랙트 시험 116개, 3,000개 지갑 부하 시험을 했습니다. 12개 컨트랙트 모두 Sourcify에서 바이트코드가 정확히 일치합니다. 메인넷 로드맵의 첫 단계가 외부 감사입니다.
-EN: No external audit yet; Slither with every High and Medium finding triaged, invariant fuzzing, 116 contract tests and a 3,000-wallet load test, and an audit is the first step to mainnet.
+**A5. 메인넷 xStocks 유동성이 얕은데, 그 가격을 NAV에 쓰면 조작되지 않나?**
+OnchainOS 가격을 X Layer 메인넷 Uniswap V3 풀 9개와 비교해 1% 넘게 다르면 기록하지 않고, 브라우저도 같은 비교를 보여 줍니다. 둘 다 X Layer 시장이라 함께 틀리면 못 잡는 것은 한계로 공개했고, 거래소 원주 가격을 세 번째 기준으로 더하는 것이 다음 단계입니다. DEX 견적으로 9종목에 $111씩 사면 가격 영향은 최대 0.21%입니다.
+EN: Prices are checked against nine X Layer pools and refused beyond 1%; an exchange reference is next, since both are X Layer markets.
 
-**Q6. 관리자가 할 수 있는 것과 없는 것은?**
-개발자 페이지(`/developers`)의 "Who controls the contracts"가 12개 컨트랙트를 방문자 브라우저에서 직접 읽어 보여 줍니다. 관리자는 일시정지, 기록자·민터 지정, 관리자 이전만 할 수 있고, USTX를 기록된 NAV 밖에서 발행하거나 기록을 고치거나 남의 USTX·dUSD를 옮길 수 없습니다. 풀, 차익거래, 피드, 두 훅, 라우터는 관리자가 없습니다.
-EN: The page reads every role from the contracts: pausing and naming the publisher only; nobody can issue USTX off the recorded NAV, edit a record or move anyone's tokens.
+**A6. 다른 X Layer 앱이 오늘 이걸 가져다 쓰려면?**
+CORS가 열린 공개 API와 OpenAPI 명세, 브라우저에서 스스로 검증하는 배지(`/embed/ustx`), Chainlink `AggregatorV3Interface` 형식의 NAV 피드 컨트랙트, 그리고 MCP 서버가 있습니다. MAG3 바스켓은 설정 파일 하나로 다른 발행자 지갑이 자기 레지스트리에 기록합니다.
+EN: An open API with OpenAPI, a self-verifying badge, a Chainlink-style feed contract and an MCP server; MAG3 shows another issuer on the same rails.
 
-### 제품과 시장
+### B. DeFi 보안 엔지니어
 
-**Q7. 그냥 9종목을 직접 사면 되지 않나? 비용 차이도 작은데.**
-맞습니다, 비용 차이는 작습니다. OKX DEX 견적으로 $1,000을 9종목에 나누면 비용이 0.09%, 수수료는 1센트 남짓입니다. USTX의 가치는 비용보다 한 번의 주문(서명 2번 대 10번), 포지션 하나, 바스켓 안의 리밸런싱, 누구나 검증하는 NAV, 그리고 담보·가격 피드·풀처럼 다른 앱이 가져다 쓰는 조합성입니다.
-EN: The cost difference is small, about 0.09% on $1,000; the value is one order, one position, rebalancing, a verifiable NAV and composability.
+**B1. 릴레이어 키가 털리면 NAV를 10배로 기록해 대출 시장을 털 수 있나?**
+기록 한 번에 NAV가 움직일 수 있는 폭을 체인이 막지는 않습니다. 대신 브라우저의 풀 가격 비교가 그 기록을 "불일치"로 보여 주고, 기록은 지울 수 없어 남으며, 관리자가 레지스트리를 멈출 수 있습니다. 실제 돈 전에는 레지스트리에 기록당 변동 상한, 발행자 여러 명, 멀티시그와 타임락을 둡니다. SECURITY.md에 그대로 적었습니다.
+EN: Nothing on chain caps one record's move; the browser flags it, records stay visible, and a cap, several publishers and a timelocked multisig come before real money.
 
-**Q8. 배당은? xStocks는 배당을 주는데.**
-xStocks는 배당을 잔고 배수(multiplier)로 줍니다. 테스트넷 NAV는 종목마다 토큰 수를 고정해서 세기 때문에 배당과 액면분할은 아직 반영하지 않고, 공개 한계에 그렇게 적었습니다. 실물을 담는 현물 볼트는 고정 수량이 아니라 비율로 세서, xStocks 같은 배수 토큰으로 한 컨트랙트 시험에서 10% 배당이 환매자에게 그대로 갔습니다. 메인넷에서는 보유 잔고를 체인에서 읽어 NAV에 반영합니다.
-EN: Dividends arrive through the xStocks' balance multiplier; the testnet NAV doesn't model them yet, which we state, while our in-kind vault counts proportions and passes them to redeemers in its tests.
+**B2. 프런트엔드가 털리면(클릭재킹, 주입) 사용자가 악성 거래에 서명하지 않나?**
+모든 응답에 보안 헤더가 있습니다. 페이지는 다른 사이트의 프레임에 들어갈 수 없고(배지만 예외), MIME 추측·외부 base·플러그인을 막습니다. 앱은 모든 거래를 브라우저에서 만들고 먼저 모의 실행한 뒤 사용자 지갑이 서명하며, 키를 갖지 않습니다. 스크립트 출처 제한(CSP script-src)은 아직 없습니다.
+EN: Pages refuse framing and sniffing, every transaction is built and dry-run in the browser and signed by the user's own wallet; a script CSP is still to come.
 
-**Q9. 왜 X Layer인가?**
-xStocks가 X Layer 메인넷에 있고, OKX OnchainOS가 그 가격을 주고, 기록 한 번이 $0.00016이라 5분마다 기록해도 월 $1.40입니다. OKX Wallet 사용자가 바로 쓸 수 있습니다.
-EN: The xStocks live on X Layer, OnchainOS prices them, and a record costs about $0.00016, so five-minute records cost $1.40 a month.
+**B3. 범위 풀 훅은 감사·퍼즈를 했나?**
+외부 감사는 없습니다. 범위 훅에 1,000단계 불변식 퍼즈를 돌렸습니다: 포지션 206개를 열고 닫고, 스왑 138건, 차익거래 47건, NAV 기록 93번, 기록이 오래된 구간 19번 동안 훅과 차익거래는 토큰을 보유하지 않고, 풀 매니저는 항상 포지션에 줄 것 이상을 가지며, 스왑은 NAV 대역을 못 벗어나고, 닫으면 받을 몫을 받고, 모두 나갈 수 있었습니다. Slither도 31건을 분류했고 코드 변경이 필요한 것은 없었습니다.
+EN: No audit; 1,000 random steps of invariant fuzzing and a triaged Slither pass, with no change needed.
 
-**Q10. 사용자는 몇 명인가?**
-실사용자를 주장하지 않습니다. 사용량을 팀 지갑과 분리해 공개하고 있고(`/api/v1/ustx/usage`), 9월 25일 이후 팀 밖 지갑은 2개, 71건입니다. 지금의 고객은 개인 투자자보다 검증된 NAV가 필요한 바스켓 발행사와 그 NAV를 쓰려는 X Layer 앱입니다.
-EN: We claim no users: our public usage API separates the team's wallets, and two outside wallets have acted since September 25.
+**B4. 펀드를 일시정지하면 사용자가 USTX를 환매할 수 없지 않나?**
+맞습니다. 펀드의 일시정지는 투자와 환매를 함께 멈추고, 그동안은 풀에서만 팔 수 있습니다. 대출 시장의 일시정지는 상환·인출·청산을 막지 않습니다. 메인넷 설계에서는 환매를 일시정지에서 빼거나 타임락 뒤에 둡니다.
+EN: Yes, a fund pause stops redemptions too; the lending market's never blocks exits, and a mainnet fund would keep redemptions open.
 
-**Q11. 수익 모델은?**
-테스트넷에서는 받지 않습니다. 메인넷에서 발행사가 바스켓을 올리면 바스켓당 구독, 인가 파트너를 통한 판매 수수료, 그리고 바스켓을 담보로 받는 대출 프로토콜의 NAV 피드 구독입니다. 원가는 바스켓당 가스 월 약 $1.40이라, 예를 들어 연 0.15%를 받는 $10M 바스켓이면 연 $15,000 대 가스 약 $17입니다. 이 숫자는 예시이고 가격 제시가 아닙니다.
-EN: Nothing on testnet; on mainnet a per-basket subscription, a distribution fee through licensed partners and NAV feed subscriptions, against about $1.40 of gas a month per basket.
+**B5. NAV가 멈추면 청산도 멈춘다. 부실채권 위험은?**
+청산도 신선한 NAV가 필요해 멈춥니다. 50% 한도로 빌린 대출은 65%에서 청산 가능해지므로, 정지 중 NAV가 약 23% 떨어져야 청산 대상이 되고 50% 떨어져야 담보가 부족해집니다. 오래된 가격으로 청산하는 것보다 이쪽이 안전하다고 봤습니다.
+EN: Liquidations wait for a fresh NAV too; the NAV would have to fall about 23% during a stall to make a loan liquidatable and 50% to leave it short.
 
-**Q12. 규제는? 실제 돈은 언제?**
-토큰화 펀드는 규제 상품이라 인가 발행사, 수탁, 감사 없이는 실제 돈을 받지 않습니다. 코드에서도 실제 돈 투자 경로와 수탁 주소는 닫혀 있고 모든 화면에 데모 표시가 있습니다. 순서는 감사 → 메인넷에 NAV를 가격 피드로만 기록(주식 발행·자금 이동 없음) → 인가 발행사가 현물 볼트로 xStocks 수탁 → 유통입니다.
-EN: Real money only with a licensed issuer, custody and an audit; the road is audit, mainnet NAV as a price feed only, a licensed issuer with custody, then distribution.
+**B6. 컨트랙트가 배포된 코드와 같다는 걸 어떻게 아나?**
+X Layer Testnet의 12개 컨트랙트 모두 Sourcify에서 생성·런타임 바이트코드가 정확히 일치하고, 처음 8개는 OKX 탐색기 검증도 마쳤습니다. 개발자 페이지의 "Who controls the contracts"가 12개의 관리자·발행자·소유자·일시정지를 방문자 브라우저에서 직접 읽습니다.
+EN: All twelve contracts match exactly on Sourcify, and the developer page reads every role and pause from the chain in your browser.
 
-**Q13. 테스트넷 펀드에 실제 xStocks가 있나?**
-없습니다. 테스트넷 펀드는 투자 때 데모 달러를 소각하고 환매 때 발행합니다. 실물을 담는 현물 볼트는 X Layer 메인넷 포크에서 실제 AAPLx·MSFTx·NVDAx로 생성과 환매를 돌렸고, 배포하지 않았습니다.
-EN: No; the testnet fund burns and mints demo dollars, and the in-kind vault ran with real xStocks only on a mainnet fork.
+### C. 프로덕트·UX 리드
 
-**Q14. 기존 서비스와 무엇이 다른가?**
-DTCC Smart NAV, Centrifuge, Reserve의 인덱스 DTF처럼 NAV를 체인에 올리거나 바스켓을 발행하는 곳은 있습니다. 저희 차이는 방문자가 자기 브라우저에서 NAV를 한 줄씩 재현하고, 어떤 검사가 어떤 조작을 잡는지 보고, 그 결과를 파일로 넘길 수 있다는 점, 그리고 NAV 자산의 공급자를 차익거래에서 지키는 v4 훅입니다.
-EN: Others put NAVs on chain; here any visitor reproduces the NAV in their own browser and passes the proof on as a file, and the hook protects providers of a NAV asset.
+**C1. 처음 온 사람이 1분 안에 무엇을 하나?**
+Markets에서 USTX를 누르면 NAV·구성·검증 결과가 보이고, OKX Wallet을 연결하면 테스트 OKB가 없는 지갑에 0.0005를 한 번 주고, dUSD를 받아 $10부터 투자합니다. 처음에는 서명이 3번(dUSD 받기, 승인, 투자)입니다.
+EN: Open USTX, connect OKX Wallet, take free test gas and demo dollars, and invest from $10: three signatures the first time.
 
-### 기술
+**C2. NAV가 멈춘 지금 화면은 사용자에게 뭐라고 하나?**
+모든 화면 맨 위에 "NAV record delayed"와 마지막 기록 시각·경과 시간이 글자로 뜹니다(색만이 아니라). 주문 패널은 지갑을 연결하기 전부터 펀드 주문이 다음 기록을 기다린다고 말하고, 대출은 "새 대출은 다음 NAV 기록을 기다린다", Transparency는 "주문·대출 유효 시간이 N시간 전에 지났다", 배지는 "delayed"와 함께 Invest 대신 Details를 보여 줍니다. Pools는 풀 자체 가격으로 가치를 보여 주며 이유를 적고, Ask USTX는 주문 가능 여부를 먼저 확인해 답합니다(10월 7일 새벽 수정 전에는 한국어 질문에 "지금 살 수 있다"고 답했고, 화면 여럿이 "Live", "open now"라고 했다).
+EN: Every screen says the NAV record is delayed and since when, in words; the order panel, borrowing, the badge and Ask USTX all say orders wait for the next record.
 
-**Q15. v4 훅은 일반 풀과 무엇이 다른가?**
-새 NAV가 기록되면 거래보다 먼저 풀을 NAV로 옮겨서 아무도 옛 가격으로 공급자와 거래할 수 없습니다. 예치는 다음 기록 가격으로 받습니다. 수수료는 NAV가 오래될수록 0.30%에서 1.00%로 오르고, 1시간이 넘으면 스왑이 멈추며, NAV에서 약 5% 밖으로는 못 갑니다. 10월 1일 이후 차익거래로 잃은 돈이 0입니다.
-EN: Before any trade after a new record it moves the pool to the NAV, so nobody trades the old price against providers; arbitrage has taken nothing from it since October 1.
+**C3. 블록 격자(DLMM) 편집기는 처음 보는 사람이 이해하나? 휴대폰은?**
+Meteora DLMM Pro처럼 가격 아래 dUSD, 위 USTX 칸을 블록으로 쌓습니다. 누르면 그 높이까지 차고, 끌면 칠해지고, 화살표 키로도 조절하며, 되돌리기와 이름 붙여 저장이 있습니다. 1440·390px에서 확인했고, 처음 열면 Custom이 선택돼 있습니다.
+EN: Blocks below the price hold demo dollars and above it USTX, as on DLMM Pro: press, drag or use the arrow keys, with undo and saved setups.
 
-**Q16. 범위 풀 훅은 왜 여러 번 배포했나?**
-10월 4일 처음 배포했고, 10월 6일 두 번 바꿨습니다. 한 번은 포지션을 열 때 가격 한도를 받게 하려고, 한 번은 칸마다 모양을 직접 그리는 기능(`openCustom`) 때문입니다. 매번 포크에서 교체를 리허설했고, 이전 훅의 시드 포지션은 닫았으며 다른 지갑의 열린 포지션은 없었습니다. 컨트랙트에 관리자가 없어서 고치려면 새로 배포하는 수밖에 없습니다.
-EN: Twice on October 6, to add a price limit and drawn shapes; it has no administrator, so a change means a new deployment, rehearsed on a fork with no outside positions open.
+**C4. 한국어 사용자는?**
+화면은 영어지만 Ask USTX는 방문자의 언어로 답합니다. 한국어 질문에 한국어로 답하는 것을 운영에서 확인했습니다.
+EN: The screens are in English; Ask USTX answers in the visitor's language, Korean included.
 
-**Q17. 커버드콜 가격은 어디서 오나? 옵션 시장이 없는데.**
-그래서 모델입니다. X Layer에 xStocks 옵션 시장이 없어서, 매달 콜 가격을 Black–Scholes로 공개된 조건(변동성 S&P 16%, 나스닥 21%, 금리 4%)에 매기고 데모에서는 펀드가 그 콜을 씁니다. 변동성은 지난 1년 VIX·VXN 평균 근처입니다. 브라우저가 문서에서 그 값을 다시 계산합니다.
-EN: There is no options market for xStocks on X Layer, so each month's call is priced by Black–Scholes at stated terms, which the browser recomputes.
+**C5. 접근성은?**
+블록 격자는 키보드로 조작되고, 칸마다 가격 구간·토큰(달러 또는 USTX)·예치금 중 몫을 읽어 줍니다. 전략 선택은 화살표 키로 움직이는 라디오 그룹입니다. 운영 사이트 7개 화면을 1440·390px에서 axe로 점검해, /pools의 심각 2건(역할 없는 차트 칸 20개, 대비 3.74:1)을 고쳤습니다. 남은 한계: 휴대폰에서 칸이 많으면 칸 폭이 24px보다 좁습니다(칸 수를 줄이거나 키보드로 조작).
+EN: The editor is keyboard-operable and each column reads its price range, token and share; axe on seven live screens, with the two serious issues on Pools fixed.
 
-**Q18. ELS1은 누가 지급하나?**
-기록된 SPYx·QQQx 가격으로 지급액을 정하고, 헤지는 없습니다. 데모 상품이고 투자는 열려 있지 않습니다.
-EN: It pays from recorded prices with nothing hedging it; it's a demo product, not open to investing.
+**C6. 오류는 어떻게 보이나? (지갑 거부, 잔액 부족, 체인 다름)**
+주문은 서명 전에 모의 실행해 컨트랙트의 거절 이유를 사람이 읽는 문장으로 보여 주고, 지갑이 다른 체인이면 X Layer Testnet으로 바꾸라고 요청합니다. 거부한 요청도 시험했습니다.
+EN: Every order is dry-run first and its revert shown in plain words; a wrong chain gets a switch request.
 
-**Q19. AI는 무엇을 하나? 환각은?**
-읽기만 합니다. 체인과 기록을 읽는 도구 8개로만 답하고, 답마다 읽은 도구를 표시하며, 투자 조언은 거절합니다. 같은 도구가 키 없이 쓰는 MCP 서버(`/mcp`)라서 다른 에이전트도 같은 근거를 씁니다.
-EN: It only reads, through eight tools, names the tools behind each answer and refuses investment advice.
+### D. VC·사업 파트너 (OKX Ventures)
 
-**Q20. OKX.AI에 등록했나?**
-MCP 서버는 OKX.AI A2MCP 클라이언트가 바로 붙을 수 있게 열려 있고, 등록은 신청 후 승인 전입니다.
+**D1. 시장은 얼마나 크고 왜 지금인가?**
+토큰화 주식은 2026년 8월 25~30억 달러 규모로 1년 사이 크게 늘었고, xStocks는 2025년 6월 출시 뒤 누적 거래액 350억 달러를 넘었으며(9월 기준 보도), X Layer의 xStocks는 9월 12일 약 9,150만 달러입니다. 바스켓은 개별 종목 다음에 오는 상품이고, 그때 필요한 것이 누구나 검증하는 NAV입니다.
+EN: Tokenized equities reached about $2.5–3B by August 2026 and xStocks passed $35B traded; baskets come next, and they need a NAV anyone can check.
+
+**D2. 고객은 누구고 왜 돈을 내나? 실사용은?**
+첫 고객은 개인이 아니라 바스켓 발행사와 그 NAV를 쓰는 X Layer 앱입니다. 실사용자는 주장하지 않습니다: 팀 지갑을 뺀 사용량을 공개하고 있고(`/api/v1/ustx/usage`), 9월 25일 이후 팀 밖 지갑은 2개입니다. 다음 달 목표는 파일럿 발행사 1곳과 커뮤니티 시험입니다.
+EN: Issuers and X Layer apps first; we claim no users and publish usage without our wallets: two outside wallets since September 25.
+
+**D3. Backed(xStocks)나 OKX가 직접 바스켓을 내면 끝 아닌가?**
+그러면 그들이 저희 고객입니다. 저희가 파는 것은 바스켓이 아니라 검증 가능한 NAV 기록·검증·배지·API와 NAV 자산 유동성 공급자를 지키는 훅입니다. 설정 파일 하나로 다른 발행자가 자기 지갑과 레지스트리로 쓸 수 있게 만들었습니다(MAG3).
+EN: Then they are our customers: we sell the verifiable NAV, its checks and the hooked liquidity, not the basket.
+
+**D4. 수익 모델과 단위 경제는?**
+테스트넷은 무료입니다. 메인넷에서 바스켓당 구독, 인가 파트너를 통한 판매 수수료, 바스켓을 담보로 받는 프로토콜의 NAV 피드 구독입니다. 원가는 바스켓당 가스 월 약 $1.40입니다. 예를 들어 연 0.15%를 받는 $10M 바스켓이면 연 $15,000 대 가스 약 $17이고, 이것은 예시이지 가격 제시가 아닙니다. 참고로 Invesco QQQ의 보수는 연 0.20%입니다.
+EN: Free on testnet; per-basket subscriptions, a distribution fee and NAV-feed subscriptions on mainnet, against about $1.40 of gas a month per basket.
+
+**D5. 규제는? 한국에서 할 수 있나?**
+토큰화 펀드는 증권이라 인가 발행사·수탁·감사 없이는 실제 돈을 받지 않습니다. 저희는 발행사가 아니라 그 발행사가 쓰는 NAV·검증 인프라를 목표로 합니다. 순서는 감사 → 메인넷 NAV를 가격 피드로만 → 인가 발행사가 현물 볼트로 수탁 → 유통입니다. 국가별 판단은 파트너 발행사의 인가 범위를 따릅니다.
+EN: A tokenized fund is a security; we stay infrastructure for a licensed issuer, in the order audit, mainnet feed, licensed issuer with custody, then distribution.
+
+**D6. 다음 6개월 마일스톤과 OKX에 원하는 것은?**
+감사, 관리자 멀티시그·타임락, 메인넷 NAV 피드, 발행사 콘솔, 거래소 가격 기준과 배당 정책입니다. OKX에 원하는 것은 세 가지입니다: xStocks 발행사(Backed)와의 파일럿 연결, OKX Wallet·X Layer 생태계에 검증 배지와 NAV 피드 노출, 감사 비용을 위한 X Layer 생태계 지원.
+EN: An audit, a multisig, a mainnet feed and an issuer console; from OKX, an intro to Backed for a pilot, distribution in OKX Wallet and X Layer, and ecosystem support for the audit.
+
+### E. AI·개발자 경험 심사위원 (OKX.AI·OnchainOS)
+
+**E1. 에이전트가 "USTX에 500달러"를 받으면 실제로 무엇을 할 수 있나?**
+`quote_ustx_order`로 펀드와 풀 3개를 견적하고, `prepare_ustx_order`로 그 지갑이 서명할 거래를 받습니다: 부족하면 dUSD 받기, 승인, 그리고 견적의 1%를 뺀 최소 수령량과(풀이면) 10분 마감이 든 주문입니다. 서버는 서명하지 않습니다. 사용자의 지갑이 서명합니다.
+EN: It quotes the four venues and gets the unsigned claim, approval and order that the user's wallet signs; the server never signs.
+
+**E2. NAV가 멈췄을 때 에이전트가 잘못된 주문을 내지 않나?**
+오늘 새벽까지는 견적 도구가 NAV보다 약 10% 비싼 상수곱 풀을 "가장 많이 준다"고 추천했습니다. 이제 견적마다 마지막 NAV와의 차이를 붙이고 2%를 넘으면 경고하며, NAV가 한 시간 넘으면 `prepare_ustx_order`가 자동 선택을 거부하고 풀을 이름으로 지정할 때만 경고와 함께 준비합니다. Ask USTX도 주문 가능 여부를 먼저 확인합니다.
+EN: Each quote carries its gap to the last NAV with a warning past 2%, and a stale NAV stops automatic order preparation.
+
+**E3. MCP를 남용하면(무한 호출)?**
+주소마다 분당 약 30번의 도구 호출로 제한하고, 일괄 요청은 4건까지 차례대로 처리합니다. 공개 API는 1분마다 저장한 스냅샷을 내보내고 공개 GET은 데이터베이스에 쓰지 않습니다.
+EN: About 30 tool calls a minute per address and batches of at most four; the public API serves snapshots and never writes.
+
+**E4. OpenAPI가 실제 응답과 맞나?**
+NAV와 풀 API의 실제 응답을 OpenAPI 스키마로 검사하는 시험이 있고, 값이 없을 때의 null까지 명세에 적었습니다. 범위 풀도 풀 API와 명세에 있습니다.
+EN: The tests check the NAV and pools responses against the OpenAPI schema, nulls included.
+
+**E5. 5분 안에 붙일 수 있나?**
+`claude mcp add --transport http ganymede-ustx https://ganymede-xlayer.gana003.workers.dev/mcp` 한 줄, 또는 의존성 없는 예제 `node examples/agent-quote.mjs buy 500 0x지갑`이 주문 가능 여부·견적·서명 전 거래까지 보여 줍니다. `/llms.txt`가 에이전트용 안내입니다.
+EN: One `claude mcp add` line, or a dependency-free example that checks orders, quotes and prepares the unsigned transactions.
+
+**E6. OKX.AI에 등록했나?**
+MCP 서버는 OKX.AI A2MCP 클라이언트가 바로 붙을 수 있게 열려 있고, 등록은 신청 후 승인 전입니다(10월 3일 기준).
 EN: The MCP server is open to OKX.AI's A2MCP clients; the listing is awaiting approval.
-※ 10월 3일 기준이다. 발표 전에 OKX.AI에서 승인 여부를 확인하고, 승인됐으면 "registered on OKX.AI"로 바꿔 말한다.
-
-**Q21. 가격 조작이나 플래시론은?**
-펀드와 대출은 풀 가격이 아니라 레지스트리에 기록된 NAV를 씁니다. 훅 풀은 NAV에서 약 5% 밖으로 못 움직이고, 범위 풀은 NAV 1% 안에서만 포지션이 열립니다. 대출 담보도 같은 NAV로 평가합니다.
-EN: Orders and loans use the recorded NAV, not a pool's spot price, and the hooks keep their pools within about 5% of it.
-
-**Q22. 결국 서버(릴레이어)에 의존하지 않나?**
-기록은 릴레이어 키 하나가 합니다. 그래서 검증은 서버 밖에서 누구나 하게 했고, 기록이 멈추면 펀드가 멈추는 쪽으로 실패합니다. 발행사마다 자기 지갑과 레지스트리로 기록할 수 있습니다(MAG3 예시).
-EN: One relayer key publishes, so verification happens outside our server and a stall fails safe; an issuer can publish from its own wallet and registry, as MAG3 does.
-
-### 팀과 다음 단계
-
-**Q23. 다음 3개월에 무엇을 하나?**
-외부 감사, 관리자 멀티시그와 타임락, 메인넷에 NAV를 가격 피드로만 기록, 거래소 가격 기준 추가와 배당·분할 정책, 발행사가 명령줄 없이 바스켓을 여는 콘솔입니다.
-EN: An audit, a multisig and timelock, NAV records on mainnet as a feed only, an exchange price reference with a corporate-actions policy, and an issuer console.
-
-**Q24. 이전에 만든 것을 재사용했나?**
-네. 7월에 원화 크립토 전략 엔진으로 시작한 코드에서 엔진과 저장소를 재사용했고, 행사 기간 이후의 작업은 커밋과 함께 `docs/BUILD_PERIOD.md`에 나눠 적었습니다.
-EN: Yes, the strategy engine from July; everything since the build period is listed with its commits in BUILD_PERIOD.md.
+※ 발표 전에 OKX.AI에서 승인 여부를 확인하고, 승인됐으면 "registered on OKX.AI"로 바꿔 말한다.
 
 ## 4. 이렇게 말하면 모순이다
 
@@ -203,6 +229,9 @@ EN: Yes, the strategy engine from July; everything since the build period is lis
 | 모든 컨트랙트가 OKX 탐색기에 검증됐다 | 12개 모두 Sourcify 정확 일치, 처음 8개는 OKX 탐색기도 |
 | 발행사 페이지에 요금제가 있다 | 발행사 페이지는 테스트넷 평가 안내와 개별 협의(요금표 없음) |
 | 테스트넷 펀드가 xStocks를 보유한다 | 보유하지 않음, 현물 볼트는 포크에서만 |
+| 에이전트가 주문을 실행한다 | 에이전트는 서명 전 거래를 준비할 뿐, 서명은 사용자 지갑 |
+| 레지스트리가 NAV 급변을 막는다 | 체인 상한은 없음, 브라우저가 불일치로 표시, 상한은 메인넷 전 |
+| 컨트랙트 통제 표가 Transparency에 있다 | 개발자 페이지(`/developers#proof-controls`) |
 | 외부 지갑 30개로 부하 시험 | 팀이 만든 시험 지갑(3,000개)이다 |
 
 ## 5. 당일 점검 (명령)
