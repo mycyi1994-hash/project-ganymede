@@ -319,7 +319,7 @@ function IncomeMarketPreview({ definition }: { definition: FundDefinition }) {
       {error && <div className="gmd-data-notice" role="status"><span>This product could not be loaded just now.</span><button type="button" onClick={() => void reload()}>Try again</button></div>}
       <dl className="gmd-fund-stats" aria-label={`${definition.ticker} figures`} aria-busy={loading}>
         <div><dt>Launched</dt><dd>{latest ? day(latest.kind === "autocall" ? latest.state.fixedAt : latest.startedAt) : "—"}</dd></div>
-        <div><dt>Records on X Layer</dt><dd>{fund ? (fund.series ?? []).length.toLocaleString("en-US") : "—"}</dd></div>
+        <div><dt>Recorded on X Layer</dt><dd>Every 5 minutes</dd></div>
         {terms.kind === "covered-call" ? <div><dt>Premium this month</dt><dd>{yields ? `${pct(yields.month, 2)} · ${pct(yields.annualized)} a year` : "—"}</dd></div>
           : <div><dt>Coupon</dt><dd>{pct(terms.couponPerYear, 0)} a year · knock-in {pct(terms.knockIn, 0)}</dd></div>}
       </dl>
