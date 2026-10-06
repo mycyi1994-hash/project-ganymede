@@ -4,13 +4,13 @@
 
 ## 확정된 범위
 
-제품의 실행 범위는 **USTX 데모 투자(데모 달러로 매수·환매, 바스켓 들여다보기, 펀드 개요), USTX 모델 NAV와 구성 공개·브라우저 검증, 발행 좌수의 X Layer 기록, 공개 NAV API와 임베드 배지, X Layer 메인넷 xStocks 읽기 전용 평가, 기존 CORE 테스트넷 지분 장부 읽기, 별도 Lab 모의 운용**이다. 실제 입출금·자산 취득·보관·지급·결제 토큰을 새로 만들거나 지정하지 않는다. 데모 주문은 실제 돈이 오가지 않으며, USTX 지분은 데모 장부에만 있고 체인에 발행되지 않는다.
+제품의 실행 범위는 **USTX 데모 투자(데모 달러로 매수·환매, 바스켓 들여다보기, 펀드 개요), USTX 모델 NAV와 구성 공개·브라우저 검증, 발행 좌수의 X Layer 기록, 공개 NAV API와 임베드 배지, X Layer 메인넷 xStocks 읽기 전용 평가, 기존 CORE 테스트넷 지분 장부 읽기, 별도 Lab 모의 운용**이다. 실제 입출금·자산 취득·보관·지급·결제 토큰을 새로 만들거나 지정하지 않는다. 데모 주문은 실제 돈이 오가지 않으며, USTX 지분은 X Layer Testnet에서 가치 없는 dUSD로만 발행된다.
 
-USTX와 GMDCORE는 다른 대상이다. USTX는 모델 바스켓이다. 지갑 투자는 X Layer Testnet의 `GanymedeBasketFund`(USTX 지분 토큰)가 레지스트리의 최신 NAV로만 발행·환매하고, 대금은 가치 없는 `GanymedeDemoDollar`(dUSD)다. 지갑이 없으면 브라우저별 비공개 데모 계정(쿠키, 해시로만 저장)의 데모 달러로 투자하며 체인에는 아무것도 발행되지 않는다. 실제 돈은 어느 쪽에서도 움직이지 않는다. 배포된 `GanymedeFundShare`는 X Layer Testnet(1952)의 CORE 장부이며, 발행자 mint/burn은 입금·출금 증거가 아니다.
+USTX와 GMDCORE는 다른 대상이다. USTX는 모델 바스켓이다. 지갑 투자는 X Layer Testnet의 `GanymedeBasketFund`(USTX 지분 토큰)가 레지스트리의 최신 NAV로만 발행·환매하고, 대금은 가치 없는 `GanymedeDemoDollar`(dUSD)다. 브라우저별 비공개 데모 계정(쿠키, 해시로만 저장한 D1 장부의 $10,000)은 10/6(PR #115)에 없앴고, 투자는 지갑으로만 한다. 실제 돈은 움직이지 않는다. 배포된 `GanymedeFundShare`는 X Layer Testnet(1952)의 CORE 장부이며, 발행자 mint/burn은 입금·출금 증거가 아니다.
 
 ## 전체 화면
 
-현재 운영 소스 `c830f14` 기준이다. 모든 화면 위에 테스트넷 안내 한 줄이 있고, 헤더에 네트워크 표시와 "Connect OKX Wallet"이 있다. 메뉴는 Markets / Pools / Portfolio / Transparency다. 이전 배포별 변경은 아래 배포 절에 있다.
+현재 운영 소스 `c830f14` 기준이다. 모든 화면 위에 테스트넷 안내 한 줄이 있고, 헤더에 네트워크 표시와 "Connect OKX Wallet"이 있다. 메뉴는 Markets / Pools / Portfolio / Transparency다. 이전 배포별 변경은 아래 배포 절에 있다. 10/6(PR #115)부터 서버의 데모 잔고는 없다: 아래 표의 `/products/ustx` Demo balance 탭, `/portfolio`의 내 투자, `/api/demo/*`는 사라졌고(경로는 404), 투자는 지갑으로만 한다.
 
 | 경로 | 완료한 동선 |
 | --- | --- |
