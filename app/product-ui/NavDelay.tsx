@@ -37,10 +37,10 @@ export function useNavDelay(): NavDelay | null {
   return { ...record, lateMs: now - Date.parse(record.effectiveAt) };
 }
 
-/** "4 h 40 min" or "35 min". */
+/** "4 h 40 min" or "35 min", with no-break spaces so a number keeps its unit on the same line. */
 export function delayText(ms: number): string {
   const minutes = Math.max(0, Math.floor(ms / 60_000));
-  return minutes >= 60 ? `${Math.floor(minutes / 60)} h ${minutes % 60} min` : `${minutes} min`;
+  return minutes >= 60 ? `${Math.floor(minutes / 60)}\u00a0h ${minutes % 60}\u00a0min` : `${minutes}\u00a0min`;
 }
 
 /** A notice on every screen while the NAV record is past its hour. */
