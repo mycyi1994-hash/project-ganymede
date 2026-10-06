@@ -4,7 +4,8 @@ import { DatabaseSync } from "node:sqlite";
 import { readFileSync } from "node:fs";
 import { FaucetError, dripGas } from "../lib/faucet.ts";
 import { FAUCET_TERMS, formatOkb } from "../lib/faucet-terms.ts";
-import { LISTED_LATE, addUsage, moveListedLate, summarizeUsage, updateUsage } from "../lib/xstocks/usage.ts";
+import { LISTED_LATE, RANGE_ORDERS_MOVED, addUsage, moveListedLate, moveRangeArbitrageOrders, summarizeUsage, updateUsage } from "../lib/xstocks/usage.ts";
+import { RANGE_ARBITRAGES } from "../lib/xstocks/range-liquidity.ts";
 import { LOAD_TEST_WALLETS } from "../lib/xstocks/load-test-wallets.ts";
 import { USAGE_SEED } from "../lib/xstocks/usage-seed.ts";
 import { TEAM_WALLETS } from "../lib/xstocks/team-wallets.ts";
@@ -126,6 +127,23 @@ test("load-test wallets counted before they were listed move to the team's figur
   const other = { ...usage, wallets: { ...wallets, [late[1]]: { ...wallets[late[1]], actions: 13 } } };
   assert.equal(moveListedLate(other), other);
   assert.equal(moveListedLate(USAGE_SEED), USAGE_SEED);
+});
+
+test("the range arbitrage's orders counted as an outside wallet move to the team's figures only when the kept rows account for all of them", () => {
+  const [range] = RANGE_ARBITRAGES;
+  const kept = [row(5, range, "redeem", 178_730_444n), row(6, range, "invest", 10_000_000n), row(7, wallet(9))];
+  const counted = { firstAt: "2026-10-05T13:43:02.000Z", lastAt: "2026-10-05T19:08:02.000Z", actions: 2, volumeMicros: "188730444" };
+  const usage = { fromBlock: 1, toBlock: 10, wallets: { [range]: counted, [wallet(9)]: { ...counted, actions: 1, volumeMicros: "100000000" } }, kinds: { redeem: { all: 4, outside: 1 }, invest: { all: 5, outside: 2 } }, team: { actions: 3, volumeMicros: "7" } };
+  const moved = moveRangeArbitrageOrders(usage, kept);
+  assert.deepEqual(Object.keys(moved.wallets), [wallet(9)]);
+  assert.deepEqual(moved.team, { actions: 5, volumeMicros: "188730451" });
+  assert.deepEqual(moved.kinds, { redeem: { all: 4, outside: 0 }, invest: { all: 5, outside: 1 } });
+  assert.deepEqual(moved.migrations, [RANGE_ORDERS_MOVED]);
+  assert.equal(moveRangeArbitrageOrders(moved, kept), moved, "once");
+  // Kept rows that do not account for every counted action and dollar leave the usage as it is.
+  assert.equal(moveRangeArbitrageOrders(usage, kept.slice(1)), usage);
+  assert.equal(moveRangeArbitrageOrders({ ...usage, toBlock: 5 }, kept).wallets[range], counted, "orders after the counted blocks were never counted");
+  assert.equal(moveRangeArbitrageOrders({ ...usage, kinds: { ...usage.kinds, redeem: { all: 4, outside: 0 } } }, kept).wallets[range], counted);
 });
 
 const quotePayload = (symbol) => ({

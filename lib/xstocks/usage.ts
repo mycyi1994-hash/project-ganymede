@@ -5,12 +5,13 @@
  * from X Layer Testnet into usage-seed.ts. GET /api/v1/ustx/usage serves it.
  */
 import type { ActivityIndex, ActivityKind, MarketActivity } from "./activity";
+import { RANGE_ARBITRAGES } from "./range-liquidity";
 import { TEAM_WALLETS } from "./team-wallets";
 import { USAGE_SEED } from "./usage-seed";
 
 export const STATE_USAGE = "xstocks:usage";
 
-const TRADE_KINDS = new Set<ActivityKind>(["invest", "redeem", "buy", "sell", "arbitrage", "v4Buy", "v4Sell"]);
+const TRADE_KINDS = new Set<ActivityKind>(["invest", "redeem", "buy", "sell", "arbitrage", "rangeArbitrage", "v4Buy", "v4Sell"]);
 
 type Wallet = { firstAt: string; lastAt: string; actions: number; volumeMicros: string };
 export type Usage = {
@@ -83,8 +84,45 @@ export function moveListedLate(usage: Usage): Usage {
   };
 }
 
-/** The usage carried forward by the activity index's latest run. */
-export const updateUsage = (usage: Usage | null, index: ActivityIndex): Usage => addUsage(moveListedLate(usage ?? USAGE_SEED), index.rows, index.toBlock);
+/** The correction moveRangeArbitrageOrders records once it has moved any orders. */
+export const RANGE_ORDERS_MOVED = "2026-10-06-range-arbitrage-orders";
+
+/**
+ * From 5 October GanymedeRangeArbitrage's orders at the fund were counted as a wallet outside the
+ * team's: the fund's events name the contract, which the keeper calls. The market activity now folds
+ * each into the keeper's arbitrage (lib/xstocks/activity.ts). This moves the orders already counted
+ * to the team's figures, from the rows the index kept before it read them again, and only when those
+ * rows account for every action and dollar counted under the contract.
+ */
+export function moveRangeArbitrageOrders(usage: Usage, kept: MarketActivity[]): Usage {
+  let next = usage;
+  for (const address of RANGE_ARBITRAGES) {
+    const wallet = next.wallets[address];
+    if (!wallet) continue;
+    const orders = kept.filter(row => row.account === address && row.block <= next.toBlock);
+    const volume = orders.reduce((sum, row) => sum + (TRADE_KINDS.has(row.kind) ? row.dollarsMicros ?? 0n : 0n), 0n);
+    const byKind = new Map<string, number>();
+    for (const row of orders) byKind.set(row.kind, (byKind.get(row.kind) ?? 0) + 1);
+    const fits = [...byKind].every(([kind, count]) => (next.kinds[kind]?.outside ?? 0) >= count);
+    if (orders.length !== wallet.actions || volume.toString() !== wallet.volumeMicros || !fits) continue;
+    const wallets = Object.fromEntries(Object.entries(next.wallets).filter(([other]) => other !== address));
+    const kinds = { ...next.kinds };
+    for (const [kind, count] of byKind) kinds[kind] = { ...kinds[kind], outside: kinds[kind].outside - count };
+    next = {
+      ...next, wallets, kinds,
+      team: { actions: next.team.actions + wallet.actions, volumeMicros: add(next.team.volumeMicros, volume) },
+      migrations: next.migrations?.includes(RANGE_ORDERS_MOVED) ? next.migrations : [...(next.migrations ?? []), RANGE_ORDERS_MOVED],
+    };
+  }
+  return next;
+}
+
+/**
+ * The usage carried forward by the activity index's latest run. `kept` are the rows the index held
+ * before the run, which still name the range pool's arbitrage in the orders it reads again.
+ */
+export const updateUsage = (usage: Usage | null, index: ActivityIndex, kept: MarketActivity[] = []): Usage =>
+  addUsage(moveRangeArbitrageOrders(moveListedLate(usage ?? USAGE_SEED), kept), index.rows, index.toBlock);
 
 export function parseUsage(value: unknown): Usage | null {
   if (typeof value !== "string") return null;
