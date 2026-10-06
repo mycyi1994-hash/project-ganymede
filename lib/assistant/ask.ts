@@ -14,6 +14,8 @@ export const ASSISTANT_DEFAULT_MODEL = "gpt-5-mini";
 export const ASSISTANT_LIMITS = {
   messages: 12,
   messageChars: 1_000,
+  /** Earlier answers come back from the browser with each question: kept to this length, never refused. */
+  answerChars: 2_000,
   totalChars: 8_000,
   toolRounds: 4,
   toolCallsPerRound: 4,
@@ -46,7 +48,12 @@ export class AssistantError extends Error {
   }
 }
 
-/** The conversation a visitor sent, checked: user and assistant turns, ending with the user's question. */
+/**
+ * The conversation a visitor sent, checked: user and assistant turns, ending with the user's question.
+ * Only the visitor's own questions are held to the question length; earlier answers are shortened, and
+ * the oldest turns are left out when the conversation runs long, so a follow-up is never refused for
+ * what the assistant said before.
+ */
 export function parseConversation(body: unknown): ChatMessage[] {
   const raw = body && typeof body === "object" ? (body as { messages?: unknown }).messages : undefined;
   if (!Array.isArray(raw) || raw.length === 0) throw new AssistantError("Ask a question.", 400, "no_question");
@@ -56,11 +63,13 @@ export function parseConversation(body: unknown): ChatMessage[] {
     if ((role !== "user" && role !== "assistant") || typeof content !== "string") throw new AssistantError("Each message needs a role and text.", 400, "bad_message");
     const text = content.trim();
     if (!text) throw new AssistantError("Ask a question.", 400, "no_question");
+    if (role === "assistant") return { role, content: text.slice(0, ASSISTANT_LIMITS.answerChars) };
     if (text.length > ASSISTANT_LIMITS.messageChars) throw new AssistantError(`Keep each question under ${ASSISTANT_LIMITS.messageChars.toLocaleString("en-US")} characters.`, 400, "too_long");
     return { role, content: text };
   });
   if (messages[messages.length - 1].role !== "user") throw new AssistantError("Ask a question.", 400, "no_question");
-  if (messages.reduce((sum, message) => sum + message.content.length, 0) > ASSISTANT_LIMITS.totalChars) throw new AssistantError("This conversation is too long. Start a new one.", 400, "too_long");
+  const total = () => messages.reduce((sum, message) => sum + message.content.length, 0);
+  while (messages.length > 1 && total() > ASSISTANT_LIMITS.totalChars) messages.shift();
   return messages;
 }
 

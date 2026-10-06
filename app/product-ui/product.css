@@ -366,6 +366,8 @@
 .gmd-wallet-message:empty { display: none; }
 .gmd-wallet-address { display: grid; gap: 4px; flex: 1 1 320px; min-width: 0; }
 .gmd-wallet-address code { font-size: 14px; overflow-wrap: anywhere; }
+.gmd-wallet-inline { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin: -6px 0 0; font-size: 13px; color: var(--gmd-copy); }
+.gmd-wallet-inline code { font-size: 13px; color: var(--gmd-ink); }
 .gmd-wallet-holdings,.gmd-plan { border: 1px solid var(--gmd-line); border-radius: 12px; background: #fff; padding: 24px; margin-top: 20px; }
 .gmd-app .gmd-wallet-holdings .gmd-section-heading { display: flex; justify-content: space-between; align-items: baseline; gap: 8px 12px; flex-wrap: wrap; margin-bottom: 12px; }
 .gmd-wallet-holdings .gmd-section-heading span { font-size: 13px; color: var(--gmd-copy); }
@@ -1981,6 +1983,8 @@ a.gmd-pool-pair:hover b { text-decoration: underline; text-underline-offset: 3px
 
 /* Five strategies, and Custom's own-position settings. */
 .gmd-strategy-options.is-5 { grid-template-columns: repeat(5, minmax(0,1fr)); }
+/* The side panel is too narrow for five across: two a row, Custom on its own. */
+.gmd-liquidity-panel .gmd-strategy-options.is-5 { grid-template-columns: repeat(2, minmax(0,1fr)); }
 .gmd-liquidity-panel .gmd-strategy-options.is-5 .is-custom { grid-column: 1 / -1; }
 .gmd-strategy-custom { display: grid; gap: 10px; padding: 12px; border-radius: 10px; background: var(--gmd-soft); }
 .gmd-strategy-row { display: grid; grid-template-columns: 96px minmax(0,1fr); align-items: center; gap: 8px; font-size: 12px; color: var(--gmd-copy); }
