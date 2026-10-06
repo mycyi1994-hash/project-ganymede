@@ -116,8 +116,8 @@ EN: An open API with OpenAPI, a self-verifying badge, a Chainlink-style feed con
 EN: Nothing on chain caps one record's move; the browser flags it, records stay visible, and a cap, several publishers and a timelocked multisig come before real money.
 
 **B2. 프런트엔드가 털리면(클릭재킹, 주입) 사용자가 악성 거래에 서명하지 않나?**
-모든 응답에 보안 헤더가 있습니다. 페이지는 다른 사이트의 프레임에 들어갈 수 없고(배지만 예외), MIME 추측·외부 base·플러그인을 막습니다. 앱은 모든 거래를 브라우저에서 만들고 먼저 모의 실행한 뒤 사용자 지갑이 서명하며, 키를 갖지 않습니다. 스크립트 출처 제한(CSP script-src)은 아직 없습니다.
-EN: Pages refuse framing and sniffing, every transaction is built and dry-run in the browser and signed by the user's own wallet; a script CSP is still to come.
+모든 응답에 보안 헤더가 있습니다. 페이지는 다른 사이트의 프레임에 들어갈 수 없고(배지만 예외), MIME 추측·외부 base·플러그인을 막습니다. 페이지가 쓰는 스크립트마다 응답별 nonce가 붙고, 그 위의 스크립트 정책(`script-src 'self' 'nonce-…'`)은 보고 전용입니다. 시험용 확장으로 재 보니 강제하면 지갑이 주입한 코드의 eval까지 막혀서, OKX Wallet 확장·앱으로 시험한 뒤 강제합니다. 앱은 모든 거래를 브라우저에서 만들고 먼저 모의 실행한 뒤 사용자 지갑이 서명하며, 키를 갖지 않습니다.
+EN: Pages refuse framing and sniffing, and every script carries a per-response nonce; the script policy is report-only until tested with OKX Wallet, since enforced it also blocked eval in an injected provider.
 
 **B3. 범위 풀 훅은 감사·퍼즈를 했나?**
 외부 감사는 없습니다. 범위 훅에 1,000단계 불변식 퍼즈를 돌렸습니다: 포지션 206개를 열고 닫고, 스왑 138건, 차익거래 47건, NAV 기록 93번, 기록이 오래된 구간 19번 동안 훅과 차익거래는 토큰을 보유하지 않고, 풀 매니저는 항상 포지션에 줄 것 이상을 가지며, 스왑은 NAV 대역을 못 벗어나고, 닫으면 받을 몫을 받고, 모두 나갈 수 있었습니다. Slither도 31건을 분류했고 코드 변경이 필요한 것은 없었습니다.

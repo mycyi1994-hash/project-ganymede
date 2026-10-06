@@ -92,7 +92,7 @@ PR #77·#78로 구현해 배포했고, 아래 근거는 모두 운영에서 확�
 
 | 질문 | 빈틈 | 조치 |
 | --- | --- | --- |
-| B2 프런트엔드 공격 | 운영 응답에 보안 헤더가 하나도 없었다(프레임 삽입·MIME 추측 방지 없음) | Worker가 모든 응답에 `X-Content-Type-Options`, `Referrer-Policy`, `Strict-Transport-Security`, `Permissions-Policy`, CSP `frame-ancestors 'none'; base-uri; object-src; form-action`과 `X-Frame-Options: DENY`를 붙인다. 배지(`/embed/*`)만 프레임 허용. 시험 추가. 스크립트 출처 제한은 인라인 스크립트에 nonce가 필요해 남겨 둠 |
+| B2 프런트엔드 공격 | 운영 응답에 보안 헤더가 하나도 없었다(프레임 삽입·MIME 추측 방지 없음) | Worker가 모든 응답에 `X-Content-Type-Options`, `Referrer-Policy`, `Strict-Transport-Security`, `Permissions-Policy`, CSP `frame-ancestors 'none'; base-uri; object-src; form-action`과 `X-Frame-Options: DENY`를 붙인다. 배지(`/embed/*`)만 프레임 허용. 시험 추가. 이어서 페이지의 모든 스크립트에 응답별 nonce를 붙이고 `script-src 'self' 'nonce-…'`를 보고 전용으로 냈다(미리보기 버전에서 22개 화면 위반 0). 강제는 시험용 확장으로 재 보니 지갑이 주입한 코드의 eval까지 막아, OKX Wallet 확장·앱 시험 뒤로 미룸 |
 | B3 범위 훅 검증 | 범위 훅·범위 차익거래는 10/2 Slither 뒤에 생겨 정적 분석도 퍼즈도 없었다 | 불변식 퍼즈 1,000단계(포지션 206개·칸 1,217개 열고 닫기, 스왑 138, 차익거래 47, NAV 기록 93, 기록 만료 19): 훅·차익거래는 토큰을 보유하지 않고, 풀 매니저는 항상 포지션 몫 이상을 갖고, 스왑은 NAV 대역을 못 벗어나고, 닫으면 받을 몫을 받고, 모두 나갈 수 있다(반올림은 언제나 풀 쪽). Slither 31건 분류, High 2건 오탐, 코드 변경 없음 |
 | B6 소스 검증 | v4 훅·라우터·범위 훅·범위 차익거래 4개가 Sourcify에 없었는데 문서는 "모두 검증"이라 했다 | 4개를 Sourcify v2로 제출해 생성·런타임 바이트코드 완전 일치, 12개 전부. OKX 탐색기용 파일도 내보냄(업로드는 캡차라 사용자 몫) |
 | B6 통제 표 | 개발자 페이지 "Who controls the contracts"에 v4 라우터·범위 훅·범위 차익거래가 없었고, SECURITY.md는 그 표가 Transparency에 있다고 했다 | 3행 추가(운영 12행 확인), 문서 위치 수정 |
@@ -117,7 +117,7 @@ PR #77·#78로 구현해 배포했고, 아래 근거는 모두 운영에서 확�
 
 남은 것(코드로 못 고친 것)
 - A3 정지 복구: 릴레이어·키퍼의 막힌 논스를 바꾸는 서명은 사용자 결정이 필요하다. 그 전까지 기록은 14:20:44에 멈춰 있고, 화면은 이제 그 사실을 정확히 말한다.
-- E6 OKX.AI 등록 승인 확인, B6 새 컨트랙트 4개의 OKX 탐색기 업로드(캡차), B2 스크립트 출처 제한(CSP `script-src`, 인라인 스크립트 nonce 필요).
+- E6 OKX.AI 등록 승인 확인, B6 새 컨트랙트 4개의 OKX 탐색기 업로드(캡차), B2 스크립트 정책 강제(지금은 nonce와 함께 보고 전용, OKX Wallet 확장·앱으로 시험한 뒤 강제).
 - 외부 감사, 관리자 멀티시그·타임락, 레지스트리의 기록당 변동 상한은 메인넷 전 단계로 공개 문서에 적혀 있다.
 - C3 격자: 휴대폰에서 칸이 많으면 칸 폭이 24px보다 좁다(칸 수를 줄이거나 키보드로 조작).
 - D2 견인력: 팀 밖 지갑 2개. 숫자를 지어내지 않는다.
