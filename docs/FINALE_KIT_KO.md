@@ -106,7 +106,7 @@ EN: A stolen publisher key could record a wrong NAV until the administrator paus
 EN: No external audit yet; Slither with every High and Medium finding triaged, invariant fuzzing, 116 contract tests and a 3,000-wallet load test, and an audit is the first step to mainnet.
 
 **Q6. 관리자가 할 수 있는 것과 없는 것은?**
-Transparency의 "Who controls the contracts"가 컨트랙트에서 직접 읽어 보여 줍니다. 관리자는 일시정지, 기록자·민터 지정, 관리자 이전만 할 수 있고, USTX를 기록된 NAV 밖에서 발행하거나 기록을 고치거나 남의 USTX·dUSD를 옮길 수 없습니다. 풀, 차익거래, 피드, 두 훅, 라우터는 관리자가 없습니다.
+개발자 페이지(`/developers`)의 "Who controls the contracts"가 12개 컨트랙트를 방문자 브라우저에서 직접 읽어 보여 줍니다. 관리자는 일시정지, 기록자·민터 지정, 관리자 이전만 할 수 있고, USTX를 기록된 NAV 밖에서 발행하거나 기록을 고치거나 남의 USTX·dUSD를 옮길 수 없습니다. 풀, 차익거래, 피드, 두 훅, 라우터는 관리자가 없습니다.
 EN: The page reads every role from the contracts: pausing and naming the publisher only; nobody can issue USTX off the recorded NAV, edit a record or move anyone's tokens.
 
 ### 제품과 시장
