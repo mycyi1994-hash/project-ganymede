@@ -44,7 +44,7 @@ export const RANGE_ARBITRAGES: readonly string[] = [
 ];
 
 export const RANGE_SELECTORS = {
-  open: "0x0dd51d63",
+  open: "0xa9229268",
   close: "0x37043fda",
   positions: "0x99fbab88",
   positionsOf: "0xf867d46b",
@@ -70,7 +70,6 @@ export const RANGE_ERRORS: Record<string, string> = {
   "0x724cdd8c": "The NAV record is timed ahead of the chain’s clock. Try again in a minute.",
   "0xb25c0b55": "That trade would move the pool more than 5% from the NAV. Try a smaller amount.",
   "0x8199f5f3": "The pool moved before this was confirmed. Review it again.",
-  "0x2d4627e0": "The pool’s price moved before your position opened. Review it again: the USTX you bought stays in your wallet.",
   "0x203d82d8": "This took too long to confirm. Try again.",
 };
 
@@ -223,15 +222,11 @@ function positionDetail(deployment: RangeDeployment, base: PositionHead, binsRaw
 
 /**
  * How far the pool's tick may move, from the one a provider saw, before their position opens: about
- * 0.3%. The bins go around the price when the position opens, so the hook refuses it outside these
- * limits rather than placing the bins around a price someone moved in the meantime; Pools also reads
- * the price again just before the wallet opens (assertRangePriceNear), so a moved price stops the open
- * before the provider signs.
+ * 0.3%. The bins go around the price when the position opens, and the deployed hook takes no price
+ * limit of its own, so Pools reads the price again just before the wallet opens and stops the open
+ * if it moved further (assertRangePriceNear).
  */
 export const RANGE_OPEN_SLIPPAGE_TICKS = 30;
-export const openLimits = (tick: number) => ({ minTick: tick - RANGE_OPEN_SLIPPAGE_TICKS, maxTick: tick + RANGE_OPEN_SLIPPAGE_TICKS });
-/** An int24 tick as an ABI word, in two's complement. */
-const tickWord = (tick: number) => word(BigInt.asUintN(256, BigInt(tick)));
 
 /** The pool's price moved, from the tick the provider saw, by more than RANGE_OPEN_SLIPPAGE_TICKS. */
 export class RangePriceMoved extends Error {
@@ -267,13 +262,13 @@ export function rangeCalls(deployment: RangeDeployment) {
   return {
     approveShares: (micros: bigint) => approve(deployment.asset, micros),
     approveDollars: (micros: bigint) => approve(deployment.dollar, micros),
-    /** `dollars` go in the bins below the price, `shares` in the bins above, if the pool's tick is within `limits`. */
-    open: (shape: RangeShape, binTicks: number, binsBelow: number, binsAbove: number, amounts: V4Amounts, deadline: number, limits: { minTick: number; maxTick: number }): TransactionCall => {
+    /** `dollars` go in the bins below the price, `shares` in the bins above. */
+    open: (shape: RangeShape, binTicks: number, binsBelow: number, binsAbove: number, amounts: V4Amounts, deadline: number): TransactionCall => {
       // Bins below the price hold currency1 and bins above it currency0.
       const [amount0, amount1] = deployment.assetIsCurrency0 ? [amounts.sharesMicros, amounts.dollarsMicros] : [amounts.dollarsMicros, amounts.sharesMicros];
       return {
         to: deployment.hook,
-        data: `${RANGE_SELECTORS.open}${word(BigInt(SHAPES.indexOf(shape)))}${word(BigInt(binTicks))}${word(BigInt(binsBelow))}${word(BigInt(binsAbove))}${word(amount0)}${word(amount1)}${tickWord(limits.minTick)}${tickWord(limits.maxTick)}${word(BigInt(deadline))}`,
+        data: `${RANGE_SELECTORS.open}${word(BigInt(SHAPES.indexOf(shape)))}${word(BigInt(binTicks))}${word(BigInt(binsBelow))}${word(BigInt(binsAbove))}${word(amount0)}${word(amount1)}${word(BigInt(deadline))}`,
       };
     },
     close: (id: bigint, minima: V4Amounts, deadline: number): TransactionCall => {
