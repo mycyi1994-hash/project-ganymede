@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { DemoPortfolio } from "./DemoInvest";
 import { WalletFundPosition } from "./WalletFund";
 import { parseComposition } from "@/lib/xstocks/proof";
 import { readBalances, tokenExplorerUrl, type WalletBalances } from "@/lib/xstocks/mainnet";
@@ -69,7 +68,6 @@ export default function WalletPortfolio() {
 
   return <>
     <div className="gmd-page-heading"><div><h1>Portfolio</h1><p>Your USTX and your xStocks on X Layer, valued at OKX OnchainOS prices.</p></div></div>
-    <DemoPortfolio />
     <header id="wallet" className="gmd-section-heading gmd-wallet-heading"><div><h2>Your wallet on X Layer</h2><p>{address ? "Your USTX on X Layer Testnet and your xStocks on X Layer mainnet." : "View your USTX on Testnet and your xStocks on X Layer mainnet. Connect OKX Wallet or enter a public address."}</p></div></header>
     <AddressBar />
     {address && <WalletFundPosition address={address} />}

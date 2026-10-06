@@ -8,7 +8,7 @@ import { incomeFund } from "../funds/catalog";
 import { sha256Hex } from "../engine/fixed";
 import { readLatestNav, type OnchainNav } from "../xstocks/onchain";
 import { PROOF_DEPLOYMENT } from "../xstocks/proof";
-import { DEMO_NAV_MAX_AGE_MS } from "../demo/ledger";
+import { NAV_MAX_AGE_MS } from "../funds/verification";
 import { autocallNav, type AutocallDocument } from "./autocall";
 import { coveredCallNav, type CoveredCallDocument } from "./covered-call";
 import { autocallTerms } from "./terms";
@@ -44,6 +44,6 @@ export async function verifyIncomeSnapshot(fund: FundDetail, productId: string, 
   const recorded = BigInt(record.navPerShareMicros);
   if (nav === null || (nav > recorded ? nav - recorded : recorded - nav) > 1n || document.navPerShareMicros !== record.navPerShareMicros) return { result: "failed", detail: "The NAV recomputed from the document differs from the record on X Layer." };
   if (fund.nav?.perShareMicros !== record.navPerShareMicros || Math.floor(Date.parse(fund.nav.asOf) / 1_000) !== Math.floor(Date.parse(record.effectiveAt) / 1_000)) return { result: "failed", detail: "The page's NAV or timestamp differs from the record on X Layer. Waiting for a matching update." };
-  if (document.kind === "covered-call" && (options.now ?? Date.now()) - Date.parse(record.effectiveAt) > DEMO_NAV_MAX_AGE_MS) return { result: "unavailable", detail: "The latest NAV is over an hour old. Orders are paused until a fresh record is available." };
+  if (document.kind === "covered-call" && (options.now ?? Date.now()) - Date.parse(record.effectiveAt) > NAV_MAX_AGE_MS) return { result: "unavailable", detail: "The latest NAV is over an hour old. Orders are paused until a fresh record is available." };
   return { result: "matched", detail: "Your browser read this product's record on X Layer, hashed its document and recomputed the NAV from it: they match.", record, document };
 }
