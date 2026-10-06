@@ -1,6 +1,6 @@
 /** Reads for the fund API. Nothing here writes. */
 import type { EngineRepository } from "../engine/repository";
-import { STATE_CONFIRMED } from "../xstocks/cycle";
+import { STATE_CONFIRMED, STATE_HISTORY, STATE_LATEST, STATE_REBALANCE } from "../xstocks/cycle";
 import { downsampleSeries, parseSeries, STATE_SERIES, type SeriesPoint } from "../xstocks/series";
 import type { Publication, RebalanceEvidence } from "../xstocks/cycle";
 import { FUNDS, type FundDefinition, type FundKind, universeToken } from "./catalog";
@@ -54,15 +54,25 @@ export type FundDetail = FundSummary & {
 
 export async function fundDetail(repo: EngineRepository, fund: FundDefinition): Promise<FundDetail> {
   const income = fund.kind === "covered-call" || fund.kind === "autocall";
+  // USTX keeps its records under the keys of the first product (lib/xstocks/cycle.ts), the others under their own.
+  const keys = fund.onchainShares
+    ? { latest: STATE_LATEST, history: STATE_HISTORY, rebalance: STATE_REBALANCE }
+    : { latest: fundStateKey(fund.id, "latest"), history: fundStateKey(fund.id, "history"), rebalance: fundStateKey(fund.id, "rebalance") };
   const [summary, latest, history, rebalance, transitions] = await Promise.all([
     fundSummary(repo, fund, 300),
-    repo.getState(fundStateKey(fund.id, "latest")),
-    repo.getState(fundStateKey(fund.id, "history")),
-    repo.getState(fundStateKey(fund.id, "rebalance")),
+    repo.getState(keys.latest),
+    repo.getState(keys.history),
+    repo.getState(keys.rebalance),
     income ? repo.getState(fundStateKey(fund.id, "transitions")) : null,
   ]);
+  // USTX's latest state also holds its document and retry time, which the record's API leaves out.
+  const stored = parse<(FundLatest & { canonical?: unknown; holdingsHash?: unknown; retryAt?: unknown }) | null>(latest?.value, null);
+  const latestRecord: FundLatest | null = stored && {
+    evaluatedAt: stored.evaluatedAt, status: stored.status, blockers: stored.blockers, warnings: stored.warnings,
+    composition: stored.composition, publication: stored.publication, poolCheck: stored.poolCheck ?? null,
+  };
   return {
-    ...summary, latest: parse<FundLatest | null>(latest?.value, null), history: parse<Publication[]>(history?.value, []), rebalance: parse<RebalanceEvidence | null>(rebalance?.value, null),
+    ...summary, latest: latestRecord, history: parse<Publication[]>(history?.value, []), rebalance: parse<RebalanceEvidence | null>(rebalance?.value, null),
     transitions: parse<TransitionArchive | null>(transitions?.value, null),
   };
 }
