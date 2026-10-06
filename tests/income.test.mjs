@@ -145,6 +145,15 @@ test("a record passes only with its product's published terms, not other terms w
   const mark = copy(later.document);
   mark.call.value = mark.call.value + 1;
   assert.equal(recomputeIncomeNav("spy-covered-call", mark), null, "the call's value is the one its inputs give");
+  // The holding is the call's: the cash is the premium on the units, which at inception are $100 of the ETF.
+  const remade = (document) => { const marked = coveredCallNav(document); document.call.value = marked.callValue; document.navPerShareMicros = marked.navMicros.toString(); return document; };
+  const extraCash = copy(later.document);
+  extraCash.cash = extraCash.cash + 5;
+  assert.equal(recomputeIncomeNav("spy-covered-call", remade(extraCash)), null, "cash beyond the premium");
+  const doubled = copy(later.document);
+  doubled.units = doubled.units * 2;
+  doubled.cash = Number((doubled.units * doubled.call.premium).toFixed(6));
+  assert.equal(recomputeIncomeNav("spy-covered-call", remade(doubled)), null, "$200 of the ETF at inception");
   // The roll count and the start agree with the call: none yet, sold at the start.
   const rolled = copy(later.document);
   rolled.rolls = 3;
@@ -155,7 +164,6 @@ test("a record passes only with its product's published terms, not other terms w
   // The call was sold at $650: its strike is 2% above that and its premium is Black–Scholes's. A lower
   // strike with a richer premium, the call's value and the NAV made to agree, is not this product's call.
   assert.equal(later.document.call.spot, 650);
-  const remade = (document) => { const marked = coveredCallNav(document); document.call.value = marked.callValue; document.navPerShareMicros = marked.navMicros.toString(); return document; };
   const lowStrike = copy(later.document);
   lowStrike.call.strike = 600;
   lowStrike.call.premium = 100;

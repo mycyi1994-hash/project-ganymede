@@ -12,7 +12,7 @@ import { GET as readNavApi } from "../api/v1/ustx/route";
 import { GET as readPoolsApi } from "../api/v1/ustx/pools/route";
 import { GET as readActivityApi } from "../api/v1/ustx/activity/route";
 import { FUNDS, type FundDefinition } from "@/lib/funds/catalog";
-import { fundDetail, fundSummaries } from "@/lib/funds/api";
+import { fundSummaries, fundSummary } from "@/lib/funds/api";
 import { fundStateKey } from "@/lib/funds/cycle";
 import { sha256Hex } from "@/lib/engine/fixed";
 import { coveredCallReturn, premiumYield, type CoveredCallDocument } from "@/lib/income/covered-call";
@@ -79,15 +79,15 @@ function fundByName(value: unknown): FundDefinition {
 }
 
 /**
- * The document of the product's latest confirmed record, the one its NAV comes from, whatever the
- * records after it did; null if there is none or it does not hash to that record.
+ * The product's latest confirmed record, read once so its NAV, time, transaction and document belong
+ * together, whatever the records after it did; null if there is none or its document does not hash to it.
  */
-async function confirmedDocument(repo: EngineRepository, fund: FundDefinition): Promise<unknown> {
+async function confirmedRecord(repo: EngineRepository, fund: FundDefinition): Promise<{ record: Publication; document: unknown } | null> {
   const stored = await repo.getState(fundStateKey(fund.id, "confirmed"));
   try {
     const record = stored ? JSON.parse(stored.value) as Publication : null;
     if (!record?.canonical || (await sha256Hex(record.canonical)).toLowerCase() !== record.holdingsHash.toLowerCase()) return null;
-    return JSON.parse(record.canonical);
+    return { record, document: JSON.parse(record.canonical) };
   } catch {
     return null;
   }
@@ -323,16 +323,17 @@ export function ustxTools(origin: string): McpTool[] {
       run: async (args) => {
         const fund = fundByName(args.id);
         const repo = new EngineRepository(engineEnv().DB);
-        const [detail, document] = await Promise.all([fundDetail(repo, fund), fund.onchainShares ? Promise.resolve(null) : confirmedDocument(repo, fund)]);
+        const [summary, confirmed] = await Promise.all([fundSummary(repo, fund), fund.onchainShares ? Promise.resolve(null) : confirmedRecord(repo, fund)]);
+        const nav = fund.onchainShares ? summary.nav : confirmed && { perShareMicros: confirmed.record.navPerShareMicros, asOf: confirmed.record.asOf, txHash: confirmed.record.txHash };
         const base = {
           id: fund.id, ticker: fund.ticker, name: fund.name, kind: fund.kind ?? "basket", description: fund.description,
-          navUsd: detail.nav ? usd(detail.nav.perShareMicros) : null, asOf: detail.nav?.asOf ?? null,
-          transactionHash: detail.nav?.txHash ?? null, explorerUrl: detail.nav?.txHash ? `${FUND_DEPLOYMENT.explorerUrl}/tx/${detail.nav.txHash}` : null,
-          change7dPercent: detail.changePercent === null ? null : Number(detail.changePercent.toFixed(2)),
+          navUsd: nav ? usd(nav.perShareMicros) : null, asOf: nav?.asOf ?? null,
+          transactionHash: nav?.txHash ?? null, explorerUrl: nav?.txHash ? `${FUND_DEPLOYMENT.explorerUrl}/tx/${nav.txHash}` : null,
+          change7dPercent: summary.changePercent === null ? null : Number(summary.changePercent.toFixed(2)),
           investable: fund.onchainShares, page: page(fund.href),
         };
         if (fund.onchainShares) return { ...base, seeAlso: "get_ustx_nav, get_ustx_holdings and quote_ustx_order give USTX's record, holdings and quotes.", environment: DEMO };
-        return { ...base, ...describeDocument(fund, document, Date.now()), notOpen: "Investing in this product is not open yet: it has no share token. Its value is recorded on X Layer every five minutes.", environment: DEMO };
+        return { ...base, ...describeDocument(fund, confirmed?.document ?? null, Date.now()), notOpen: "Investing in this product is not open yet: it has no share token. Its value is recorded on X Layer every five minutes.", environment: DEMO };
       },
     },
   ];

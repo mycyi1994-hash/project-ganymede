@@ -37,6 +37,19 @@ function callSoldOnTerms(call: CoveredCallDocument["call"], terms: { moneyness: 
   return Math.abs(call.premium - callPrice(call.strike / (1 + terms.moneyness), call.strike, years, terms.volatility, terms.rate)) <= 0.006;
 }
 
+/**
+ * The fund's holding within one call: at each sale everything goes back into the ETF, less than a
+ * micro-dollar of rounding is left in cash, and the premium is added, so the cash is the premium on
+ * the units. At inception the units are US$100 of the ETF at the price the call was sold at (for a
+ * call sold before that price was recorded, at strike / (1 + moneyness), within the cent of the strike).
+ */
+function positionOnTerms(document: CoveredCallDocument, moneyness: number): boolean {
+  const { units, cash, call } = document;
+  if (!(units > 0) || !Number.isFinite(cash) || Math.abs(cash - units * call.premium) > 2e-6) return false;
+  if (document.rolls > 0) return true;
+  return typeof call.spot === "number" ? Math.abs(units * call.spot - 100) <= 1e-6 : Math.abs(units * call.strike / (1 + moneyness) - 100) <= 0.001;
+}
+
 /** Deep equality of plain JSON values, whatever the order of their keys. */
 function same(a: unknown, b: unknown): boolean {
   if (Array.isArray(a) || Array.isArray(b)) return Array.isArray(a) && Array.isArray(b) && a.length === b.length && a.every((item, index) => same(item, b[index]));
@@ -67,7 +80,8 @@ export function incomeTermsHold(productId: string, document: IncomeDocument): bo
       // The first call is sold at the start, and each roll at least a tenor after the sale before it.
       && Number.isInteger(document.rolls) && document.rolls >= 0 && (document.rolls === 0) === (call.soldAt === document.startedAt)
       && Date.parse(call.soldAt) >= Date.parse(document.startedAt) + document.rolls * terms.tenorDays * 86_400_000
-      && callSoldOnTerms(call, terms) && call.value === coveredCallNav(document).callValue;
+      && callSoldOnTerms(call, terms) && call.value === coveredCallNav(document).callValue
+      && positionOnTerms(document, terms.moneyness);
   }
   const terms = autocallTerms(productId);
   if (!terms) return false;
