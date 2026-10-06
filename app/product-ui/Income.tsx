@@ -8,7 +8,7 @@ import { formatUsdMicros } from "@/lib/nav-display";
 import { shortTime } from "@/lib/product-market";
 import { PROOF_DEPLOYMENT } from "@/lib/xstocks/proof";
 import { INCOME_TERMS, type AutocallTerms, type CoveredCallTerms } from "@/lib/income/terms";
-import { premiumYield, type CoveredCallDocument } from "@/lib/income/covered-call";
+import { coveredCallReturn, premiumYield, type CoveredCallDocument } from "@/lib/income/covered-call";
 import { couponPayout, observationDate, type AutocallDocument } from "@/lib/income/autocall";
 import { verifyIncomeSnapshot, type IncomeDocument, type IncomeVerification } from "@/lib/income/verify";
 import { useFundResource } from "./useFundResource";
@@ -47,28 +47,33 @@ function latestDocument(fund: FundDetail | null, check: IncomeVerification): Inc
   try { return entry ? JSON.parse(entry.canonical) as IncomeDocument : null; } catch { return null; }
 }
 
-/** A covered call's return at expiry against holding the ETF, by the ETF's move: capped above the strike, cushioned by the premium. */
+/**
+ * The covered call's return from today's NAV to this call's expiry against holding the ETF, by the
+ * ETF's move from today's price: capped above the strike, cushioned by what the call is still worth.
+ * Counting from today keeps it right once the ETF has moved since the call was sold.
+ */
 function CoveredCallPayoff({ document }: { document: CoveredCallDocument }) {
   const [hover, setHover] = useState<number | null>(null);
   const title = useId();
   const [ref, W] = useWidth(640);
   const price = document.underlying.price;
-  const yieldNow = premiumYield(document).month;
+  const nav = Number(document.navPerShareMicros) / 1e6;
+  const callShare = nav > 0 ? document.units * document.call.value / nav : 0;
   const strikeMove = document.call.strike / price - 1;
   const moves = Array.from({ length: 61 }, (_, index) => (index - 30) / 200); // −15% … +15%
-  const covered = (move: number) => Math.min(move, strikeMove) + yieldNow;
+  const covered = (move: number) => coveredCallReturn(document, move);
   const H = 230, top = 16, bottom = 28, left = 44, right = 12;
   const lo = -0.16, hi = 0.16;
   const x = (move: number) => left + (move + 0.15) / 0.3 * (W - left - right);
   const y = (value: number) => top + (hi - value) / (hi - lo) * (H - top - bottom);
   const path = (fn: (move: number) => number) => moves.map((move, index) => `${index ? "L" : "M"}${x(move).toFixed(1)},${y(fn(move)).toFixed(1)}`).join("");
   const at = hover === null ? null : moves[hover];
-  const question = `On the ${document.underlying.symbol} covered call fund, the fund sold a call at ${money(document.call.strike)} with the ETF at ${money(price)}, for a premium of ${pct(yieldNow, 2)} of the fund this month. Explain in plain words what the fund earns if the ETF rises 10%, stays flat, or falls 10% by ${day(document.call.expiresAt)}.`;
+  const question = `On the ${document.underlying.symbol} covered call fund, the fund has sold a call at ${money(document.call.strike)} that expires on ${day(document.call.expiresAt)}. The ETF is at ${money(price)} now, and the call is worth ${pct(callShare, 2)} of the fund. Explain in plain words what the fund earns from today's NAV if the ETF rises 10%, stays flat, or falls 10% by then.`;
   return <figure className="gmd-navmove gmd-income-chart" aria-labelledby={title}>
-    <ChartHead id={title} title="At this call's expiry" question={question} />
+    <ChartHead id={title} title="From today to this call's expiry" question={question} />
     <ul className="gmd-lq-legend"><li><i className="is-line-pool" aria-hidden="true" />Covered call</li><li><i className="is-line-held" aria-hidden="true" />Holding the ETF</li></ul>
     <div className="gmd-lq-plot" ref={ref}>
-      <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`Return at expiry: the covered call earns the ${pct(yieldNow, 2)} premium plus the ETF's move up to the strike, ${signed(strikeMove)}; holding the ETF earns its move.`}
+      <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`Return from today's NAV to ${day(document.call.expiresAt)}: the covered call earns the ETF's move up to the strike, ${signed(strikeMove)} from today's price, and keeps what the call is still worth; holding the ETF earns its move.`}
         onPointerMove={event => { const box = event.currentTarget.getBoundingClientRect(); const ratio = ((event.clientX - box.left) / box.width * W - left) / (W - left - right); setHover(Math.max(0, Math.min(moves.length - 1, Math.round(ratio * 60)))); }} onPointerLeave={() => setHover(null)}>
         {[-0.1, 0, 0.1].map(value => <g key={value}><line className="gmd-lq-base" x1={left} x2={W - right} y1={y(value)} y2={y(value)} /><text className="gmd-lq-tick" x={left - 6} y={y(value) + 4} textAnchor="end">{signed(value, 0)}</text></g>)}
         <line className="gmd-income-strike" x1={x(strikeMove)} x2={x(strikeMove)} y1={top} y2={H - bottom} />
@@ -78,9 +83,9 @@ function CoveredCallPayoff({ document }: { document: CoveredCallDocument }) {
         {[-0.15, 0, 0.15].map(move => <text key={move} className="gmd-lq-tick" x={x(move)} y={H - 8} textAnchor="middle">{move === 0 ? "ETF flat" : signed(move, 0)}</text>)}
         {at !== null && <g className="gmd-navmove-cross"><line x1={x(at)} x2={x(at)} y1={top} y2={H - bottom} /><circle className="is-held" cx={x(at)} cy={y(at)} r={4} /><circle className="is-pool" cx={x(at)} cy={y(covered(at))} r={4} /></g>}
       </svg>
-      {at !== null && <div className={`gmd-chart-tip is-below${hover! > 30 ? " is-left" : ""}`} style={{ left: `${(x(at) / W) * 100}%`, top: "3%" }} role="status"><b>Covered call {signed(covered(at), 2)}</b><span>If the ETF moves {signed(at, 1)} by expiry</span><small>Holding the ETF: {signed(at, 2)}</small><small>{at > strikeMove ? `Gives up ${pct(at - strikeMove, 2)} above the strike, keeps the ${pct(yieldNow, 2)} premium` : `Gains the ${pct(yieldNow, 2)} premium over holding`}</small></div>}
+      {at !== null && <div className={`gmd-chart-tip is-below${hover! > 30 ? " is-left" : ""}`} style={{ left: `${(x(at) / W) * 100}%`, top: "3%" }} role="status"><b>Covered call {signed(covered(at), 2)}</b><span>If the ETF moves {signed(at, 1)} from today by expiry</span><small>Holding the ETF: {signed(at, 2)}</small><small>{at > strikeMove ? `Capped at the strike, ${signed(strikeMove, 1)} from today` : `${signed(covered(at) - at, 2)} against holding: the call expires unpaid`}</small></div>}
     </div>
-    <figcaption className="gmd-caption">Over this one-month call, before the next one is sold. The premium is modelled by Black–Scholes at {pct(document.terms.volatility, 0)} volatility: there is no options market for xStocks on X Layer.</figcaption>
+    <figcaption className="gmd-caption">From today&rsquo;s NAV to {day(document.call.expiresAt)}, when this call settles and the next one is sold. The call is valued by Black–Scholes at {pct(document.terms.volatility, 0)} volatility: there is no options market for xStocks on X Layer.</figcaption>
   </figure>;
 }
 

@@ -3,13 +3,15 @@ import type { EngineRepository } from "../engine/repository";
 import { STATE_CONFIRMED } from "../xstocks/cycle";
 import { downsampleSeries, parseSeries, STATE_SERIES, type SeriesPoint } from "../xstocks/series";
 import type { Publication, RebalanceEvidence } from "../xstocks/cycle";
-import { FUNDS, type FundDefinition, universeToken } from "./catalog";
+import { FUNDS, type FundDefinition, type FundKind, universeToken } from "./catalog";
 import { fundStateKey, type FundLatest } from "./cycle";
 
 const parse = <T>(value: string | undefined | null, empty: T): T => { try { return value ? JSON.parse(value) as T : empty; } catch { return empty; } };
 
 export type FundSummary = {
   id: string; ticker: string; name: string; theme: string; description: string; href: string; productKey: string;
+  /** A basket of xStocks, a covered-call fund or a step-down autocallable note. */
+  kind: FundKind;
   onchainShares: boolean;
   holdings: { symbol: string; name: string; kind: "stock" | "etf" }[];
   nav: { perShareMicros: string; asOf: string; txHash: string | null } | null;
@@ -31,7 +33,7 @@ export async function fundSummary(repo: EngineRepository, fund: FundDefinition, 
   const first = series[0] ? Number(series[0][1]) : null;
   const latest = record ? Number(record.navPerShareMicros) : null;
   return {
-    id: fund.id, ticker: fund.ticker, name: fund.name, theme: fund.theme, description: fund.description, href: fund.href, productKey: fund.productKey, onchainShares: fund.onchainShares,
+    id: fund.id, ticker: fund.ticker, name: fund.name, theme: fund.theme, description: fund.description, href: fund.href, productKey: fund.productKey, kind: fund.kind ?? "basket", onchainShares: fund.onchainShares,
     holdings: fund.constituents.map((symbol) => { const token = universeToken(symbol)!; return { symbol, name: token.name, kind: token.kind }; }),
     nav: record ? { perShareMicros: record.navPerShareMicros, asOf: record.asOf, txHash: record.txHash } : null,
     changePercent: first && latest ? ((latest - first) / first) * 100 : null,

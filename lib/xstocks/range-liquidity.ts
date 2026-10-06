@@ -115,7 +115,12 @@ const signedTick = (value: bigint) => { const raw = Number(value & 0xffffffn); r
 const byToken = (deployment: V4Deployment, amount0: bigint, amount1: bigint): V4Amounts =>
   deployment.assetIsCurrency0 ? { sharesMicros: amount0, dollarsMicros: amount1 } : { sharesMicros: amount1, dollarsMicros: amount0 };
 
-/** The pool and, with `account`, that wallet's open positions, read at one block. */
+/** Position ids known to be closed, per hook: a closed position never opens again, so later reads skip it. */
+const CLOSED_POSITIONS = new Map<string, Set<bigint>>();
+/** Positions read at once, so a wallet with many does not flood the RPC. */
+const POSITION_READS = 10;
+
+/** The pool and, with `account`, every open position of that wallet, read at one block. */
 export async function readRangePool(deployment: RangeDeployment, account: string | null, options: { rpc?: Rpc; minBlock?: number } = {}): Promise<{ pool: RangePool; account: RangeAccount | null }> {
   const rpc = options.rpc ?? fundRpc();
   const block = await readBlock(rpc, options.minBlock);
@@ -147,8 +152,17 @@ export async function readRangePool(deployment: RangeDeployment, account: string
       call(rpc, hook, `${RANGE_SELECTORS.positionsOf}${owner}`, tag),
     ]);
     const [ids] = decodeAbiParameters([{ type: "uint256[]" }], idsRaw as `0x${string}`);
-    // The latest 20 positions are enough for a wallet's view.
-    const positions = (await Promise.all(ids.slice(-20).map(id => readPosition(rpc, deployment, id, tag)))).filter(position => position.open);
+    // Every position the wallet ever opened, oldest first; those already seen closed are skipped.
+    const closed = CLOSED_POSITIONS.get(hook) ?? new Set<bigint>();
+    CLOSED_POSITIONS.set(hook, closed);
+    const unseen = ids.filter(id => !closed.has(id));
+    const positions: RangePosition[] = [];
+    for (let start = 0; start < unseen.length; start += POSITION_READS) {
+      for (const position of await Promise.all(unseen.slice(start, start + POSITION_READS).map(id => readPosition(rpc, deployment, id, tag)))) {
+        if (position.open) positions.push(position);
+        else closed.add(position.id);
+      }
+    }
     return { pool, account: { dollarsMicros: dollars, sharesMicros: shares, assetAllowanceMicros: assetAllowance, dollarAllowanceMicros: dollarAllowance, positions } };
   });
 }

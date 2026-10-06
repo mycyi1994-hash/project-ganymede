@@ -4,23 +4,74 @@
  * from that document's inputs (Black–Scholes for a covered call; face or payout for the note).
  */
 import type { FundDetail } from "../funds/api";
-import { incomeFund } from "../funds/catalog";
+import { incomeFund, universeToken } from "../funds/catalog";
 import { sha256Hex } from "../engine/fixed";
 import { readLatestNav, type OnchainNav } from "../xstocks/onchain";
 import { PROOF_DEPLOYMENT } from "../xstocks/proof";
 import { NAV_MAX_AGE_MS } from "../funds/verification";
-import { autocallNav, type AutocallDocument } from "./autocall";
+import { autocallNav, couponPayout, maturityPayout, observationDate, subscriptionEnd, type AutocallDocument } from "./autocall";
 import { coveredCallNav, type CoveredCallDocument } from "./covered-call";
-import { autocallTerms } from "./terms";
+import { autocallTerms, coveredCallTerms } from "./terms";
 
 export type IncomeDocument = CoveredCallDocument | AutocallDocument;
 export type IncomeVerification =
   | { result: "matched"; detail: string; record: OnchainNav; document: IncomeDocument }
   | { result: "failed" | "unavailable" | "checking"; detail: string; record?: never; document?: never };
 
-/** The NAV a document implies, or null if its inputs do not hold together. */
+/** Deep equality of plain JSON values, whatever the order of their keys. */
+function same(a: unknown, b: unknown): boolean {
+  if (Array.isArray(a) || Array.isArray(b)) return Array.isArray(a) && Array.isArray(b) && a.length === b.length && a.every((item, index) => same(item, b[index]));
+  if (a && b && typeof a === "object" && typeof b === "object") {
+    const keys = Object.keys(a);
+    return keys.length === Object.keys(b).length && keys.every((key) => Object.hasOwn(b, key) && same((a as Record<string, unknown>)[key], (b as Record<string, unknown>)[key]));
+  }
+  return a === b;
+}
+const isoPlusDays = (iso: string, days: number) => new Date(Date.parse(iso) + days * 86_400_000).toISOString();
+
+/**
+ * Whether a document follows its product's pinned terms (lib/income/terms.ts), so a record cannot
+ * pass with other terms whose NAV merely holds together: a covered call's underlying, strike rule
+ * inputs, tenor and the call's mark; a note's barriers, coupon, knock-in, observations and payout.
+ */
+export function incomeTermsHold(productId: string, document: IncomeDocument): boolean {
+  if (document.product !== productId) return false;
+  if (document.kind === "covered-call") {
+    const terms = coveredCallTerms(productId);
+    if (!terms) return false;
+    const token = universeToken(terms.underlying);
+    const { call } = document;
+    return !!token && document.underlying.symbol === terms.underlying && document.underlying.address.toLowerCase() === token.address.toLowerCase()
+      && same(document.terms, { moneyness: terms.moneyness, tenorDays: terms.tenorDays, volatility: terms.volatility, rate: terms.rate })
+      && call.expiresAt === isoPlusDays(call.soldAt, terms.tenorDays)
+      && Date.parse(document.startedAt) <= Date.parse(call.soldAt) && Date.parse(call.soldAt) <= Date.parse(document.asOf) && Date.parse(document.asOf) < Date.parse(call.expiresAt)
+      && call.strike > 0 && call.premium > 0 && call.value === coveredCallNav(document).callValue;
+  }
+  const terms = autocallTerms(productId);
+  if (!terms) return false;
+  const { state } = document;
+  if (!same(document.terms, { underlyings: terms.underlyings, face: terms.face, subscriptionDays: terms.subscriptionDays, observationMonths: terms.observationMonths, barriers: terms.barriers, knockIn: terms.knockIn, couponPerYear: terms.couponPerYear })) return false;
+  if (Date.parse(state.fixedAt) < Date.parse(terms.fixingFrom) || document.subscriptionEndsAt !== subscriptionEnd(terms, state.fixedAt)) return false;
+  if (state.knockedIn !== state.lowestWorst < terms.knockIn) return false;
+  // Each observation is the next one on the schedule, against its own barrier, and only the last may call the note.
+  const count = state.observations.length;
+  if (count > terms.barriers.length) return false;
+  for (const [position, observation] of state.observations.entries()) {
+    const index = position + 1;
+    if (observation.index !== index || observation.barrier !== terms.barriers[index - 1] || observation.date !== observationDate(terms, state.fixedAt, index)
+      || observation.called !== observation.worst >= observation.barrier || (observation.called && index !== count)) return false;
+  }
+  const last = state.observations[count - 1];
+  const payout = last?.called ? couponPayout(terms, last.index) : count === terms.barriers.length ? maturityPayout(terms, last.worst, state.knockedIn) : null;
+  const status = last?.called ? "called" : count === terms.barriers.length ? "matured" : "live";
+  if (state.status !== status || state.payout !== payout) return false;
+  const next = status === "live" ? count + 1 : null;
+  return same(document.nextObservation, next ? { index: next, date: observationDate(terms, state.fixedAt, next), barrier: terms.barriers[next - 1], payIfCalled: couponPayout(terms, next) } : null);
+}
+
+/** The NAV a document implies, or null if its inputs do not hold together or it leaves its product's terms. */
 export function recomputeIncomeNav(productId: string, document: IncomeDocument): bigint | null {
-  if (document.product !== productId) return null;
+  if (!incomeTermsHold(productId, document)) return null;
   if (document.kind === "covered-call") return coveredCallNav(document).navMicros;
   const terms = autocallTerms(productId);
   if (!terms) return null;
@@ -40,6 +91,7 @@ export async function verifyIncomeSnapshot(fund: FundDetail, productId: string, 
   if ((await sha256Hex(entry.canonical)).toLowerCase() !== record.holdingsHash.toLowerCase()) return { result: "failed", detail: "The document's fingerprint differs from the record on X Layer." };
   let document: IncomeDocument;
   try { document = JSON.parse(entry.canonical) as IncomeDocument; } catch { return { result: "failed", detail: "The document could not be read." }; }
+  try { if (!incomeTermsHold(definition.id, document)) return { result: "failed", detail: "The document's terms differ from this product's published terms." }; } catch { return { result: "failed", detail: "The document could not be read." }; }
   const nav = recomputeIncomeNav(definition.id, document);
   const recorded = BigInt(record.navPerShareMicros);
   if (nav === null || (nav > recorded ? nav - recorded : recorded - nav) > 1n || document.navPerShareMicros !== record.navPerShareMicros) return { result: "failed", detail: "The NAV recomputed from the document differs from the record on X Layer." };

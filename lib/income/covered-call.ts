@@ -73,6 +73,19 @@ export function stepCoveredCall(productId: string, terms: CoveredCallTerms, prev
   return { state, document, rolled };
 }
 
+/**
+ * The fund's return from this record's NAV to the call's expiry if the ETF moves `move` from this
+ * record's price by then: the ETF and the cash, less what the call settles for, over the NAV now. At
+ * inception that is the premium plus the move up to the strike; once the ETF has moved, it counts
+ * from today, so a flat ETF earns only what the call is still worth over its settlement.
+ */
+export function coveredCallReturn(document: CoveredCallDocument, move: number): number {
+  const nav = Number(document.navPerShareMicros) / 1e6;
+  if (!(nav > 0)) return 0;
+  const price = document.underlying.price * (1 + move);
+  return (document.units * price + document.cash - document.units * Math.max(price - document.call.strike, 0)) / nav - 1;
+}
+
 /** Premium of the current call as a share of the fund, and that a year if every month paid the same. */
 export function premiumYield(document: CoveredCallDocument): { month: number; annualized: number } {
   const nav = Number(document.navPerShareMicros) / 1e6;

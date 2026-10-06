@@ -3,7 +3,7 @@ import test from "node:test";
 import { DatabaseSync } from "node:sqlite";
 import { readFileSync } from "node:fs";
 import { callPrice, normalCdf } from "../lib/income/options.ts";
-import { coveredCallNav, premiumYield, stepCoveredCall } from "../lib/income/covered-call.ts";
+import { coveredCallNav, coveredCallReturn, premiumYield, stepCoveredCall } from "../lib/income/covered-call.ts";
 import { couponPayout, maturityPayout, stepAutocall } from "../lib/income/autocall.ts";
 import { addMonths, INCOME_TERMS } from "../lib/income/terms.ts";
 import { recomputeIncomeNav } from "../lib/income/verify.ts";
@@ -72,6 +72,30 @@ test("a covered call starts at $100, keeps its premium, caps the gain at the str
   assert.notEqual(recomputeIncomeNav("spy-covered-call", tampered), BigInt(start.document.navPerShareMicros));
 });
 
+test("the covered call's chart counts from today's NAV once the ETF has moved after the call was sold", () => {
+  const terms = INCOME_TERMS["spy-covered-call"];
+  const start = stepCoveredCall("spy-covered-call", terms, null, { price: 650, time: "2026-10-04T12:00:00.000Z", address: SPY });
+  const units = start.state.units;
+  // At inception a flat ETF earns the premium, and above the strike the gain stops there.
+  assert.ok(Math.abs(coveredCallReturn(start.document, 0) - premiumYield(start.document).month) < 1e-4);
+  const capped = coveredCallReturn(start.document, 0.08);
+  assert.ok(Math.abs(coveredCallReturn(start.document, 0.12) - capped) < 1e-12, "no gain above the strike");
+  // Fifteen days later the ETF is 5% higher, above the 663 strike.
+  const later = stepCoveredCall("spy-covered-call", terms, start.state, { price: 682.5, time: "2026-10-19T12:00:00.000Z", address: SPY });
+  const nav = Number(later.document.navPerShareMicros) / 1e6;
+  const flat = coveredCallReturn(later.document, 0);
+  // A flat ETF from here earns only the call's time value: what it is worth over what it settles for.
+  assert.ok(Math.abs(flat - units * (later.document.call.value - (682.5 - 663)) / nav) < 1e-6, `${flat}`);
+  assert.ok(flat > 0 && flat < premiumYield(start.document).month, `${flat}`);
+  // The chart used to add the whole premium to the move capped at the strike from today's price: −1.76% here.
+  const old = Math.min(0, 663 / 682.5 - 1) + premiumYield(later.document).month;
+  assert.ok(old < -0.01, `${old}`);
+  // A minute before expiry nothing is left to earn on a flat ETF.
+  const last = stepCoveredCall("spy-covered-call", terms, start.state, { price: 682.5, time: new Date(Date.parse(start.state.call.expiresAt) - 60_000).toISOString(), address: SPY });
+  assert.equal(last.rolled, false);
+  assert.ok(Math.abs(coveredCallReturn(last.document, 0)) < 1e-4);
+});
+
 test("the step-down note fixes, knocks in, is called early, or pays the worse index at maturity", () => {
   const terms = INCOME_TERMS["spy-qqq-autocall-1"];
   assert.equal(stepAutocall("spy-qqq-autocall-1", terms, null, { SPYx: 650, QQQx: 590 }, "2026-10-03T00:00:00.000Z"), null, "not before the fixing date");
@@ -92,6 +116,53 @@ test("the step-down note fixes, knocks in, is called early, or pays the worse in
   assert.equal(maturityPayout(terms, 0.6, false), 121, "no knock-in: the full coupon");
   assert.equal(maturityPayout(terms, 0.6, true), 60, "knocked in and below 75%: the worse index's level");
   assert.equal(maturityPayout(terms, 0.8, true), 121, "knocked in but above the last barrier");
+});
+
+test("a record passes only with its product's published terms, not other terms whose NAV holds together", () => {
+  const callTerms = INCOME_TERMS["spy-covered-call"];
+  const start = stepCoveredCall("spy-covered-call", callTerms, null, { price: 650, time: "2026-10-04T12:00:00.000Z", address: SPY });
+  const later = stepCoveredCall("spy-covered-call", callTerms, start.state, { price: 670, time: "2026-10-10T12:00:00.000Z", address: SPY });
+  const copy = (value) => JSON.parse(JSON.stringify(value));
+  assert.equal(recomputeIncomeNav("spy-covered-call", copy(later.document)), BigInt(later.document.navPerShareMicros));
+  // Its keys in another order are still the same terms.
+  const reordered = copy(later.document);
+  reordered.terms = { rate: callTerms.rate, volatility: callTerms.volatility, tenorDays: callTerms.tenorDays, moneyness: callTerms.moneyness };
+  assert.equal(recomputeIncomeNav("spy-covered-call", reordered), BigInt(later.document.navPerShareMicros));
+  // A lower volatility marks the call cheaper; with the NAV and the call's value made to agree, the inputs hold together.
+  const calm = copy(later.document);
+  calm.terms.volatility = 0.05;
+  const marked = coveredCallNav(calm);
+  calm.call.value = marked.callValue;
+  calm.navPerShareMicros = marked.navMicros.toString();
+  assert.notEqual(calm.navPerShareMicros, later.document.navPerShareMicros);
+  assert.equal(recomputeIncomeNav("spy-covered-call", calm), null, "not this product's volatility");
+  const elsewhere = copy(later.document);
+  elsewhere.underlying.address = "0x0000000000000000000000000000000000000001";
+  assert.equal(recomputeIncomeNav("spy-covered-call", elsewhere), null, "not this product's ETF");
+  const longer = copy(later.document);
+  longer.call.expiresAt = new Date(Date.parse(longer.call.expiresAt) + 86_400_000).toISOString();
+  assert.equal(recomputeIncomeNav("spy-covered-call", longer), null, "not this product's tenor");
+  const mark = copy(later.document);
+  mark.call.value = mark.call.value + 1;
+  assert.equal(recomputeIncomeNav("spy-covered-call", mark), null, "the call's value is the one its inputs give");
+  // The note: its terms, observations and payout are the published ones.
+  const terms = INCOME_TERMS["spy-qqq-autocall-1"];
+  const fixed = stepAutocall("spy-qqq-autocall-1", terms, null, { SPYx: 650, QQQx: 590 }, "2026-10-04T12:00:00.000Z");
+  const called = stepAutocall("spy-qqq-autocall-1", terms, fixed.state, { SPYx: 660, QQQx: 560 }, "2027-04-04T12:00:00.000Z");
+  assert.equal(recomputeIncomeNav("spy-qqq-autocall-1", copy(called.document)), 103_500_000n);
+  const richer = copy(called.document);
+  richer.state.payout = 150;
+  assert.equal(recomputeIncomeNav("spy-qqq-autocall-1", richer), null, "pays what its observation pays");
+  const lower = copy(fixed.document);
+  lower.terms.barriers = [0.5, 0.5, 0.5, 0.5, 0.5, 0.5];
+  assert.equal(recomputeIncomeNav("spy-qqq-autocall-1", lower), null, "not this note's barriers");
+  const early = copy(called.document);
+  early.state.observations[0].barrier = 0.8;
+  assert.equal(recomputeIncomeNav("spy-qqq-autocall-1", early), null, "each observation against its own barrier");
+  const unknocked = stepAutocall("spy-qqq-autocall-1", terms, fixed.state, { SPYx: 640, QQQx: 283.2 }, "2026-11-04T12:00:00.000Z");
+  const hidden = copy(unknocked.document);
+  hidden.state.knockedIn = false;
+  assert.equal(recomputeIncomeNav("spy-qqq-autocall-1", hidden), null, "a knock-in cannot be hidden");
 });
 
 test("three income products beside the baskets, recorded under their own product keys", () => {
