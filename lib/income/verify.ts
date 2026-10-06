@@ -70,22 +70,32 @@ export function incomeTermsHold(productId: string, document: IncomeDocument): bo
   if (!terms) return false;
   const { state } = document;
   if (!same(document.terms, { underlyings: terms.underlyings, face: terms.face, subscriptionDays: terms.subscriptionDays, observationMonths: terms.observationMonths, barriers: terms.barriers, knockIn: terms.knockIn, couponPerYear: terms.couponPerYear })) return false;
-  if (Date.parse(state.fixedAt) < Date.parse(terms.fixingFrom) || document.subscriptionEndsAt !== subscriptionEnd(terms, state.fixedAt)) return false;
-  // The lowest level is a minimum over every record, so it is at or below this record's (while the
-  // note is live) and every observation's; a knock-in follows from it and has its time.
-  if (state.status === "live" && state.lowestWorst > document.worst) return false;
+  const asOf = Date.parse(document.asOf);
+  if (Date.parse(state.fixedAt) < Date.parse(terms.fixingFrom) || Date.parse(state.fixedAt) > asOf || document.subscriptionEndsAt !== subscriptionEnd(terms, state.fixedAt)) return false;
+  // The lowest level is a minimum over every record up to this one: a note is recorded only while
+  // live and once more as it settles, so it is at or below this record's and every observation's.
+  // A knock-in follows from it and has its time.
+  if (state.lowestWorst > document.worst) return false;
   if (state.observations.some(observation => state.lowestWorst > observation.worst)) return false;
   if (state.knockedIn !== state.lowestWorst < terms.knockIn || state.knockedIn !== (state.knockedInAt !== null)) return false;
   if (state.knockedInAt !== null && (Date.parse(state.knockedInAt) < Date.parse(state.fixedAt) || Date.parse(state.knockedInAt) > Date.parse(document.asOf))) return false;
   // Each observation is the next one on the schedule, against its own barrier, and only the last may call the note.
   const count = state.observations.length;
   if (count > terms.barriers.length) return false;
+  let previousAt = Date.parse(state.fixedAt);
   for (const [position, observation] of state.observations.entries()) {
     const index = position + 1;
     if (observation.index !== index || observation.barrier !== terms.barriers[index - 1] || observation.date !== observationDate(terms, state.fixedAt, index)
       || observation.called !== observation.worst >= observation.barrier || (observation.called && index !== count)) return false;
+    // Taken at a record on or after its date, after the one before, and not after this record.
+    const observedAt = Date.parse(observation.observedAt);
+    if (!(observedAt >= Date.parse(observation.date) && observedAt > previousAt && observedAt <= asOf)) return false;
+    previousAt = observedAt;
   }
   const last = state.observations[count - 1];
+  // An observation taken at this record saw this record's levels; a settled note's last record is the one it settled in.
+  if (last && last.observedAt === document.asOf && last.worst !== document.worst) return false;
+  if (state.status !== "live" && last?.observedAt !== document.asOf) return false;
   const payout = last?.called ? couponPayout(terms, last.index) : count === terms.barriers.length ? maturityPayout(terms, last.worst, state.knockedIn) : null;
   const status = last?.called ? "called" : count === terms.barriers.length ? "matured" : "live";
   if (state.status !== status || state.payout !== payout) return false;

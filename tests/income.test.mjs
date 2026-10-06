@@ -191,6 +191,28 @@ test("a record passes only with its product's published terms, not other terms w
   const untimed = copy(unknocked.document);
   untimed.state.knockedInAt = null;
   assert.equal(recomputeIncomeNav("spy-qqq-autocall-1", untimed), null, "a knock-in has its time");
+  // The note settles in the record that observes it: that record's levels are the observation's.
+  const reprice = (document, prices) => {
+    document.prices = prices;
+    document.performance = Object.fromEntries(Object.entries(prices).map(([symbol, price]) => [symbol, Number((price / document.state.initial[symbol]).toFixed(6))]));
+    document.worst = Math.min(...Object.values(document.performance));
+    return document;
+  };
+  const belowBarrier = reprice(copy(called.document), { SPYx: 660, QQQx: 500 });
+  assert.ok(belowBarrier.worst < 0.9);
+  assert.equal(recomputeIncomeNav("spy-qqq-autocall-1", belowBarrier), null, "called at levels the record does not show");
+  const afterwards = copy(called.document);
+  afterwards.asOf = "2027-04-05T12:00:00.000Z";
+  assert.equal(recomputeIncomeNav("spy-qqq-autocall-1", afterwards), null, "nothing is recorded after the record it settled in");
+  // Nor a timeline that starts after the record, or an observation before its date.
+  const future = copy(fixed.document);
+  future.state.fixedAt = "2028-10-04T12:00:00.000Z";
+  future.subscriptionEndsAt = new Date(Date.parse(future.state.fixedAt) + terms.subscriptionDays * 86_400_000).toISOString();
+  future.nextObservation = { ...future.nextObservation, date: addMonths(future.state.fixedAt, 6) };
+  assert.equal(recomputeIncomeNav("spy-qqq-autocall-1", future), null, "fixed after its own record");
+  const beforeDate = copy(called.document);
+  beforeDate.state.observations[0].observedAt = "2027-04-01T12:00:00.000Z";
+  assert.equal(recomputeIncomeNav("spy-qqq-autocall-1", beforeDate), null, "observed before its date");
 });
 
 test("three income products beside the baskets, recorded under their own product keys", () => {
