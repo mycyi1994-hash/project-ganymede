@@ -19,6 +19,8 @@ const TOOL_LABELS: Record<string, string> = {
   quote_ustx_order: "fund and pool quotes",
   get_ustx_pools: "pools",
   get_ustx_market_activity: "market activity",
+  list_funds: "every product",
+  get_fund: "product details",
 };
 
 type AskApi = { ask: (question: string) => void };

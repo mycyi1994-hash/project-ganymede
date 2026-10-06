@@ -11,6 +11,7 @@ import { verifyFundComposition, parseFundComposition } from "../lib/xstocks/proo
 import { FUND_POOLS } from "../lib/xstocks/pool-prices.ts";
 import { STATE_LATEST } from "../lib/xstocks/cycle.ts";
 import { GET as fundsGET } from "../app/api/v1/funds/route.ts";
+import { ustxTools } from "../app/mcp/tools.ts";
 
 const schema = ["0000_giant_speedball.sql", "0001_demo_ledger.sql"].map((file) => readFileSync(new URL(`../drizzle/${file}`, import.meta.url), "utf8")).join("\n");
 
@@ -144,4 +145,56 @@ test("the fund API reads only and carries no demo totals", async () => {
     assert.deepEqual(detail.fund.holdings.map((holding) => holding.symbol), ["SPYx", "QQQx"]);
     assert.equal(detail.fund.demo, undefined);
   } finally { delete env.DB; delete env.NAV_REGISTRY_ADDRESS; sql.close(); }
+});
+
+test("Ask USTX and MCP agents read every product: the list, a basket's weights, the month's call and the note's knock-in", async () => {
+  const { db, sql } = database();
+  try {
+    const repo = new EngineRepository(db);
+    const at = "2026-10-04T03:05:00.000Z";
+    await runFundsCycle({ ...credentials, DB: db }, repo, settlement(), at, { fetcher: priceFetch(at), poolPrices: pools() });
+    env.DB = db;
+    db.readOnly = true;
+    const tools = ustxTools("https://ganymede.example");
+    const run = (name, args = {}) => tools.find((tool) => tool.name === name).run(args);
+    const listed = await run("list_funds");
+    assert.deepEqual(listed.funds.map((fund) => [fund.ticker, fund.kind, fund.investable]), [
+      ["USTX", "basket", true], ["M7X", "basket", false], ["AIX", "basket", false], ["CRYX", "basket", false], ["CORX", "basket", false], ["RTLX", "basket", false],
+      ["SPYC", "covered-call", false], ["QQQC", "covered-call", false], ["ELS1", "autocall", false],
+    ]);
+    assert.ok(Math.abs(Number(listed.funds.find((fund) => fund.ticker === "M7X").navUsd) - 100) < 0.001, "a new fund starts at US$100");
+    const basket = await run("get_fund", { id: "M7X" });
+    assert.equal(basket.holdings.length, 7);
+    assert.ok(Math.abs(basket.holdings.reduce((sum, holding) => sum + holding.weightPercent, 0) - 100) < 0.1);
+    assert.match(basket.notOpen, /not open yet/);
+    const call = await run("get_fund", { id: "spy-covered-call" });
+    assert.equal(call.etf.symbol, "SPYx");
+    assert.equal(call.call.strikeUsd, 682.28);
+    assert.equal(call.terms.tenorDays, 30);
+    assert.ok(call.call.premiumThisMonthPercent > 0.5 && call.returnFromTodayToExpiryPercent.etfFlat === call.call.premiumThisMonthPercent, JSON.stringify(call.returnFromTodayToExpiryPercent));
+    assert.equal(call.documentConsistent, true);
+    const note = await run("get_fund", { id: "els1" });
+    assert.equal(note.status, "live");
+    assert.equal(note.knockIn.levelPercent, 50);
+    assert.equal(note.knockIn.furtherFallToKnockInPercent, 50);
+    assert.equal(note.nextObservation.barrierPercent, 90);
+    assert.equal(note.nextObservation.paysPer100IfCalled, 103.5);
+    assert.equal(note.schedule.length, 6);
+    assert.equal(note.documentConsistent, true);
+    // Records the relayer has not confirmed do not replace the confirmed record's document, which the NAV is from.
+    db.readOnly = false;
+    const key = fundStateKey("spy-covered-call", "history");
+    const queued = JSON.parse(sql.prepare("SELECT value FROM engine_state WHERE key = ?").get(key).value);
+    const moved = JSON.parse(queued[0].canonical);
+    moved.underlying.price = 700;
+    queued.unshift({ ...queued[0], asOf: "2026-10-04T03:10:00.000Z", canonical: JSON.stringify(moved), status: "failed", txHash: null });
+    sql.prepare("UPDATE engine_state SET value = ? WHERE key = ?").run(JSON.stringify(queued.map((entry) => ({ ...entry, status: entry.txHash ? "failed" : entry.status }))), key);
+    db.readOnly = true;
+    const confirmedCall = await run("get_fund", { id: "SPYC" });
+    assert.equal(confirmedCall.etf.priceUsd, 668.9, "the confirmed record's ETF price, not a newer unconfirmed one");
+    assert.equal(confirmedCall.asOf, at);
+    const ustx = await run("get_fund", { id: "USTX" });
+    assert.match(ustx.seeAlso, /get_ustx_holdings/);
+    await assert.rejects(run("get_fund", { id: "nope" }), /id must be one of/);
+  } finally { delete env.DB; sql.close(); }
 });
