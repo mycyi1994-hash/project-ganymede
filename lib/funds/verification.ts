@@ -8,8 +8,8 @@ import { PROOF_DEPLOYMENT, verifyFundComposition } from "../xstocks/proof";
 export const NAV_MAX_AGE_MS = 60 * 60_000;
 
 export type FundVerification =
-  | { result: "matched"; detail: string; record: OnchainNav; composition: Composition }
-  | { result: "failed" | "unavailable" | "checking"; detail: string; record?: never; composition?: never };
+  | { result: "matched"; detail: string; record: OnchainNav; composition: Composition; stale?: true }
+  | { result: "failed" | "unavailable" | "checking"; detail: string; record?: never; composition?: never; stale?: never };
 
 /** Every verified figure comes from the same record, read under a locally pinned product key. */
 export async function verifyFundSnapshot(fund: FundDetail, fundId: string, options: { fetcher?: typeof fetch; now?: number } = {}): Promise<FundVerification> {
@@ -37,8 +37,10 @@ export async function verifyFundSnapshot(fund: FundDetail, fundId: string, optio
   if (fund.nav?.perShareMicros !== record.navPerShareMicros || Math.floor(Date.parse(fund.nav.asOf) / 1_000) !== Math.floor(Date.parse(record.effectiveAt) / 1_000)) {
     return { result: "failed", detail: "The page's NAV or timestamp differs from the record on X Layer. Waiting for a matching update." };
   }
+  const detail = "Your browser read this fund's record on X Layer, hashed its holdings document and recalculated the NAV shown here: they match.";
+  // An old record still checks out as what was recorded; it is shown as the last value, marked delayed.
   if ((options.now ?? Date.now()) - Date.parse(record.effectiveAt) > NAV_MAX_AGE_MS) {
-    return { result: "unavailable", detail: "The latest NAV is over an hour old. Orders are paused until a fresh record is available." };
+    return { result: "matched", stale: true, detail: `${detail} It is the latest record but over an hour old: new records are delayed, so this is the last known value.`, record, composition: checks.composition };
   }
-  return { result: "matched", detail: "Your browser read this fund's record on X Layer, hashed its holdings document and recalculated the NAV shown here: they match.", record, composition: checks.composition };
+  return { result: "matched", detail, record, composition: checks.composition };
 }

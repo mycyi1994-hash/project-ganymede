@@ -236,7 +236,7 @@ const signed = (ratio: number) => Math.abs(ratio) < 0.00005 ? "0.00%" : `${ratio
 function ago(iso: string, now: number) {
   const minutes = Math.max(0, Math.round((now - Date.parse(iso)) / 60_000));
   if (minutes < 60) return minutes === 0 ? "just now" : minutes === 1 ? "1 minute ago" : `${minutes} minutes ago`;
-  return `${Math.floor(minutes / 60)} h ${minutes % 60} min ago`;
+  return `${Math.floor(minutes / 60)}\u00a0h ${minutes % 60}\u00a0min ago`;
 }
 /** Past the hour the fund accepts a record, orders wait for the next one. */
 const delayed = (iso: string | null | undefined, now: number) => Boolean(iso && now - Date.parse(iso) > 3_600_000);

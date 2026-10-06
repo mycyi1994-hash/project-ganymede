@@ -2040,9 +2040,9 @@ a.gmd-pool-pair:hover b { text-decoration: underline; text-underline-offset: 3px
 @media (max-width:600px) { .gmd-strategy-options.is-5 { grid-template-columns: repeat(2, minmax(0,1fr)); } .gmd-strategy-options.is-5 .is-custom { grid-column: 1 / -1; } .gmd-range-positions li { grid-template-columns: minmax(0,1fr) auto; } .gmd-range-positions li button { grid-column: 1 / -1; } }
 
 /* While the NAV record is past its hour: one notice on every screen, in words as well as colour. */
-.gmd-delay-notice { margin: 0 0 18px; padding: 12px 16px; border: 1px solid #f0c36d; border-left: 4px solid #c27c0e; border-radius: 10px; background: #fff7e8; color: #4d3200; font-size: 14px; line-height: 1.5; }
+.gmd-app .gmd-delay-notice { margin: 0 0 18px; padding: 12px 16px; border: 1px solid #f0c36d; border-left: 4px solid #c27c0e; border-radius: 10px; background: #fff7e8; color: #4d3200; font-size: 14px; line-height: 1.5; }
 .gmd-delay-notice b { margin-right: 6px; color: #3d2800; }
-@media (max-width:600px) { .gmd-delay-notice { margin-bottom: 12px; padding: 10px 12px; font-size: 13px; line-height: 1.45; } }
+@media (max-width:600px) { .gmd-app .gmd-delay-notice { margin-bottom: 12px; padding: 10px 12px; font-size: 13px; line-height: 1.45; } }
 
 /* The header's connect button without a wallet in the browser: how to get one, in place. */
 .gmd-wallet-connect-box { position: relative; }
