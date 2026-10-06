@@ -22,7 +22,7 @@ test("Markets renders the actual product path without fabricated values or the v
   assert.match(html, />Invest </);
   assert.match(html, /You are on X Layer Testnet\. Balances are demo funds with no real value\./);
   assert.match(html, /Connect OKX Wallet/);
-  assert.match(html, /NAV per share/);
+  assert.match(html, /<abbr title="Net asset value: what the xStocks behind one share are worth">NAV<\/abbr> per share/);
   assert.match(html, /Priced by OKX OnchainOS/);
   assert.doesNotMatch(html, /Try to break it|Recent investor activity|Built on X Layer and OKX|What you can do/, "no pitch or developer material on the customer page");
   assert.match(html, /href="\/products\/ustx#investment"/);

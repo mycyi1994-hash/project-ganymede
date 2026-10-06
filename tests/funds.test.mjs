@@ -154,6 +154,16 @@ test("the fund API reads only and carries no demo totals", async () => {
     assert.deepEqual(ustx.history.map((entry) => entry.navPerShareMicros), ["101570295"]);
     assert.equal(ustx.latest.publication.txHash, record.txHash);
     assert.equal(ustx.latest.canonical, undefined);
+    // While newer records wait for X Layer, the last confirmed one stays listed with its document for the browser's check.
+    db.readOnly = false;
+    const waiting = Array.from({ length: 12 }, (_, index) => ({ asOf: new Date(Date.parse("2026-10-06T14:25:00.000Z") + index * 300_000).toISOString(), navPerShareMicros: "100000000", holdingsHash: `0x${String(index).padStart(64, "0")}`, canonical: "{}", status: "submitted", txHash: null, error: null }));
+    const confirmedRecord = { asOf: "2026-10-06T14:20:44.000Z", navPerShareMicros: "100500000", holdingsHash: `0x${"d".repeat(64)}`, canonical: "{}", status: "confirmed", txHash: `0x${"e".repeat(64)}`, error: null };
+    sql.prepare("INSERT INTO engine_state (key, value, updated_at) VALUES (?, ?, CURRENT_TIMESTAMP)").run("fund:magnificent-7:history", JSON.stringify(waiting));
+    sql.prepare("INSERT INTO engine_state (key, value, updated_at) VALUES (?, ?, CURRENT_TIMESTAMP)").run("fund:magnificent-7:confirmed", JSON.stringify(confirmedRecord));
+    db.readOnly = true;
+    const m7x = (await (await fundsGET(request("/api/v1/funds?id=magnificent-7"))).json()).fund;
+    assert.equal(m7x.history.length, 13);
+    assert.deepEqual(m7x.history.at(-1), confirmedRecord);
   } finally { delete env.DB; delete env.NAV_REGISTRY_ADDRESS; sql.close(); }
 });
 

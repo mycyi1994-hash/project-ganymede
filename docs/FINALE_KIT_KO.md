@@ -142,8 +142,8 @@ Markets에서 USTX를 누르면 NAV·구성·검증 결과가 보이고, OKX Wal
 EN: Open USTX, connect OKX Wallet, take free test gas and demo dollars, and invest from $10: three signatures the first time.
 
 **C2. NAV가 멈춘 지금 화면은 사용자에게 뭐라고 하나?**
-Pools는 풀 자체 가격으로 가치를 보여 주며 "NAV 기록이 한 시간 넘었다"고 알리고, 주문 패널은 펀드 대신 견적이 가능한 곳만 보여 주며 이유를 적습니다. Ask USTX는 이제 주문 가능 여부를 먼저 확인해 "지금은 펀드가 주문을 받지 않는다"고 답합니다(오늘 새벽 수정 전에는 한국어 질문에 "지금 살 수 있다"고 답했다).
-EN: Pools and the order panel say the NAV record is over an hour old, and Ask USTX checks that orders are open before saying so.
+모든 화면 맨 위에 "NAV record delayed"와 마지막 기록 시각·경과 시간이 글자로 뜹니다(색만이 아니라). 주문 패널은 지갑을 연결하기 전부터 펀드 주문이 다음 기록을 기다린다고 말하고, 대출은 "새 대출은 다음 NAV 기록을 기다린다", Transparency는 "주문·대출 유효 시간이 N시간 전에 지났다", 배지는 "delayed"와 함께 Invest 대신 Details를 보여 줍니다. Pools는 풀 자체 가격으로 가치를 보여 주며 이유를 적고, Ask USTX는 주문 가능 여부를 먼저 확인해 답합니다(10월 7일 새벽 수정 전에는 한국어 질문에 "지금 살 수 있다"고 답했고, 화면 여럿이 "Live", "open now"라고 했다).
+EN: Every screen says the NAV record is delayed and since when, in words; the order panel, borrowing, the badge and Ask USTX all say orders wait for the next record.
 
 **C3. 블록 격자(DLMM) 편집기는 처음 보는 사람이 이해하나? 휴대폰은?**
 Meteora DLMM Pro처럼 가격 아래 dUSD, 위 USTX 칸을 블록으로 쌓습니다. 누르면 그 높이까지 차고, 끌면 칠해지고, 화살표 키로도 조절하며, 되돌리기와 이름 붙여 저장이 있습니다. 1440·390px에서 확인했고, 처음 열면 Custom이 선택돼 있습니다.
@@ -154,8 +154,8 @@ EN: Blocks below the price hold demo dollars and above it USTX, as on DLMM Pro: 
 EN: The screens are in English; Ask USTX answers in the visitor's language, Korean included.
 
 **C5. 접근성은?**
-블록 격자는 키보드로 조작되고 칸마다 라벨이 있습니다. 주요 화면을 axe로 점검합니다(결과는 리뷰 문서).
-EN: Keyboard-operable editor with labels, and axe checks on the key screens.
+블록 격자는 키보드로 조작되고, 칸마다 가격 구간·토큰(달러 또는 USTX)·예치금 중 몫을 읽어 줍니다. 전략 선택은 화살표 키로 움직이는 라디오 그룹입니다. 운영 사이트 7개 화면을 1440·390px에서 axe로 점검해, /pools의 심각 2건(역할 없는 차트 칸 20개, 대비 3.74:1)을 고쳤습니다. 남은 한계: 휴대폰에서 칸이 많으면 칸 폭이 24px보다 좁습니다(칸 수를 줄이거나 키보드로 조작).
+EN: The editor is keyboard-operable and each column reads its price range, token and share; axe on seven live screens, with the two serious issues on Pools fixed.
 
 **C6. 오류는 어떻게 보이나? (지갑 거부, 잔액 부족, 체인 다름)**
 주문은 서명 전에 모의 실행해 컨트랙트의 거절 이유를 사람이 읽는 문장으로 보여 주고, 지갑이 다른 체인이면 X Layer Testnet으로 바꾸라고 요청합니다. 거부한 요청도 시험했습니다.

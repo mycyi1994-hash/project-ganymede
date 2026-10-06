@@ -25,6 +25,8 @@ import { OkxSource } from "./OkxSource";
 
 const money = (value: number, digits = 2) => `$${value.toLocaleString("en-US", { minimumFractionDigits: digits, maximumFractionDigits: digits })}`;
 const pct = (ratio: number, digits = 1) => `${(ratio * 100).toFixed(digits)}%`;
+/** A gap between two levels given in percent of the start: "51.2 points". */
+const pointsApart = (ratio: number) => `${(ratio * 100).toFixed(1)} points`;
 const signed = (ratio: number, digits = 1) => `${ratio > 0 ? "+" : ratio < 0 ? "−" : ""}${Math.abs(ratio * 100).toFixed(digits)}%`;
 const day = (iso: string) => new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
 const txUrl = (hash: string | null | undefined) => hash && /^0x[0-9a-f]{64}$/i.test(hash) ? `${PROOF_DEPLOYMENT.explorerUrl}/tx/${hash}` : null;
@@ -136,7 +138,7 @@ function AutocallPath({ document, terms, tall = false }: { document: AutocallDoc
             <text className="gmd-autocall-barrier" x={cx - 6} y={y(barrier) - 8} textAnchor="end">{pct(barrier, 0)}</text>
             <text className="gmd-lq-tick" x={cx} y={H - bottom + 18} textAnchor={index + 1 === n ? "end" : "middle"}>{narrow ? `${(index + 1) * terms.observationMonths}m` : index + 1 === n ? "3 years" : `${(index + 1) * terms.observationMonths} months`}</text>
             <text className="gmd-autocall-pay" x={cx} y={H - bottom + 36} textAnchor={index + 1 === n ? "end" : "middle"}>{money(couponPayout(terms, index + 1), narrow ? 0 : 2)}</text>
-            <rect className="gmd-lq-hit" x={xi(index)} y={top} width={xi(index + 1) - xi(index)} height={H - top - bottom} tabIndex={0} aria-label={`Observation ${index + 1}, ${day(dates[index + 1])}: barrier ${pct(barrier, 0)}, pays ${money(couponPayout(terms, index + 1))} per $100 if the worse index is at or above it`}
+            <rect className="gmd-lq-hit" x={xi(index)} y={top} width={xi(index + 1) - xi(index)} height={H - top - bottom} tabIndex={0} role="img" aria-label={`Observation ${index + 1}, ${day(dates[index + 1])}: barrier ${pct(barrier, 0)}, pays ${money(couponPayout(terms, index + 1))} per $100 if the worse index is at or above it`}
               onPointerEnter={() => setHover(index)} onPointerLeave={() => setHover(null)} onFocus={() => setHover(index)} onBlur={() => setHover(null)} />
           </g>;
         })}
@@ -256,7 +258,7 @@ export function IncomeScreen({ id }: { id: string }) {
           <header className="gmd-section-heading"><div><h2 id="note-title">Where the note stands</h2><p>Started on {day(note.state.fixedAt)} at {terms.underlyings.map(symbol => `${symbol} ${money(note.state.initial[symbol])}`).join(" and ")}.</p></div><span className="gmd-fund-asset">{terms.underlyings.map(symbol => <AssetMark key={symbol} symbol={symbol} />)}</span></header>
           <div className="gmd-pools-summary-stats gmd-income-tiles">
             {terms.underlyings.map(symbol => <Tile key={symbol} label={`${symbol} vs start`} value={pct(note.performance[symbol])} note={money(note.prices[symbol])} />)}
-            <Tile label="Knock-in" value={note.state.knockedIn ? "Hit" : "Not hit"} note={note.state.knockedIn ? `On ${day(note.state.knockedInAt!)}` : `The worse index is ${pct(note.worst - terms.knockIn)} above ${pct(terms.knockIn, 0)}`} />
+            <Tile label="Knock-in" value={note.state.knockedIn ? "Hit" : "Not hit"} note={note.state.knockedIn ? `On ${day(note.state.knockedInAt!)}` : `The worse index is at ${pct(note.worst)} of its start, ${pointsApart(note.worst - terms.knockIn)} above ${pct(terms.knockIn, 0)}`} />
             <Tile label={note.state.status === "live" ? "Next observation" : note.state.status === "called" ? "Called" : "Matured"} value={note.nextObservation ? day(note.nextObservation.date) : money(note.state.payout ?? 0)} note={note.nextObservation ? `Pays ${money(note.nextObservation.payIfCalled)} if at or above ${pct(note.nextObservation.barrier, 0)}` : "Per note, on its final record"} />
           </div>
           <AutocallPath document={note} terms={terms} tall />
@@ -352,7 +354,7 @@ function IncomeMarketPreview({ definition }: { definition: FundDefinition }) {
         <div className="gmd-income-meter is-note" role="img" aria-label={`Worse index at ${pct(note.worst)} of its start; knock-in at ${pct(terms.knockIn, 0)}`}><span style={{ width: `${Math.min(100, note.worst / 1.2 * 100)}%` }} /><i style={{ left: `${terms.knockIn / 1.2 * 100}%` }} /><b>Worse index {pct(note.worst)}</b></div>
         <ul className="gmd-income-rows">
           {terms.underlyings.map(symbol => <Row key={symbol} mark={symbol} label={`${symbol} vs start`} note={`${money(note.prices[symbol])} from ${money(note.state.initial[symbol])}`} value={pct(note.performance[symbol])} />)}
-          <Row label="Knock-in" note={note.state.knockedIn ? `Hit on ${day(note.state.knockedInAt!)}` : `${pct(note.worst - terms.knockIn)} above ${pct(terms.knockIn, 0)}`} value={note.state.knockedIn ? "Hit" : "Not hit"} />
+          <Row label="Knock-in" note={note.state.knockedIn ? `Hit on ${day(note.state.knockedInAt!)}` : `At ${pct(note.worst)}, ${pointsApart(note.worst - terms.knockIn)} above ${pct(terms.knockIn, 0)}`} value={note.state.knockedIn ? "Hit" : "Not hit"} />
           {note.nextObservation && <Row label="Next observation" note={`Pays ${money(note.nextObservation.payIfCalled)} if at or above ${pct(note.nextObservation.barrier, 0)}`} value={day(note.nextObservation.date)} />}
           <Row label="Subscription" note={`At $${terms.face} a note`} value={Date.parse(note.asOf) > Date.parse(note.subscriptionEndsAt) ? "Closed" : `Until ${day(note.subscriptionEndsAt)}`} />
         </ul>

@@ -22,7 +22,12 @@ export async function verifyFundSnapshot(fund: FundDetail, fundId: string, optio
   });
   if (!record.effectiveAt) return { result: "unavailable", detail: "No record of this fund is on X Layer yet." };
   const entry = fund.history.find(item => item.holdingsHash.toLowerCase() === record.holdingsHash.toLowerCase());
-  if (!entry) return { result: "unavailable", detail: "A newer record is on X Layer than this page has. Waiting for the page to refresh." };
+  if (!entry) {
+    const newest = fund.history[0];
+    return { result: "unavailable", detail: newest && Date.parse(newest.asOf) > Date.parse(record.effectiveAt)
+      ? "This page's newer records are still waiting to be written to X Layer, and the one on X Layer is not among them. Waiting for the next record."
+      : "A newer record is on X Layer than this page has. Waiting for the page to refresh." };
+  }
   const checks = await verifyFundComposition(entry.canonical, record, definition.id);
   if (checks.hash.state !== "pass" || checks.nav.state !== "pass" || !checks.composition) {
     return { result: "failed", detail: "The holdings document does not match this fund's record on X Layer." };
