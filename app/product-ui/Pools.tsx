@@ -26,7 +26,7 @@ import { TxLink, sendFromWallet, useInjectedWallet, useWalletChain, type Provide
 import { TxSteps, WalletGate, orderDeadline, runPlan, useUnmountSignal, type PlanProgress, type PlanStep, type StepState, type TxStep } from "./LiquidityParts";
 import { V4_POOL_DEPLOYMENT, formatFeePips, v4Calls, v4ErrorMessage, v4Fill, v4ValueMicros, v4WithdrawEstimate, type V4Amounts } from "@/lib/xstocks/v4-liquidity";
 import { allocateShares, binTicksFor, planRange, planStrategy, strategyById } from "@/lib/xstocks/lp-strategy";
-import { RANGE_POOL_DEPLOYMENT, assertRangePriceNear, rangeCalls, rangeErrorMessage, rangeFill } from "@/lib/xstocks/range-liquidity";
+import { RANGE_POOL_DEPLOYMENT, RangePriceMoved, assertRangePriceNear, rangeCalls, rangeErrorMessage, rangeFill } from "@/lib/xstocks/range-liquidity";
 import { V4LiquidityPanel, V4PoolGuide, V4PoolOverview, useV4Pool, v4Position, type V4Reader } from "./PoolsV4";
 import { PoolResults } from "./PoolResults";
 import { DEFAULT_CHOICE, StrategyChart, StrategyPicker, ownRangeOf, strategyPercent, type StrategyChoice } from "./PoolStrategy";
@@ -685,6 +685,8 @@ function LiquidityPanel({ provider, chain, owner, reader, v4, range, onBusy, amo
       const step = progress.step ?? "";
       const reason = /^(approveRange|open|close)/.test(step) ? rangeErrorMessage(error) : /^(approveV4|deposit|cancelV4|withdrawV4)/.test(step) ? v4ErrorMessage(error) : liquidityErrorMessage(error);
       setFailure({ message: `${partial}${reason}`, hash: progress.lastHash });
+      // A price that moved is read again now, so trying again is quoted at the new one.
+      if (error instanceof RangePriceMoved) range?.retry();
       // So that trying again does not repeat the step that went through: the bought USTX waits in the
       // pair form, and a withdrawal that came out is not withdrawn again.
       if (result.invested && !result.added && !result.deposited && !strategyRun && !rangeRun) { setExpert(true); setMode("pair"); setPair({ anchor: "shares", text: plain(result.invested.sharesMicros) }); setDollarsText(""); }
