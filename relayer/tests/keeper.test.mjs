@@ -291,6 +291,23 @@ test("the keeper approves its demo dollars to the range arbitrage once, before t
   assert.deepEqual(calls.splice(0), ["allowance", "simulate"], "and not again");
 });
 
+test("the keeper claims demo dollars for the range arbitrage when it holds under $10 and a claim is due", async () => {
+  const claims = [];
+  const range = { dollarAllowance: async () => 2n ** 256n - 1n, approveDollars: async () => { throw new Error("approved"); }, simulate: async () => ({ revert: "NothingToDo()" }), navGap: async () => null, arbitrage: async () => { throw new Error("not sent"); } };
+  const wallet = (balance, nextClaimAt, success = true) => ({
+    dollarBalance: async () => balance, nextClaimAt: async () => nextClaimAt, now: async () => 1_000n,
+    claim: async () => { claims.push(balance); return { hash: `0x${"9".repeat(64)}`, success }; },
+  });
+  // Shortfall trades draw up to $10 each, whether or not the constant-product pool's run claimed.
+  assert.equal((await runRangeArbitrage(range, wallet(5n * USD, 0n))).reason, "the range pool is within its fee of the NAV");
+  assert.deepEqual(claims, [5n * USD]);
+  // Enough held, or no claim due yet: nothing is claimed and the call still runs.
+  await runRangeArbitrage(range, wallet(10n * USD, 0n));
+  await runRangeArbitrage(range, wallet(5n * USD, 2_000n));
+  assert.deepEqual(claims, [5n * USD]);
+  assert.equal((await runRangeArbitrage(range, wallet(0n, 0n, false))).reason, `claim reverted: 0x${"9".repeat(64)}`);
+});
+
 test("reads the range pool's price against the NAV from the hook and Uniswap's PoolManager", async (t) => {
   // The pool on X Layer Testnet as `npm run deploy:range` recorded it (lib/xstocks/range-liquidity.ts).
   const arbitrage = "0x58571aa0519a82f1d3839cae5392dfb060c5d572";

@@ -84,9 +84,14 @@ export type RangeOutcome = { action: "none"; reason: string } | { action: "arbit
  * worth more at the NAV. Either is sent for the gas alone. A profit under a cent means only a little
  * liquidity lies there; that trade is sent too, insisting on half of it, while the price is too far
  * from the NAV for positions to open, since nothing else would bring it back. The keeper approves
- * its demo dollars to the arbitrage first, once.
+ * its demo dollars to the arbitrage first, once, and keeps the $10 it may draw: given its `wallet`,
+ * it claims demo dollars when it holds less and a claim is due, whatever became of the other trade.
  */
-export async function runRangeArbitrage(chain: RangeChain): Promise<RangeOutcome> {
+export async function runRangeArbitrage(chain: RangeChain, wallet?: KeeperWallet): Promise<RangeOutcome> {
+  if (wallet && (await wallet.dollarBalance()) < MIN_INVESTMENT_MICROS && (await wallet.nextClaimAt()) <= (await wallet.now())) {
+    const claimed = await wallet.claim();
+    if (!claimed.success) return none(`claim reverted: ${claimed.hash}`);
+  }
   if (await chain.dollarAllowance() < MIN_INVESTMENT_MICROS) {
     const approved = await chain.approveDollars();
     if (!approved.success) return none(`approving demo dollars for the range arbitrage failed in ${approved.hash}`);
@@ -141,6 +146,9 @@ export interface KeeperChain {
   /** The range pool, when RANGE_ARBITRAGE_ADDRESS is set; it shares the keeper's nonces too. */
   range?: RangeChain | null;
 }
+
+/** The keeper's own demo dollars, for the range pool's arbitrage to keep enough of them. */
+export type KeeperWallet = Pick<KeeperChain, "dollarBalance" | "nextClaimAt" | "now" | "claim">;
 
 export type KeeperOutcome =
   | { action: "none"; reason: string }
@@ -455,7 +463,7 @@ export default {
       await runKeeper(chain).then(outcome => console.log(JSON.stringify(outcome)), error => console.error(`keeper run failed: ${describe(error)}`));
       // The v4 pool's re-peg runs whatever became of the arbitrage.
       if (chain.v4) await runRepeg(chain.v4).then(outcome => console.log(JSON.stringify({ pool: "v4", ...outcome })), error => console.error(`v4 re-peg failed: ${describe(error)}`));
-      if (chain.range) await runRangeArbitrage(chain.range).then(outcome => console.log(JSON.stringify({ pool: "range", ...outcome })), error => console.error(`range arbitrage failed: ${describe(error)}`));
+      if (chain.range) await runRangeArbitrage(chain.range, chain).then(outcome => console.log(JSON.stringify({ pool: "range", ...outcome })), error => console.error(`range arbitrage failed: ${describe(error)}`));
     })());
   },
   // The keeper only runs on its schedule; it serves nothing.
