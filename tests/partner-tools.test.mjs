@@ -4,6 +4,7 @@ import { DatabaseSync } from "node:sqlite";
 import { readFileSync } from "node:fs";
 import { FaucetError, dripGas } from "../lib/faucet.ts";
 import { FAUCET_TERMS, formatOkb } from "../lib/faucet-terms.ts";
+import { visitorOf } from "../lib/engine/api-helpers.ts";
 import { LISTED_LATE, RANGE_ORDERS_MOVED, addUsage, moveListedLate, moveRangeArbitrageOrders, summarizeUsage, updateUsage } from "../lib/xstocks/usage.ts";
 import { RANGE_ARBITRAGES } from "../lib/xstocks/range-liquidity.ts";
 import { LOAD_TEST_WALLETS } from "../lib/xstocks/load-test-wallets.ts";
@@ -74,8 +75,23 @@ test("a failed send leaves the wallet free to ask again, and each visitor and th
   await assert.rejects(drip(wallet(100)), (error) => error.code === "limit" && /several wallets/.test(error.message));
   // The refused wallet was not marked as served.
   assert.equal(db.sql.prepare("SELECT COUNT(*) AS n FROM engine_state WHERE key = ?").get(`faucet:wallet:${wallet(100)}`).n, 0);
+  // Past their allowance, a visitor is refused as often as they ask, without spending the site's.
+  const site = () => db.sql.prepare("SELECT value FROM engine_state WHERE key = ?").get(`faucet:site:${now.toISOString().slice(0, 10)}`).value;
+  const before = site();
+  for (let n = 101; n < 120; n++) await assert.rejects(drip(wallet(n)), (error) => error.code === "limit" && /several wallets/.test(error.message));
+  assert.equal(site(), before);
   for (let n = 0; n < FAUCET_TERMS.perSitePerDay; n++) await drip(wallet(1_000 + n), `10.0.0.${n}`).catch(() => undefined);
   await assert.rejects(drip(wallet(5_000), "9.9.9.9"), (error) => error.code === "limit" && /run out/.test(error.message));
+});
+
+test("a daily allowance counts an IPv4 address, or the /64 network of an IPv6 one", () => {
+  const visitor = (ip) => visitorOf(new Request("https://demo.test/", { headers: { "cf-connecting-ip": ip } }));
+  assert.equal(visitor("203.0.113.7"), "203.0.113.7");
+  assert.equal(visitor("2001:db8:abcd:12:1:2:3:4"), "2001:db8:abcd:12::/64");
+  assert.equal(visitor("2001:DB8:ABCD:0012::ffff"), "2001:db8:abcd:12::/64", "any address in the /64, however written");
+  assert.equal(visitor("2001:db8::1"), "2001:db8:0:0::/64");
+  assert.equal(visitor("::ffff:198.51.100.2"), "198.51.100.2", "an IPv4 address written as IPv6");
+  assert.equal(visitorOf(new Request("https://demo.test/", { headers: { "x-forwarded-for": "198.51.100.9, 10.0.0.1" } })), "198.51.100.9");
 });
 
 const row = (block, account, kind = "invest", dollars = 100_000_000n) => ({

@@ -1,7 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { ContractFunctionExecutionError, ContractFunctionRevertedError, keccak256, parseAbi, parseTransaction } from "viem";
-import { MIN_PROFIT_MICROS, revertReason, runKeeper, runRangeArbitrage, runRepeg, xlayerKeeperChain } from "../src/keeper.ts";
+import {
+  ContractFunctionExecutionError, ContractFunctionRevertedError, encodeAbiParameters, encodeErrorResult, keccak256, parseAbi, parseTransaction, toFunctionSelector,
+} from "viem";
+import { MIN_PROFIT_MICROS, RANGE_OPEN_GAP, revertReason, runKeeper, runRangeArbitrage, runRepeg, xlayerKeeperChain } from "../src/keeper.ts";
 
 const USD = 1_000_000n;
 const MAX = 2n ** 256n - 1n;
@@ -239,18 +241,79 @@ test("a write that fails before it is mined leaves no nonce gap for the next one
   assert.equal(counts, 2);
 });
 
-test("the range pool's arbitrage is sent when it pays a cent, insisting on half of it, or to cross an empty stretch", async () => {
+test("the range pool's arbitrage is sent when it pays a cent, insisting on half of it, or to bring back a price that keeps positions out", async () => {
   const sent = [];
-  const chain = (simulated) => ({
+  const gaps = [];
+  const chain = (simulated, gap = 0.012) => ({
     simulate: async () => simulated,
+    navGap: async () => { gaps.push(gap); return gap; },
     arbitrage: async (minProfit) => { sent.push(minProfit); return { hash: `0x${"7".repeat(64)}`, success: true }; },
   });
+  const landed = { hash: `0x${"7".repeat(64)}`, success: true };
   assert.deepEqual(await runRangeArbitrage(chain({ revert: "NothingToDo()" })), { action: "none", reason: "the range pool is within its fee of the NAV" });
   assert.equal((await runRangeArbitrage(chain({ revert: "NavTooOld(1)" }))).reason, "the arbitrage would revert: NavTooOld(1)");
-  assert.equal((await runRangeArbitrage(chain({ profit: MIN_PROFIT_MICROS - 1n }))).action, "none");
-  assert.deepEqual(await runRangeArbitrage(chain({ profit: 650_000n })), { action: "arbitrage", profit: "650000", hash: `0x${"7".repeat(64)}`, success: true });
+  assert.deepEqual(await runRangeArbitrage(chain({ profit: 650_000n })), { action: "arbitrage", profit: "650000", ...landed });
   assert.deepEqual(sent, [325_000n]);
   // Nothing between the price and the NAV: the pool is moved across for the gas alone.
-  assert.deepEqual(await runRangeArbitrage(chain({ profit: 0n })), { action: "recentre", profit: "0", hash: `0x${"7".repeat(64)}`, success: true });
+  assert.deepEqual(await runRangeArbitrage(chain({ profit: 0n })), { action: "recentre", profit: "0", ...landed });
   assert.deepEqual(sent, [325_000n, 0n]);
+  assert.deepEqual(gaps, [], "a trade worth a cent, or nothing at all, is sent without reading the price");
+  // Under a cent, the trade waits while positions can still open, or while the NAV cannot be read...
+  for (const gap of [RANGE_OPEN_GAP, -RANGE_OPEN_GAP, 0.004, null]) {
+    assert.equal((await runRangeArbitrage(chain({ profit: MIN_PROFIT_MICROS - 1n }, gap))).action, "none");
+  }
+  assert.deepEqual(sent, [325_000n, 0n]);
+  // ...and is sent, insisting on half of it, once the price is too far for them: a few dollars of
+  // USTX over a pool 3% under the NAV earn about a third of a cent, and nothing else moves it.
+  assert.deepEqual(await runRangeArbitrage(chain({ profit: 3_301n }, -0.029)), { action: "recentre", profit: "3301", ...landed });
+  assert.deepEqual(await runRangeArbitrage(chain({ profit: 1n }, 0.0096)), { action: "recentre", profit: "1", ...landed });
+  assert.deepEqual(sent, [325_000n, 0n, 1_650n, 0n]);
+});
+
+test("reads the range pool's price against the NAV from the hook and Uniswap's PoolManager", async (t) => {
+  // The pool on X Layer Testnet as `npm run deploy:range` recorded it (lib/xstocks/range-liquidity.ts).
+  const arbitrage = "0xa4cc0d50eb9fa78b8615ec264b034006e051cbb4";
+  const hook = "0x7964c50943c3ea9338d6653b91b872f147fe28c0";
+  const manager = "0xe83eee508ce92832488dd9f574ad329a1203641c";
+  const poolId = "0x2ffd6b32d25902cf1bc6714ae74cb0afb2711e2cab38e265d58b2de78afee7a1";
+  const stateSlot = "0xc0ae777922c57e236a9da6e9779173cb9f76b12252cdb71b7aaef76b2aca6510";
+  // A NAV of $100 (USTX and demo dollars both have six decimals) and a pool 1% under it in square-root terms.
+  const navSqrt = 10n * 2n ** 96n;
+  const poolSqrt = navSqrt * 99n / 100n;
+  const state = { assetIsCurrency0: true, nav: "ok" };
+  const word = (types, values) => encodeAbiParameters(types.map((type) => ({ type })), values);
+  t.mock.method(globalThis, "fetch", async (_url, init) => {
+    const body = JSON.parse(init.body);
+    if (body.method !== "eth_call") throw new Error(`unexpected ${body.method}`);
+    const { to, data } = body.params[0];
+    const answer = (result) => Response.json({ jsonrpc: "2.0", id: body.id, result });
+    const call = `${to.toLowerCase()}:${data.slice(0, 10)}`;
+    if (call === `${arbitrage}:${toFunctionSelector("hook()")}`) return answer(word(["address"], [hook]));
+    if (call === `${arbitrage}:${toFunctionSelector("poolManager()")}`) return answer(word(["address"], [manager]));
+    if (call === `${hook}:${toFunctionSelector("poolId()")}`) return answer(poolId);
+    if (call === `${hook}:${toFunctionSelector("assetIsCurrency0()")}`) return answer(word(["bool"], [state.assetIsCurrency0]));
+    if (call === `${hook}:${toFunctionSelector("nav()")}`) {
+      if (state.nav === "ok") return answer(word(["uint256", "uint256", "uint160"], [100n * 10n ** 8n, 1_790_000_000n, navSqrt]));
+      const revert = encodeErrorResult({ abi: parseAbi(["error NavTooOld(uint256 updatedAt)"]), errorName: "NavTooOld", args: [1_790_000_000n] });
+      return Response.json({ jsonrpc: "2.0", id: body.id, error: { code: 3, message: "execution reverted", data: revert } });
+    }
+    if (call === `${manager}:${toFunctionSelector("extsload(bytes32)")}`) {
+      assert.equal(`0x${data.slice(10)}`, stateSlot, "slot0 is read where the recorded deployment keeps it");
+      // slot0 packs the tick and the fees above the price's 160 bits.
+      return answer(word(["uint256"], [(0xbb8n << 208n) | (0xffffd8n << 160n) | poolSqrt]));
+    }
+    throw new Error(`unexpected call ${call}`);
+  });
+  const chain = xlayerKeeperChain({
+    KEEPER_PRIVATE_KEY: `0x${"1".repeat(64)}`, ARBITRAGE_ADDRESS: `0x${"a".repeat(40)}`, DOLLAR_ADDRESS: `0x${"b".repeat(40)}`, RANGE_ARBITRAGE_ADDRESS: arbitrage,
+    SETTLEMENT_RPC_URL: "https://rpc.example/key",
+  });
+  // USTX at 0.99² of the NAV: 1.99% under it.
+  assert.ok(Math.abs(await chain.range.navGap() - (0.9801 - 1)) < 1e-12);
+  // With USTX as currency1 the pool's price is demo dollars per USTX's inverse: 2.03% over the NAV.
+  state.assetIsCurrency0 = false;
+  assert.ok(Math.abs(await chain.range.navGap() - (1 / 0.9801 - 1)) < 1e-12);
+  // A NAV the hook will not use: no gap to act on.
+  state.nav = "stale";
+  assert.equal(await chain.range.navGap(), null);
 });
