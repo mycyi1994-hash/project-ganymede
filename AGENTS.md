@@ -59,9 +59,11 @@ administrator action on the PoolManager needs the user's approval. `GanymedeRang
 PoolManager where each provider holds bins of their own, shaped Spot, Curve or Bid-Ask, guarded by the NAV) and
 `GanymedeRangeArbitrage` (which brings that pool back to the NAV through the fund, for the keeper's
 `RANGE_ARBITRAGE_ADDRESS`) are live on X Layer Testnet (hook `0x7964c50943c3ea9338d6653b91b872f147fe28c0`, arbitrage
-`0xa4cc0d50eb9fa78b8615ec264b034006e051cbb4`), deployed and seeded by `npm run deploy:range` with the user's approval on
+`0x58571aa0519a82f1d3839cae5392dfb060c5d572`), deployed and seeded by `npm run deploy:range` with the user's approval on
 4 October; `npm run fork:range` rehearses it on a fork. The arbitrage was replaced the same day after an audit
-(`npm run deploy:range-arbitrage`) so it also moves the price across a stretch with no position in it. Wallet orders route to that pool too when it pays the most.
+(`npm run deploy:range-arbitrage`) so it also moves the price across a stretch with no position in it, and again on
+6 October with the user's approval so the caller (the keeper, from demo dollars it approves) makes up what the pool pays
+short of the fund's $10 minimum investment, repaid in USTX. Wallet orders route to that pool too when it pays the most.
 Redeploying it needs the user's approval. Real money stays out of scope: no mainnet deployment of these contracts, no real deposits, withdrawals, custody or payment destinations, and
 no value for dUSD or USTX. Never create or name an address that would receive
 real funds, and keep the demo, testnet and simulation labels.
