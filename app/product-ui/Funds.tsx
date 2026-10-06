@@ -135,7 +135,7 @@ export function FundClosed({ ticker, note }: { ticker: string; note?: string | n
   </aside>;
 }
 
-/** One fund's page: its NAV and record, its holdings, the browser's check and a demo order. */
+/** One fund's page: its NAV and record, its holdings, the browser's check, and investing not open yet. */
 export function FundScreen({ id }: { id: string }) {
   const definition = otherFund(id);
   const { data, error: failed } = useFundResource<{ fund: FundDetail }>(`/api/v1/funds?id=${encodeURIComponent(id)}`);

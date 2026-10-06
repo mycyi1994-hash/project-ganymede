@@ -28,7 +28,7 @@ const apiExample = `{
   },
   "shares": {
     "token": "0x77ea…7596",
-    "outstanding": { "recordedMicros": "1520833514", "inWalletsMicros": "706600000", "inDemoBalancesMicros": "827100000", … },
+    "outstanding": { "recordedMicros": "1520833514", "inWalletsMicros": "1520833514", … },
     …
   },
   "verify": { "page": "${SITE}/products/ustx/transparency", … }

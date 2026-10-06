@@ -22,11 +22,11 @@
 - **운영 제품** (X Layer Testnet, 가치 없는 데모 달러 dUSD)
   - **Markets**: USTX NAV(OKX OnchainOS 가격, X Layer 기록)와 **다음 기록까지 카운트다운**(새 기록이 오면 초록·빨강으로 반짝임), 펀드 규모·투자자·24시간 순유입, 차트(마우스를 올리면 툴팁, **키퍼 차익거래와 $1,000 이상 주문 표시**), 구성 종목(가격·고정 이후 변화·목표 비중 막대, **누르면 상세 패널**), 그리고 **시장 활동 카드**(24시간 거래액·거래 수·키퍼 차익거래와 번 금액·대출 동작, 최근 거래 4줄).
   - **USTX 화면**
-    - 투자 패널: OKX Wallet → X Layer Testnet 전환 → dUSD 받기 → 주문. 펀드(NAV)와 풀(시장가) 중 **더 좋은 가격으로 자동 선택**한다. 체결 후 "Added to your basket"에 6종목 토큰 수량이 나온다. 지갑이 없으면 Demo balance 탭으로 같은 체험을 한다.
+    - 투자 패널: OKX Wallet → X Layer Testnet 전환 → dUSD 받기 → 주문. 펀드(NAV)와 풀(시장가) 중 **더 좋은 가격으로 자동 선택**한다. 체결 후 "Added to your basket"에 6종목 토큰 수량이 나온다. 지갑 없이 투자하는 길은 없다(서버의 데모 잔고는 10/6에 없앴다).
     - 펀드 개요: 규모, 투자자, 수익률, 핵심 조건, 풀의 시장가격과 NAV 대비 괴리율(**±0.3% 수수료 구간이 칠해진 게이지**), 가격 오라클.
     - **시장 활동**: 펀드 투자·환매, 풀 매매, 키퍼 차익거래(번 금액 포함), 대출의 각 단계가 실시간으로 나온다. 줄마다 OKX 탐색기로 연결된다.
     - **Borrow against USTX**: USTX를 담보로 넣고 dUSD를 빌리고, 갚고, 빼고, 빌려주는 대출 시장. 내 대출은 **50% 한도·65% 청산선이 있는 막대**로 보인다.
-  - **Portfolio**: 지갑의 USTX와 담보(대출 포함)를 6종목으로 들여다보기(**도넛 차트**와 표), 데모 잔고, X Layer 메인넷의 실제 xStocks 평가와 명세서.
+  - **Portfolio**: 지갑의 USTX와 담보(대출 포함)를 6종목으로 들여다보기(**도넛 차트**와 표), X Layer 메인넷의 실제 xStocks 평가와 명세서.
   - **Transparency**: 고객용 증명 페이지. 방문자 브라우저가 X Layer 기록을 직접 읽어 확인한다.
   - **파트너용**: `/developers`(검증 실험·증거 파일·API·NAV 가격 피드·풀·담보 예시), `/issuers`, `/embed/ustx` 배지, 공개 API `/api/v1/ustx`·`/api/v1/ustx/activity`.
 - **컨트랙트 8개** (X Layer Testnet): NAV 기록, USTX 펀드, dUSD, Chainlink 방식 NAV 피드, USTX/dUSD 풀, NAV 차익거래, 대출 시장, 예전 GMDCORE 장부. 모두 OKX 탐색기와 Sourcify에서 소스 검증을 마쳤다.
@@ -58,7 +58,7 @@
   - 지갑 장면을 찍으려면 녹화 전에 준비한다(4절 "녹화 전 준비").
     - 크롬에 OKX Wallet 확장 프로그램을 설치하고, 사이트에서 Connect → Switch to X Layer Testnet을 한다.
     - 가스비로 쓸 테스트 OKB가 조금 필요하다. 필요하면 **지갑 주소를 Claude에게 알려 주면 테스트 지갑에서 보내 준다**(테스트넷, 가치 없음).
-  - 지갑 준비가 어려우면 Demo balance 탭으로 찍어도 된다. 지갑 거래는 시장 활동 목록과 OKX 탐색기로 보여 준다.
+  - Demo balance 탭은 10/6에 없앴으니 촬영 전에 지갑(테스트 OKB·dUSD)을 준비한다. 지갑 거래는 시장 활동 목록과 OKX 탐색기로 보여 준다.
 - [ ] **2. 영상 업로드 (필수, 20분)**: YouTube에 "공개" 또는 "일부 공개"로 올린다. **"비공개"는 안 된다.** 로그아웃한 시크릿 창에서 재생되는지 확인한다.
 - [ ] **3. 제출 양식 작성 (필수, 20분)**: 6절 답안을 양식 항목 순서대로 붙여 넣는다. 팀 이름·인원·멤버 실명·참가 경로는 본인이 정한다.
 - [ ] **4. 제출 후 (필수)**
@@ -89,7 +89,7 @@
 | 컨트랙트 감사 없음 | 보안 신뢰도 | 테스트넷 기록용이며 실자금 경로 없음을 명시 |
 | 기존 프로젝트(7월 업비트·GIWA 코드) 기반 | 심사는 빌드 기간 작업만 봄 | `BUILD_PERIOD.md`에 커밋별로 구분. GMDCORE의 "GIWA" 문구도 공개 설명함 |
 | 실자금 투자는 아님(데모 달러) | "진짜 돈은 못 넣는다"는 지적 가능 | 지갑으로 X Layer Testnet에서 실제 거래(승인·투자·환매)가 되고 USTX가 지갑에 들어온다. 돈은 가치 없는 데모 달러(dUSD)다. 실자금은 발행사·수탁·라이선스가 필요하며 `/issuers` 요금제 아래에 "실자금 서비스는 라이선스 파트너와만 제공한다"고 적었다 |
-| 투자자 수는 데모 계정 수 + USTX를 가진 지갑 수 | "실사용자"로 오해될 수 있음 | 화면에 테스트넷·데모 표시가 있다. 발표·영상에서 "투자자가 N명 있다"고 말하지 않는다 |
+| 투자자 수는 USTX를 가진 지갑 수(대부분 팀 테스트 지갑) | "실사용자"로 오해될 수 있음 | 화면에 테스트넷·데모 표시가 있다. 발표·영상에서 "투자자가 N명 있다"고 말하지 않는다 |
 
 ## 4. 데모 영상 대본 (약 3분 15초)
 
@@ -111,7 +111,7 @@
   3. 가스비로 쓸 테스트 OKB가 필요하다. 투자 패널의 "Get test OKB" 링크(OKX 수도꼭지)를 쓰거나, **지갑 주소를 Claude에게 보내면 테스트 OKB를 보내 준다**.
   4. 투자 패널의 **Get demo dollars**로 dUSD 10,000을 받는다(24시간에 한 번).
   5. 리허설로 $10 한 번 사 본다. 승인 창이 한 번 더 뜨는 것(처음 한 번만)을 미리 겪어 두면 녹화가 매끄럽다.
-- **지갑 없이 찍을 때**: 투자 패널의 **Demo balance** 탭으로 장면 2를 찍고, 장면 4는 대출 절의 시장 숫자와 설명만 보여 준다.
+- **지갑 없이 찍을 때**: Demo balance 탭은 10/6에 없앴으므로 주문은 찍을 수 없다. 장면 2는 시장 활동 목록의 지갑 거래와 OKX 탐색기로, 장면 4는 대출 절의 시장 숫자와 설명만 보여 준다.
 - **미리 열어 둘 탭 5개**
   1. https://ganymede-xlayer.gana003.workers.dev/
   2. https://ganymede-xlayer.gana003.workers.dev/products/ustx
@@ -169,7 +169,7 @@
 ### 영상에서 하면 안 되는 말
 
 - "실제 돈으로 투자할 수 있다" → 항상 "demo dollars"라고 말한다.
-- "투자자가 N명 있다", "사용자가 있다" → 투자자 수와 거래는 대부분 우리 테스트 지갑과 데모 계정이다.
+- "투자자가 N명 있다", "사용자가 있다" → 투자자 수와 거래는 대부분 우리 테스트 지갑이다.
 - "메인넷에 기록한다" → 기록과 거래는 X Layer **Testnet**, 가격과 xStocks는 메인넷이다.
 - "가격이 정확함을 증명한다", "감사받았다", "요금을 받고 있다"(요금제는 문의만 받는다).
 - "키퍼가 돈을 번다" → 번 것은 가치 없는 데모 달러다.
@@ -296,7 +296,7 @@ AI-assisted development tools were used. The team reviewed the work and is respo
 11. **펀드가 실제 xStocks를 들고 있나?**
     > No. On testnet the fund holds no assets: an investment's demo dollars are burned and a redemption mints new ones, so the NAV is a model price. xStocks exist on X Layer mainnet, and holding them for investors needs real money, custody and an issuer. The in-kind vault, GanymedeBasketVault, is built and ran with real AAPLx, MSFTx and NVDAx on a fork of X Layer mainnet; it is not deployed.
 12. **펀드 규모에 데모 잔고가 섞여 있지 않나?**
-    > Yes, and the page shows the split: USTX tokens in wallets, which trade in the pool and serve as loan collateral, and shares in demo balances, which stay in the app. Both were issued at the same recorded NAV, and the X Layer record counts both.
+    > No. Since 6 October every share is a USTX token in a wallet on X Layer Testnet, issued by the contract at the recorded NAV: the off-chain demo balance was retired, and the fund size is read from the contract's events.
 13. **AI를 썼나?**
     > Yes, AI-assisted development tools. We reviewed the work, it has about 280 automated tests (app, contracts and relayer), and we can explain each part.
 
