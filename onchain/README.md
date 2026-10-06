@@ -211,7 +211,12 @@ wherever the price is within 1% of the NAV (the app refuses to send one when the
 0.95% away); bins can reach past the 5% band, where they never trade; a paused fund stops payouts of
 USTX, closing included. The first arbitrage contract reverted where no position lay between the
 price and the NAV; it was replaced (`npm run deploy:range-arbitrage`) by one that moves the price across
-such a stretch for nothing, which the keeper sends when the call returns a profit of 0.
+such a stretch for nothing, which the keeper sends when the call returns a profit of 0. It also sends
+a profit under a cent, insisting on half of it, while the price is more than 0.95% from the NAV, so a
+little USTX between a price under the NAV and the NAV no longer leaves positions shut out. Over the
+NAV the limit remains: selling into less than $10 of demo dollars between the price and the NAV
+cannot pay the fund's $10 minimum investment, so the arbitrage reverts (`Unprofitable(0)`) and the
+price stays until a trade or the NAV moves it; lifting that needs a new arbitrage contract.
 
 ## Uniswap v4 liquidity for USTX (fork of X Layer Testnet)
 

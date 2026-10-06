@@ -30,6 +30,13 @@ export const RANGE_POOL_DEPLOYMENT: RangeDeployment | null = {
   arbitrage: "0xa4cc0d50eb9fa78b8615ec264b034006e051cbb4",
 };
 
+/**
+ * Every GanymedeRangeArbitrage: the one pinned above, and the first one, replaced on 4 October
+ * (docs/PRODUCT_RELEASE.md). The fund's events name the contract as the investor in its orders, so
+ * the market activity folds each into the arbitrage it was part of (lib/xstocks/activity.ts).
+ */
+export const RANGE_ARBITRAGES: readonly string[] = [...(RANGE_POOL_DEPLOYMENT ? [RANGE_POOL_DEPLOYMENT.arbitrage] : []), "0xbe0624ee3d949352498a767f1edbe235de38ca4d"];
+
 export const RANGE_SELECTORS = {
   open: "0xa9229268",
   close: "0x37043fda",

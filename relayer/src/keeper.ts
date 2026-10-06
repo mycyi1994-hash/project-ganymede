@@ -1,4 +1,7 @@
-import { BaseError, ContractFunctionRevertedError, createPublicClient, createWalletClient, http, maxUint256, parseAbi, type Address, type Hex } from "viem";
+import {
+  BaseError, ContractFunctionRevertedError, createPublicClient, createWalletClient, encodeAbiParameters, http, keccak256, maxUint256, parseAbi, parseAbiParameters,
+  type Address, type Hex,
+} from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { xlayerTestnet } from "./chain";
 
@@ -51,8 +54,16 @@ export interface RepegChain {
 export interface RangeChain {
   /** The arbitrage's profit in demo-dollar micros, run as a call, or the error it would revert with. */
   simulate(): Promise<{ profit: bigint } | { revert: string }>;
+  /** USTX's price in the pool against the NAV, as a fraction (−0.012 is 1.2% under it); null while the hook has no usable NAV. */
+  navGap(): Promise<number | null>;
   arbitrage(minProfit: bigint): Promise<Sent>;
 }
+
+/**
+ * How far the range pool's price may be from the NAV for positions to open: the hook allows
+ * OPEN_TICKS, about 1%, and the app (app/product-ui/Pools.tsx) stops short of it at 0.95%.
+ */
+export const RANGE_OPEN_GAP = 0.0095;
 
 export type RangeOutcome = { action: "none"; reason: string } | { action: "arbitrage" | "recentre"; profit: string; hash: Hex; success: boolean };
 
@@ -60,7 +71,9 @@ export type RangeOutcome = { action: "none"; reason: string } | { action: "arbit
  * Brings the range pool to the NAV when that earns at least a cent, insisting on half of it when it
  * lands. A profit of exactly 0 means no position lies between the price and the NAV: the trade then
  * only moves the price across that empty stretch, which positions need before they can open, so it
- * is sent for the gas alone.
+ * is sent for the gas alone. A profit under a cent means only a little liquidity lies there; that
+ * trade is sent too, insisting on half of it, while the price is too far from the NAV for positions
+ * to open, since nothing else would bring it back.
  */
 export async function runRangeArbitrage(chain: RangeChain): Promise<RangeOutcome> {
   const simulated = await chain.simulate();
@@ -69,7 +82,12 @@ export async function runRangeArbitrage(chain: RangeChain): Promise<RangeOutcome
     const sent = await chain.arbitrage(0n);
     return { action: "recentre", profit: "0", hash: sent.hash, success: sent.success };
   }
-  if (simulated.profit < MIN_PROFIT_MICROS) return none(`the arbitrage would earn ${simulated.profit}, under the ${MIN_PROFIT_MICROS} worth a trade`);
+  if (simulated.profit < MIN_PROFIT_MICROS) {
+    const gap = await chain.navGap();
+    if (gap === null || Math.abs(gap) <= RANGE_OPEN_GAP) return none(`the arbitrage would earn ${simulated.profit}, under the ${MIN_PROFIT_MICROS} worth a trade`);
+    const sent = await chain.arbitrage(simulated.profit / 2n);
+    return { action: "recentre", profit: simulated.profit.toString(), hash: sent.hash, success: sent.success };
+  }
   const sent = await chain.arbitrage(simulated.profit / 2n);
   return { action: "arbitrage", profit: simulated.profit.toString(), hash: sent.hash, success: sent.success };
 }
@@ -210,6 +228,8 @@ const HOOK_ABI = parseAbi([
 
 const RANGE_ARBITRAGE_ABI = parseAbi([
   "function arbitrage(uint256 minProfit) returns (uint256 profit)",
+  "function hook() view returns (address)",
+  "function poolManager() view returns (address)",
   "error NothingToDo()",
   "error Unprofitable(uint256 profit)",
   "error TransferFailed()",
@@ -220,6 +240,20 @@ const RANGE_ARBITRAGE_ABI = parseAbi([
   "error BelowMinimum()",
   "error ContractPaused()",
 ]);
+
+const RANGE_HOOK_ABI = parseAbi([
+  "function poolId() view returns (bytes32)",
+  "function assetIsCurrency0() view returns (bool)",
+  "function nav() view returns (uint256 answer, uint256 updatedAt, uint160 sqrtPriceX96)",
+  "error NavUnavailable()",
+  "error NavTooOld(uint256 updatedAt)",
+  "error NavInFuture(uint256 updatedAt)",
+  "error NavOutOfRange()",
+]);
+
+const POOL_MANAGER_ABI = parseAbi(["function extsload(bytes32 slot) view returns (bytes32)"]);
+// Where Uniswap v4's PoolManager keeps its pools (StateLibrary.POOLS_SLOT): a pool's slot0 is at keccak256(poolId, 6).
+const POOLS_SLOT = 6n;
 
 const DOLLAR_ABI = parseAbi([
   "function balanceOf(address account) view returns (uint256)",
@@ -343,6 +377,30 @@ export function xlayerKeeperChain(env: KeeperEnv): KeeperChain {
           if (reason === undefined) throw error;
           return { revert: reason };
         }
+      },
+      async navGap() {
+        const [hook, manager] = await Promise.all([
+          publicClient.readContract({ address: rangeArbitrage, abi: RANGE_ARBITRAGE_ABI, functionName: "hook" }),
+          publicClient.readContract({ address: rangeArbitrage, abi: RANGE_ARBITRAGE_ABI, functionName: "poolManager" }),
+        ]);
+        const [poolId, assetIsCurrency0] = await Promise.all([
+          publicClient.readContract({ address: hook, abi: RANGE_HOOK_ABI, functionName: "poolId" }),
+          publicClient.readContract({ address: hook, abi: RANGE_HOOK_ABI, functionName: "assetIsCurrency0" }),
+        ]);
+        let navSqrt: bigint;
+        try {
+          [, , navSqrt] = await publicClient.readContract({ address: hook, abi: RANGE_HOOK_ABI, functionName: "nav" });
+        } catch (error) {
+          if (revertReason(error) === undefined) throw error;
+          return null;
+        }
+        const slot = keccak256(encodeAbiParameters(parseAbiParameters("bytes32, uint256"), [poolId, POOLS_SLOT]));
+        const slot0 = BigInt(await publicClient.readContract({ address: manager, abi: POOL_MANAGER_ABI, functionName: "extsload", args: [slot] }));
+        const poolSqrt = slot0 & ((1n << 160n) - 1n);
+        if (navSqrt === 0n || poolSqrt === 0n) return null;
+        // Pool prices are currency1 per currency0, so USTX's price in demo dollars is the ratio squared, or its inverse.
+        const ratio = (Number(poolSqrt) / Number(navSqrt)) ** 2;
+        return (assetIsCurrency0 ? ratio : 1 / ratio) - 1;
       },
       // A swap across the pool's bins, a redemption or an investment at the fund: about 300,000 gas, more when it crosses many bins.
       arbitrage: minProfit => send(n => walletClient.writeContract({ address: rangeArbitrage, abi: RANGE_ARBITRAGE_ABI, functionName: "arbitrage", args: [minProfit], nonce: n, gas: 1_500_000n })),
