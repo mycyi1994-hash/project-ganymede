@@ -11,9 +11,9 @@ import { hookRevert, tickToUsd, v4PriceMicros, type V4Amounts, type V4Deployment
 // above, spread evenly (Spot), heaviest next to the price (Curve) or heaviest at the far ends
 // (Bid-Ask). Swaps need a NAV under an hour old, and none may leave the price more than 5% from
 // it; GanymedeRangeArbitrage, which the keeper runs, brings the price back to the NAV. Closing a
-// position pays its tokens and fees at any NAV. RANGE_POOL_DEPLOYMENT pins the deployment
-// `npm run deploy:range` recorded on 4 October 2026 with the user's approval, and the arbitrage
-// `npm run deploy:range-arbitrage` replaced on 6 October;
+// position pays its tokens and fees at any NAV, and opens only within the caller's tick limits.
+// RANGE_POOL_DEPLOYMENT pins the deployment `npm run deploy:range` recorded on 6 October 2026 with
+// the user's approval, when it replaced the hook of 4 October with one that takes those limits;
 // onchain/test/AppRangeClient.test.ts checks the pin against the record. Demo dollars and USTX have no value.
 
 export type RangeDeployment = V4Deployment & { arbitrage: string };
@@ -21,24 +21,26 @@ export type RangeDeployment = V4Deployment & { arbitrage: string };
 /** The pool on X Layer Testnet, as `npm run deploy:range` recorded it in onchain/deployments/xlayer-testnet.json. */
 export const RANGE_POOL_DEPLOYMENT: RangeDeployment | null = {
   poolManager: "0xe83eee508ce92832488dd9f574ad329a1203641c",
-  hook: "0x7964c50943c3ea9338d6653b91b872f147fe28c0",
+  hook: "0x79b7985e025dbab36cffbfd82863b4f2f50128c0",
   router: "0xbd899115e3c6926d109a5bd39bf12646fae3862b",
   asset: "0x77eaeba1366bde7818da12d3cbdbea0a2ee97596",
   dollar: "0xf07535080f74e8b0f571e58dfa600f47e72ea9bf",
   assetIsCurrency0: true,
-  poolId: "0x2ffd6b32d25902cf1bc6714ae74cb0afb2711e2cab38e265d58b2de78afee7a1",
-  stateSlot: "0xc0ae777922c57e236a9da6e9779173cb9f76b12252cdb71b7aaef76b2aca6510",
-  arbitrage: "0x58571aa0519a82f1d3839cae5392dfb060c5d572",
+  poolId: "0x3fff3b1249469f8cf04040da6608c6b2501f4f1eb607f3ccea0029c37dff9f7e",
+  stateSlot: "0xa5898aef90ba0b680c0012f761e869bda74617f9e28a31325cb810add587291b",
+  arbitrage: "0xf76fa2ff202613556e6f30e3dda130a2fa10c593",
 };
 
 /**
- * Every GanymedeRangeArbitrage: the one pinned above, the second, replaced on 6 October when the
- * caller began to make up what the pool pays short of the fund's minimum, and the first, replaced on
- * 4 October (docs/PRODUCT_RELEASE.md). The fund's events name the contract as the investor in its
- * orders, so the market activity folds each into the arbitrage it was part of (lib/xstocks/activity.ts).
+ * Every GanymedeRangeArbitrage: the one pinned above, for the hook of 6 October; the third, for the
+ * hook it replaced, which the caller topped up to the fund's minimum (6 October); the second, replaced
+ * that day; and the first, replaced on 4 October (docs/PRODUCT_RELEASE.md). The fund's events name
+ * the contract as the investor in its orders, so the market activity folds each into the arbitrage it
+ * was part of (lib/xstocks/activity.ts).
  */
 export const RANGE_ARBITRAGES: readonly string[] = [
   ...(RANGE_POOL_DEPLOYMENT ? [RANGE_POOL_DEPLOYMENT.arbitrage] : []),
+  "0x58571aa0519a82f1d3839cae5392dfb060c5d572",
   "0xa4cc0d50eb9fa78b8615ec264b034006e051cbb4",
   "0xbe0624ee3d949352498a767f1edbe235de38ca4d",
 ];
