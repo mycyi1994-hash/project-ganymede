@@ -146,7 +146,9 @@ test("load-test wallets counted before they were listed move to the team's figur
 });
 
 test("the range arbitrage's orders counted as an outside wallet are counted again as its arbitrages, only when the kept rows account for all of them", () => {
-  const [range] = RANGE_ARBITRAGES;
+  // The arbitrage whose orders were counted from 5 October, replaced on 6 October.
+  const range = "0xa4cc0d50eb9fa78b8615ec264b034006e051cbb4";
+  assert.ok(RANGE_ARBITRAGES.includes(range));
   const keeper = Object.keys(TEAM_WALLETS).find((address) => TEAM_WALLETS[address] === "Arbitrage keeper");
   const kept = [row(5, range, "redeem", 178_730_444n), row(6, range, "invest", 10_000_000n), row(7, wallet(9))];
   // What the index read in their place: the keeper's arbitrages, with the dollars each put in. Bought

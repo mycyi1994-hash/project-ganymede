@@ -245,6 +245,8 @@ test("the range pool's arbitrage is sent when it pays a cent, insisting on half 
   const sent = [];
   const gaps = [];
   const chain = (simulated, gap = 0.012) => ({
+    dollarAllowance: async () => 2n ** 256n - 1n,
+    approveDollars: async () => { throw new Error("already approved"); },
     simulate: async () => simulated,
     navGap: async () => { gaps.push(gap); return gap; },
     arbitrage: async (minProfit) => { sent.push(minProfit); return { hash: `0x${"7".repeat(64)}`, success: true }; },
@@ -270,9 +272,28 @@ test("the range pool's arbitrage is sent when it pays a cent, insisting on half 
   assert.deepEqual(sent, [325_000n, 0n, 1_650n, 0n]);
 });
 
+test("the keeper approves its demo dollars to the range arbitrage once, before the first call", async () => {
+  const calls = [];
+  let allowance = 0n;
+  const chain = (approval = true) => ({
+    dollarAllowance: async () => { calls.push("allowance"); return allowance; },
+    approveDollars: async () => { calls.push("approve"); if (approval) allowance = 2n ** 256n - 1n; return { hash: `0x${"8".repeat(64)}`, success: approval }; },
+    simulate: async () => { calls.push("simulate"); return { revert: "NothingToDo()" }; },
+    navGap: async () => null,
+    arbitrage: async () => { throw new Error("not sent"); },
+  });
+  // Selling into fewer bids than the fund's minimum draws the rest from the keeper, so the call needs the allowance.
+  assert.equal((await runRangeArbitrage(chain(false))).reason, `approving demo dollars for the range arbitrage failed in 0x${"8".repeat(64)}`);
+  assert.deepEqual(calls.splice(0), ["allowance", "approve"], "nothing is run without it");
+  assert.equal((await runRangeArbitrage(chain())).action, "none");
+  assert.deepEqual(calls.splice(0), ["allowance", "approve", "simulate"]);
+  assert.equal((await runRangeArbitrage(chain())).action, "none");
+  assert.deepEqual(calls.splice(0), ["allowance", "simulate"], "and not again");
+});
+
 test("reads the range pool's price against the NAV from the hook and Uniswap's PoolManager", async (t) => {
   // The pool on X Layer Testnet as `npm run deploy:range` recorded it (lib/xstocks/range-liquidity.ts).
-  const arbitrage = "0xa4cc0d50eb9fa78b8615ec264b034006e051cbb4";
+  const arbitrage = "0x58571aa0519a82f1d3839cae5392dfb060c5d572";
   const hook = "0x7964c50943c3ea9338d6653b91b872f147fe28c0";
   const manager = "0xe83eee508ce92832488dd9f574ad329a1203641c";
   const poolId = "0x2ffd6b32d25902cf1bc6714ae74cb0afb2711e2cab38e265d58b2de78afee7a1";
