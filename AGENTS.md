@@ -4,10 +4,10 @@
 
 The public UI presents USTX as a live fund service, laid out like a production
 DeFi app: one testnet notice and the network and "Connect OKX Wallet" in the
-header; Markets (with the market's latest activity and its 24-hour figures, a countdown to the next NAV record, and a detail panel for each xStock); Pools (the USTX/dUSD pool's value, 24-hour volume and fees, fee APR and price against the NAV, its activity (the v4 pool's trades and liquidity in a list of their own), and adding or withdrawing liquidity from a wallet, in both tokens or demo dollars alone, with a strategy (`lib/xstocks/lp-strategy.ts`, drawn by price in one chart in `app/product-ui/PoolStrategy.tsx` with Ask USTX on each): Spot, Curve and Spot + Curve split demo dollars between the two pooled pools, and Bid-Ask and Custom (one's own shape, reach, bins and sides) open a position of one's own in the range pool pinned by `RANGE_POOL_DEPLOYMENT` in `lib/xstocks/range-liquidity.ts`, each closed on its own or by Withdraw all; with the v4 pool, both pools' results for their providers at the NAV over the same records, kept by the activity cron in `lib/xstocks/lp-markout.ts`); the USTX page (order panel with wallet and demo-balance investing, wallet orders routed to the fund, the constant-product pool or the v4 pool at the best price (the v4 quote from its router's dry run), borrowing against USTX, fund
-overview with the price oracle and the pool's market price, market activity from the contracts' events, factsheet holdings, About); Portfolio (the demo
-balance and the wallet's USTX, including any posted as lending collateral with its loan and its liquidity in the pool, looked through to each xStock, and valuation of
-any wallet's xStocks on X Layer mainnet); and Transparency (the customer proof page). Five more funds (`lib/funds/catalog.ts`: M7X, AIX, CRYX, CORX, RTLX, over 18 pinned xStocks) are listed on Markets and have their own pages (`/funds/<id>`, `app/product-ui/Funds.tsx`); the NAV cron records them after USTX (`lib/funds/cycle.ts`) under their own product keys in the same registry, and they are bought with the demo balance only (`lib/funds/demo.ts`, `POST /api/funds/orders`, tables created by the cron). Three income products sit beside them on SPYx and QQQx (`INCOME_FUNDS`, `lib/income/`): two covered-call funds (SPYC, QQQC), whose monthly call is priced by Black–Scholes at stated terms because there is no options market for xStocks on X Layer, and a step-down autocallable note (ELS1) that pays from recorded prices; the funds cycle records them under their own product keys, the browser recomputes each value from its document, and Markets groups everything into RWA baskets, Income and Structured. Ask USTX (`app/product-ui/AskUstx.tsx`, `POST /api/assistant`,
+header; Markets (with the market's latest activity and its 24-hour figures, a countdown to the next NAV record, and a detail panel for each xStock); Pools (the USTX/dUSD pool's value, 24-hour volume and fees, fee APR and price against the NAV, its activity (the v4 pool's trades and liquidity in a list of their own), and adding or withdrawing liquidity from a wallet, in both tokens or demo dollars alone, with a strategy (`lib/xstocks/lp-strategy.ts`, drawn by price in one chart in `app/product-ui/PoolStrategy.tsx` with Ask USTX on each): Spot, Curve and Spot + Curve split demo dollars between the two pooled pools, and Bid-Ask and Custom (one's own shape, reach, bins and sides) open a position of one's own in the range pool pinned by `RANGE_POOL_DEPLOYMENT` in `lib/xstocks/range-liquidity.ts`, each closed on its own or by Withdraw all; with the v4 pool, both pools' results for their providers at the NAV over the same records, kept by the activity cron in `lib/xstocks/lp-markout.ts`); the USTX page (order panel investing from a wallet only, orders routed to the fund, the constant-product pool or the v4 pool at the best price (the v4 quote from its router's dry run), borrowing against USTX, fund
+overview with the price oracle and the pool's market price, market activity from the contracts' events, factsheet holdings, About); Portfolio (the
+wallet's USTX, including any posted as lending collateral with its loan and its liquidity in the pool, looked through to each xStock, and valuation of
+any wallet's xStocks on X Layer mainnet); and Transparency (the customer proof page). Five more funds (`lib/funds/catalog.ts`: M7X, AIX, CRYX, CORX, RTLX, over 18 pinned xStocks) are listed on Markets and have their own pages (`/funds/<id>`, `app/product-ui/Funds.tsx`); the NAV cron records them after USTX (`lib/funds/cycle.ts`) under their own product keys in the same registry, and investing in them is not open: they have no share token yet. Three income products sit beside them on SPYx and QQQx (`INCOME_FUNDS`, `lib/income/`): two covered-call funds (SPYC, QQQC), whose monthly call is priced by Black–Scholes at stated terms because there is no options market for xStocks on X Layer, and a step-down autocallable note (ELS1) that pays from recorded prices; the funds cycle records them under their own product keys, the browser recomputes each value from its document, and Markets groups everything into RWA baskets, Income and Structured. Ask USTX (`app/product-ui/AskUstx.tsx`, `POST /api/assistant`,
 `lib/assistant/ask.ts`) answers questions on every product screen with an OpenAI model (the Worker secret
 `OPENAI_API_KEY`, optional `OPENAI_MODEL`) that reads only through the MCP tools, gives no investment
 advice and is limited per visitor and per day. Keep pitch and developer
@@ -29,15 +29,17 @@ providers as a second job) four minutes past, apart so it never holds up the NAV
 so a stalled record stops wallet orders and loans; check the cron's outcome after each deploy.
 `docs/PRODUCT_RELEASE.md` records the current source and Worker version.
 
-Investing uses demo dollars with no value, in two ways. Wallet investing
+Investing uses demo dollars with no value, and only on chain: wallet investing
 (`lib/xstocks/fund.ts`, `app/product-ui/WalletInvest.tsx`) runs on X Layer
 Testnet only: anyone can claim `GanymedeDemoDollar` (dUSD) (and a wallet with almost no test OKB gets 0.0005 once from `POST /api/faucet`,
 `lib/faucet.ts`, signed by the Worker secret `FAUCET_PRIVATE_KEY`, a key holding test OKB only with no role on any contract), and
 `GanymedeBasketFund` issues USTX only when a wallet invests at the latest NAV in
-the registry and redeems at that NAV, holding no assets. Demo-balance investing
-(`lib/demo/`, `app/api/demo/`) keeps a D1 ledger per browser and issues nothing
-on chain. Each NAV record carries the shares outstanding in wallets plus demo
-balances. `GanymedeNavFeed` serves the registry's USTX NAV to other contracts in
+the registry and redeems at that NAV, holding no assets. The off-chain demo
+balance ($10,000 per browser in a D1 ledger) was retired on 6 October at the
+user's request, as confusing beside a wallet: nothing is held for a visitor off
+chain, and its D1 tables are left unread. Each NAV record carries the shares
+outstanding in wallets; `GET /api/fund` serves them with the wallets holding
+USTX and the last day's orders at the fund, from the contracts' events. `GanymedeNavFeed` serves the registry's USTX NAV to other contracts in
 the Chainlink `AggregatorV3Interface`; it has no owner. USTX also trades on
 `GanymedeUstxPool` (USTX/dUSD, constant product), and `GanymedeNavArbitrage`
 closes the pool's gap to the NAV through the fund in one transaction; the keeper

@@ -7,8 +7,7 @@ import { coveredCallNav, premiumYield, stepCoveredCall } from "../lib/income/cov
 import { couponPayout, maturityPayout, stepAutocall } from "../lib/income/autocall.ts";
 import { addMonths, INCOME_TERMS } from "../lib/income/terms.ts";
 import { recomputeIncomeNav } from "../lib/income/verify.ts";
-import { demoFund, fundKind, INCOME_FUNDS, otherFund, universeToken } from "../lib/funds/catalog.ts";
-import { ensureFundDemoTables, FundDemoLedger } from "../lib/funds/demo.ts";
+import { fundKind, incomeFund, INCOME_FUNDS, otherFund, universeToken } from "../lib/funds/catalog.ts";
 import { fundStateKey } from "../lib/funds/cycle.ts";
 import { incomeModelKey, runIncomeCycle } from "../lib/income/cycle.ts";
 import { EngineRepository } from "../lib/engine/repository.ts";
@@ -95,74 +94,37 @@ test("the step-down note fixes, knocks in, is called early, or pays the worse in
   assert.equal(maturityPayout(terms, 0.8, true), 121, "knocked in but above the last barrier");
 });
 
-test("income products are bought with a demo balance; a settled note pays its holders once", async () => {
+test("three income products beside the baskets, recorded under their own product keys", () => {
   assert.equal(INCOME_FUNDS.length, 3);
   assert.equal(otherFund("spy-covered-call"), null, "not a basket");
-  assert.equal(demoFund("spy-covered-call")?.ticker, "SPYC");
+  assert.equal(incomeFund("spy-covered-call")?.ticker, "SPYC");
   assert.equal(fundKind("spy-qqq-autocall-1"), "autocall");
-  const sql = new DatabaseSync(":memory:");
-  sql.exec(["0000_giant_speedball.sql", "0001_demo_ledger.sql"].map((file) => readFileSync(new URL(`../drizzle/${file}`, import.meta.url), "utf8")).join("\n"));
-  const db = {
-    prepare(query) { const prepared = sql.prepare(query); let args = []; return { bind(...values) { args = values; return this; }, async first() { return prepared.get(...args) ?? null; }, async all() { return { results: prepared.all(...args) }; }, async run() { return prepared.run(...args); }, runNow() { return prepared.run(...args); } }; },
-    async batch(statements) { sql.exec("BEGIN"); try { const results = statements.map((statement) => statement.runNow()); sql.exec("COMMIT"); return results; } catch (error) { sql.exec("ROLLBACK"); throw error; } },
-  };
-  await ensureFundDemoTables(db);
-  const ledger = new FundDemoLedger(db);
-  const face = { navMicros: 100_000_000n, effectiveAt: new Date().toISOString(), holdingsHash: "0x" + "b".repeat(64) };
-  await ledger.place("alice", "spy-qqq-autocall-1", { id: "a1", side: "subscribe", usdMicros: 1_000_000_000n }, face, new Date());
-  assert.equal(await ledger.cash("alice"), 9_000_000_000n);
-  const paid = { navMicros: 103_500_000n, effectiveAt: "2027-04-04T12:00:00.000Z", holdingsHash: "0x" + "c".repeat(64) };
-  await ledger.settleAll("spy-qqq-autocall-1", paid);
-  await ledger.settleAll("spy-qqq-autocall-1", paid);
-  assert.equal(await ledger.cash("alice"), 9_000_000_000n + 1_035_000_000n, "paid $1,035 once");
-  assert.deepEqual(await ledger.positions("alice"), []);
-  const orders = await ledger.orders("alice", "spy-qqq-autocall-1");
-  assert.equal(orders.filter((order) => order.side === "redeem").length, 1);
 });
 
-test("a note pays whole micros: a holding paid at $103.50 rounds down, as every fill does", async () => {
+test("a note whose final record the relayer refused sends it again until it is confirmed, and records no shares", async () => {
   const { sql, db } = ledgerDatabase();
-  await ensureFundDemoTables(db);
-  const ledger = new FundDemoLedger(db);
-  const face = { navMicros: 100_000_000n, effectiveAt: "2026-10-05T00:00:00.000Z", holdingsHash: "0x" + "b".repeat(64) };
-  // $10.0001 buys 0.100001 of a note, which at $103.50 is $10.3501035.
-  await ledger.place("alice", "spy-qqq-autocall-1", { id: "a1", side: "subscribe", usdMicros: 10_000_100n }, face, new Date());
-  await ledger.settleAll("spy-qqq-autocall-1", { navMicros: 103_500_000n, effectiveAt: "2027-04-04T12:00:00.000Z", holdingsHash: "0x" + "c".repeat(64) });
-  const account = sql.prepare("SELECT cash_micros, typeof(cash_micros) AS kind FROM demo_accounts WHERE subject = 'alice'").get();
-  assert.equal(account.kind, "integer");
-  assert.equal(await ledger.cash("alice"), 10_000_000_000n - 10_000_100n + 10_350_103n);
-  const paid = (await ledger.orders("alice", "spy-qqq-autocall-1")).filter((order) => order.side === "redeem");
-  assert.deepEqual(paid.map((order) => order.usdMicros), ["10350103"]);
-});
-
-test("a note whose final record the relayer refused sends it again, and pays its holders once it is confirmed", async () => {
-  const { sql, db } = ledgerDatabase();
-  await ensureFundDemoTables(db);
   const repo = new EngineRepository(db);
-  const demo = new FundDemoLedger(db);
   const NOTE = "spy-qqq-autocall-1";
   let refusing = false;
   const network = relayer((request) => refusing && request.productId === NOTE);
   const fixing = "2026-10-04T13:20:19.000Z";
-  await runIncomeCycle(repo, network, demo, prices(770_000_000n, 750_000_000n, fixing), fixing, 10, null);
-  const face = stateOf(sql, fundStateKey(NOTE, "confirmed"));
-  await demo.place("alice", NOTE, { id: "a1", side: "subscribe", usdMicros: 1_000_000_000n }, { navMicros: 100_000_000n, effectiveAt: face.asOf, holdingsHash: face.holdingsHash }, new Date(fixing));
+  await runIncomeCycle(repo, network, prices(770_000_000n, 750_000_000n, fixing), fixing, 10, null);
+  // Investing is not open, so no record counts shares.
+  assert.ok(network.requests.every((request) => !request.sharesOutstandingMicros));
 
   // Both indices hold up at the first observation, so the note is called at $103.50; the relayer refuses that record.
   refusing = true;
   const observed = "2027-04-04T13:25:00.000Z";
-  await runIncomeCycle(repo, network, demo, prices(780_000_000n, 760_000_000n, observed), observed, 10, null);
+  await runIncomeCycle(repo, network, prices(780_000_000n, 760_000_000n, observed), observed, 10, null);
   assert.equal(stateOf(sql, incomeModelKey(NOTE)).status, "called");
-  assert.equal(await demo.cash("alice"), 9_000_000_000n, "not paid while its final record is refused");
-  const again = await runIncomeCycle(repo, network, demo, prices(780_000_000n, 760_000_000n, "2027-04-04T13:30:00.000Z"), "2027-04-04T13:30:00.000Z", 10, null);
+  assert.notEqual(stateOf(sql, fundStateKey(NOTE, "confirmed")).navPerShareMicros, "103500000", "not confirmed while the relayer refuses it");
+  const again = await runIncomeCycle(repo, network, prices(780_000_000n, 760_000_000n, "2027-04-04T13:30:00.000Z"), "2027-04-04T13:30:00.000Z", 10, null);
   assert.ok(again.warnings.includes("ELS1 final record: Settlement relayer 401: Unauthorized"), "a refusal is sent again and said so");
 
-  // Once the relayer takes it, that same record is confirmed and the holders are paid, once.
+  // Once the relayer takes it, that same record is confirmed, and nothing more is sent.
   refusing = false;
-  for (const at of ["2027-04-04T13:35:00.000Z", "2027-04-04T13:40:00.000Z"]) await runIncomeCycle(repo, network, demo, prices(780_000_000n, 760_000_000n, at), at, 10, null);
+  for (const at of ["2027-04-04T13:35:00.000Z", "2027-04-04T13:40:00.000Z"]) await runIncomeCycle(repo, network, prices(780_000_000n, 760_000_000n, at), at, 10, null);
   assert.equal(stateOf(sql, fundStateKey(NOTE, "confirmed")).navPerShareMicros, "103500000");
-  assert.equal(await demo.cash("alice"), 9_000_000_000n + 1_035_000_000n);
-  assert.deepEqual(await demo.positions("alice"), []);
   const finals = network.requests.filter((request) => request.productId === NOTE && request.navPerShareMicros === "103500000");
   assert.equal(finals.length, 3, "sent once and again twice, and not after it was confirmed");
   assert.ok(finals.every((request) => request.entityId === finals[0].entityId), "under the record's own idempotency key");
@@ -170,18 +132,16 @@ test("a note whose final record the relayer refused sends it again, and pays its
 
 test("the income products refuse a price of zero, one for another token or one stamped ahead, as the baskets do", async () => {
   const { sql, db } = ledgerDatabase();
-  await ensureFundDemoTables(db);
   const repo = new EngineRepository(db);
-  const demo = new FundDemoLedger(db);
   const network = relayer();
   const start = "2026-10-05T12:00:00.000Z";
-  await runIncomeCycle(repo, network, demo, prices(770_000_000n, 750_000_000n, start), start, 10, null);
+  await runIncomeCycle(repo, network, prices(770_000_000n, 750_000_000n, start), start, 10, null);
   const note = stateOf(sql, incomeModelKey("spy-qqq-autocall-1"));
   const qqqc = stateOf(sql, fundStateKey("qqq-covered-call", "confirmed"));
 
   // A QQQx price of zero, with no pool read to catch it.
   const zero = "2026-10-05T12:05:00.000Z";
-  const priced = await runIncomeCycle(repo, network, demo, prices(771_000_000n, 0n, zero), zero, 10, null);
+  const priced = await runIncomeCycle(repo, network, prices(771_000_000n, 0n, zero), zero, 10, null);
   assert.equal(priced.published, 1, "SPYC alone");
   assert.ok(priced.warnings.includes("QQQC not published: Non-positive price for QQQx"));
   assert.ok(priced.warnings.includes("ELS1 not published: Non-positive price for QQQx"));
@@ -190,7 +150,7 @@ test("the income products refuse a price of zero, one for another token or one s
 
   // A price quoted for another token, and one stamped a year ahead.
   const later = "2026-10-05T12:10:00.000Z";
-  const wrong = await runIncomeCycle(repo, network, demo, new Map([quote("SPYx", 772_000_000n, later, universeToken("QQQx").address), quote("QQQx", 752_000_000n, "2027-10-05T12:10:00.000Z")]), later, 10, null);
+  const wrong = await runIncomeCycle(repo, network, new Map([quote("SPYx", 772_000_000n, later, universeToken("QQQx").address), quote("QQQx", 752_000_000n, "2027-10-05T12:10:00.000Z")]), later, 10, null);
   assert.equal(wrong.published, 0);
   assert.ok(wrong.warnings.includes("SPYC not published: Price address mismatch for SPYx"));
   assert.ok(wrong.warnings.includes("QQQC not published: Invalid price timestamp for QQQx"));
