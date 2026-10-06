@@ -228,6 +228,18 @@ test("a record passes only with its product's published terms, not other terms w
   const beforeDate = copy(called.document);
   beforeDate.state.observations[0].observedAt = "2027-04-01T12:00:00.000Z";
   assert.equal(recomputeIncomeNav("spy-qqq-autocall-1", beforeDate), null, "observed before its date");
+  // No knock-in can be invented at the fixing, where nothing is lower yet, nor at a record above the knock-in.
+  const invented = copy(fixed.document);
+  Object.assign(invented.state, { lowestWorst: 0.4, knockedIn: true, knockedInAt: invented.state.fixedAt });
+  assert.equal(recomputeIncomeNav("spy-qqq-autocall-1", invented), null, "a knock-in at the fixing");
+  const shifted = copy(fixed.document);
+  shifted.prices = { SPYx: 660, QQQx: 590 };
+  shifted.performance = { SPYx: Number((660 / 650).toFixed(6)), QQQx: 1 };
+  assert.equal(recomputeIncomeNav("spy-qqq-autocall-1", shifted), null, "the fixing's prices are its starting levels");
+  const unbreached = stepAutocall("spy-qqq-autocall-1", terms, fixed.state, { SPYx: 640, QQQx: 560 }, "2026-11-04T12:00:00.000Z");
+  const claimed = copy(unbreached.document);
+  Object.assign(claimed.state, { lowestWorst: 0.4, knockedIn: true, knockedInAt: claimed.asOf });
+  assert.equal(recomputeIncomeNav("spy-qqq-autocall-1", claimed), null, "knocked in at a record above the knock-in");
   // A live record dated past its next observation skipped it: the note would have been observed then.
   const skipped = copy(unknocked.document);
   skipped.asOf = "2027-04-05T12:00:00.000Z";

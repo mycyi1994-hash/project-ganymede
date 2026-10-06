@@ -50,6 +50,8 @@ function positionOnTerms(document: CoveredCallDocument, moneyness: number): bool
   return typeof call.spot === "number" ? Math.abs(units * call.spot - 100) <= 1e-6 : Math.abs(units * call.strike / (1 + moneyness) - 100) <= 0.001;
 }
 
+const anyOf = (items: readonly unknown[]) => items.length > 0;
+
 /** Deep equality of plain JSON values, whatever the order of their keys. */
 function same(a: unknown, b: unknown): boolean {
   if (Array.isArray(a) || Array.isArray(b)) return Array.isArray(a) && Array.isArray(b) && a.length === b.length && a.every((item, index) => same(item, b[index]));
@@ -95,6 +97,10 @@ export function incomeTermsHold(productId: string, document: IncomeDocument): bo
   if (state.lowestWorst > document.worst) return false;
   if (state.observations.some(observation => state.lowestWorst > observation.worst)) return false;
   if (state.knockedIn !== state.lowestWorst < terms.knockIn || state.knockedIn !== (state.knockedInAt !== null)) return false;
+  // The fixing record sets the starting levels from its own prices, so nothing is lower yet and nothing observed.
+  if (state.fixedAt === document.asOf && (terms.underlyings.some(symbol => document.prices[symbol] !== state.initial[symbol]) || state.lowestWorst !== document.worst || anyOf(state.observations))) return false;
+  // A note that knocks in at this record is below the knock-in here, and this is its lowest level: it was above before.
+  if (state.knockedInAt === document.asOf && !(document.worst < terms.knockIn && state.lowestWorst === document.worst)) return false;
   if (state.knockedInAt !== null && (Date.parse(state.knockedInAt) < Date.parse(state.fixedAt) || Date.parse(state.knockedInAt) > Date.parse(document.asOf))) return false;
   // Each observation is the next one on the schedule, against its own barrier, and only the last may call the note.
   const count = state.observations.length;
