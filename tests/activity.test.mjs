@@ -431,8 +431,10 @@ test("rows kept from before the range arbitrage was folded are read again, and i
   assert.deepEqual(parseActivityIndex(stored(STATE_MARKET_ACTIVITY)).rows, [...RANGE_ROWS, alice]);
   const usage = JSON.parse(stored(STATE_USAGE));
   assert.deepEqual(Object.keys(usage.wallets), [ALICE]);
-  assert.deepEqual(usage.team, { actions: 7, volumeMicros: "188730451" });
-  assert.deepEqual(usage.kinds, { invest: { all: 2, outside: 1 }, redeem: { all: 1, outside: 0 } });
+  // Counted as the keeper's arbitrages, with what each put in: $10 invested, and $178.704444 that
+  // bought the USTX it redeemed for $178.730444.
+  assert.deepEqual(usage.team, { actions: 7, volumeMicros: (7n + 10n * USD + 178_704_444n).toString() });
+  assert.deepEqual(usage.kinds, { invest: { all: 1, outside: 1 }, redeem: { all: 0, outside: 0 }, rangeArbitrage: { all: 2, outside: 0 } });
   assert.deepEqual(usage.migrations, [LISTED_LATE.id, RANGE_ORDERS_MOVED]);
 
   // The next run finds nothing to read again or move.

@@ -29,12 +29,10 @@ export type Usage = {
 
 const add = (value: string, more: bigint) => (BigInt(value) + more).toString();
 
-/** The usage with `rows` counted: only rows after `usage.toBlock`, up to `toBlock`. */
-export function addUsage(usage: Usage, rows: MarketActivity[], toBlock: number): Usage {
-  if (toBlock <= usage.toBlock) return usage;
-  const next: Usage = { ...usage, toBlock, wallets: { ...usage.wallets }, kinds: { ...usage.kinds }, team: { ...usage.team } };
+/** `usage` with each of `rows` counted: by kind, and under its wallet or the team's. */
+function countRows(usage: Usage, rows: MarketActivity[]): Usage {
+  const next: Usage = { ...usage, wallets: { ...usage.wallets }, kinds: { ...usage.kinds }, team: { ...usage.team } };
   for (const row of [...rows].sort((a, b) => a.block - b.block || a.logIndex - b.logIndex)) {
-    if (row.block <= usage.toBlock || row.block > toBlock) continue;
     const volume = TRADE_KINDS.has(row.kind) ? row.dollarsMicros ?? 0n : 0n;
     const team = row.account in TEAM_WALLETS;
     const kind = next.kinds[row.kind] ?? { all: 0, outside: 0 };
@@ -45,10 +43,16 @@ export function addUsage(usage: Usage, rows: MarketActivity[], toBlock: number):
     }
     const wallet = next.wallets[row.account];
     next.wallets[row.account] = wallet
-      ? { ...wallet, lastAt: row.at, actions: wallet.actions + 1, volumeMicros: add(wallet.volumeMicros, volume) }
+      ? { firstAt: row.at < wallet.firstAt ? row.at : wallet.firstAt, lastAt: row.at > wallet.lastAt ? row.at : wallet.lastAt, actions: wallet.actions + 1, volumeMicros: add(wallet.volumeMicros, volume) }
       : { firstAt: row.at, lastAt: row.at, actions: 1, volumeMicros: volume.toString() };
   }
   return next;
+}
+
+/** The usage with `rows` counted: only rows after `usage.toBlock`, up to `toBlock`. */
+export function addUsage(usage: Usage, rows: MarketActivity[], toBlock: number): Usage {
+  if (toBlock <= usage.toBlock) return usage;
+  return { ...countRows(usage, rows.filter(row => row.block > usage.toBlock && row.block <= toBlock)), toBlock };
 }
 
 /**
@@ -90,11 +94,14 @@ export const RANGE_ORDERS_MOVED = "2026-10-06-range-arbitrage-orders";
 /**
  * From 5 October GanymedeRangeArbitrage's orders at the fund were counted as a wallet outside the
  * team's: the fund's events name the contract, which the keeper calls. The market activity now folds
- * each into the keeper's arbitrage (lib/xstocks/activity.ts). This moves the orders already counted
- * to the team's figures, from the rows the index kept before it read them again, and only when those
- * rows account for every action and dollar counted under the contract.
+ * each into the arbitrage it was part of (lib/xstocks/activity.ts): the caller's, with the dollars it
+ * put in. This counts those arbitrages in place of the orders already counted, as if they had been
+ * counted so from the start, so later runs, which count only new blocks, never need to: from the
+ * orders the index kept before it read their blocks again (`kept`) and the arbitrages it read in their
+ * place (`rows`). Only when the orders account for every action and dollar counted under the contract,
+ * and each has its arbitrage.
  */
-export function moveRangeArbitrageOrders(usage: Usage, kept: MarketActivity[]): Usage {
+export function moveRangeArbitrageOrders(usage: Usage, kept: MarketActivity[], rows: MarketActivity[]): Usage {
   let next = usage;
   for (const address of RANGE_ARBITRAGES) {
     const wallet = next.wallets[address];
@@ -103,16 +110,17 @@ export function moveRangeArbitrageOrders(usage: Usage, kept: MarketActivity[]): 
     const volume = orders.reduce((sum, row) => sum + (TRADE_KINDS.has(row.kind) ? row.dollarsMicros ?? 0n : 0n), 0n);
     const byKind = new Map<string, number>();
     for (const row of orders) byKind.set(row.kind, (byKind.get(row.kind) ?? 0) + 1);
-    const fits = [...byKind].every(([kind, count]) => (next.kinds[kind]?.outside ?? 0) >= count);
-    if (orders.length !== wallet.actions || volume.toString() !== wallet.volumeMicros || !fits) continue;
+    const fits = [...byKind].every(([kind, count]) => (next.kinds[kind]?.outside ?? 0) >= count && (next.kinds[kind]?.all ?? 0) >= count);
+    const hashes = new Set(orders.map(row => row.hash));
+    const arbitrages = rows.filter(row => row.kind === "rangeArbitrage" && hashes.has(row.hash));
+    if (orders.length !== wallet.actions || volume.toString() !== wallet.volumeMicros || !fits || arbitrages.length !== orders.length) continue;
     const wallets = Object.fromEntries(Object.entries(next.wallets).filter(([other]) => other !== address));
     const kinds = { ...next.kinds };
-    for (const [kind, count] of byKind) kinds[kind] = { ...kinds[kind], outside: kinds[kind].outside - count };
-    next = {
+    for (const [kind, count] of byKind) kinds[kind] = { all: kinds[kind].all - count, outside: kinds[kind].outside - count };
+    next = countRows({
       ...next, wallets, kinds,
-      team: { actions: next.team.actions + wallet.actions, volumeMicros: add(next.team.volumeMicros, volume) },
       migrations: next.migrations?.includes(RANGE_ORDERS_MOVED) ? next.migrations : [...(next.migrations ?? []), RANGE_ORDERS_MOVED],
-    };
+    }, arbitrages);
   }
   return next;
 }
@@ -122,7 +130,7 @@ export function moveRangeArbitrageOrders(usage: Usage, kept: MarketActivity[]): 
  * before the run, which still name the range pool's arbitrage in the orders it reads again.
  */
 export const updateUsage = (usage: Usage | null, index: ActivityIndex, kept: MarketActivity[] = []): Usage =>
-  addUsage(moveRangeArbitrageOrders(moveListedLate(usage ?? USAGE_SEED), kept), index.rows, index.toBlock);
+  addUsage(moveRangeArbitrageOrders(moveListedLate(usage ?? USAGE_SEED), kept, index.rows), index.rows, index.toBlock);
 
 export function parseUsage(value: unknown): Usage | null {
   if (typeof value !== "string") return null;
