@@ -4,7 +4,7 @@ USTX is a demo fund on X Layer Testnet. It is bought with demo dollars (dUSD) th
 
 ## Who can do what
 
-Every role below can be read from the contracts on X Layer Testnet; the Transparency page (`/products/ustx/transparency#proof-controls`) reads them in your browser and shows whether anything is paused. No administrator can issue USTX, change a recorded NAV or move anyone's USTX or demo dollars.
+Every role below can be read from the contracts on X Layer Testnet; the developer page (`/developers#proof-controls`) reads them in your browser and shows whether anything is paused. No administrator can issue USTX, change a recorded NAV or move anyone's USTX or demo dollars.
 
 | Contract | Roles | What they can do | What nobody can do |
 | --- | --- | --- | --- |
