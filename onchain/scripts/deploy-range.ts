@@ -14,8 +14,9 @@
  * With RANGE_REPLACE set to the recorded hook's address it replaces that hook, as on 6 October 2026
  * with the user's approval, when positions began to open only within the caller's tick limits: a new
  * hook and arbitrage, seeded the same way, then the administrator's seed positions in the replaced
- * hook closed. The record keeps the replaced hook under `replaced`. Anyone's position there can still
- * be closed at any NAV.
+ * hook closed. The record keeps the replaced hook under `replaced`. It refuses while another wallet
+ * holds an open position in the replaced hook, since Pools reads only the recorded one; on chain, any
+ * position there can still be closed at any NAV.
  *
  * On the in-process `hardhat` network it runs the same routine on a fork of X Layer Testnet with
  * the administrator impersonated, then rehearses a trade, a NAV move with the keeper's arbitrage,
@@ -84,6 +85,18 @@ async function main() {
   if (now - updatedAt > 1_800n) throw new Error(`The USTX NAV was recorded ${now - updatedAt} s ago; check the NAV record first.`);
   console.log(`${fork ? "fork of " : ""}${rail.name}, admin ${adminAddress}`);
   console.log(`pool manager ${managerAddress}, NAV ${formatUnits(answer, 8)} (${now - updatedAt} s old)\n`);
+  if (replace) {
+    // Pools reads only the recorded hook, so a position another wallet holds open in the replaced one
+    // would drop out of its view. The replacement waits until there is none.
+    const replaced = await hre.viem.getContractAt("GanymedeRangeLiquidityHook", replace.address as Address);
+    const others: string[] = [];
+    const next = await replaced.read.nextPositionId();
+    for (let id = 1n; id < next; id += 1n) {
+      const [owner, , , , , , open] = await replaced.read.positions([id]);
+      if (open && owner.toLowerCase() !== adminAddress.toLowerCase()) others.push(`#${id} (${owner})`);
+    }
+    if (others.length) throw new Error(`Other wallets hold open positions in ${replace.address}: ${others.join(", ")}. Pools reads only the recorded hook, so replace it once they are closed.`);
+  }
 
   let nonce = await publicClient.getTransactionCount({ address: adminAddress, blockTag: "pending" });
   let hookAddress = replace ? undefined : (recorded?.address as Address | undefined);
