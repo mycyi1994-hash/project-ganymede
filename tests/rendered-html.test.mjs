@@ -282,7 +282,11 @@ test("issuer, developer and embed pages render for partners", async () => {
   const basket = await render("/embed/basket?config=/baskets/mag3/basket.json");
   assert.equal(basket.status, 200);
   assert.match(visible(await basket.text()), /Loading the basket/);
-  assert.match(visible(await (await render("/embed/basket?config=https://other.example/basket.json")).text()), /No basket configured/);
+  // Without a configuration on this site, the badge says how to name one, not that a check failed.
+  const unconfigured = visible(await (await render("/embed/basket?config=https://other.example/basket.json")).text());
+  assert.match(unconfigured, /No basket configured/);
+  assert.match(unconfigured, /Add \?config=\/baskets\/(?:&lt;|<)id(?:&gt;|>)\/basket\.json to this address/);
+  assert.doesNotMatch(unconfigured, /Not verified|could not be checked/);
 });
 
 test("Markets lists every fund, and each fund other than USTX has its own page", async () => {
