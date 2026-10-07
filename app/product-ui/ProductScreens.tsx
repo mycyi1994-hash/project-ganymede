@@ -19,7 +19,6 @@ import { PageGuide, designLink } from "./ProductShell";
 import MarketChart from "./MarketChart";
 import { InvestPanel } from "./InvestPanel";
 import { FundHoldings, FundOverview, FundStats } from "./Fund";
-import { LendingSection } from "./Lending";
 import { ActivityProvider, MarketActivitySection, MarketPulse } from "./MarketActivity";
 import Holdings from "./Holdings";
 import { useRecordCheck } from "./useRecordCheck";
@@ -140,9 +139,9 @@ export function ProductScreen({ preview = false, orderPanel, holding = false }: 
   const composition = data ? compositionForRecord(data) : null;
   const points = data ? publicationHistory(data) : [];
   const screen = <><Link prefetch={false} className="gmd-breadcrumb" href={holding ? designLink("portfolio") : preview ? designLink("markets") : "/"}><Icon name="back" size={16} />{holding ? "Your portfolio" : "All markets"}</Link><div className="gmd-product-heading"><ProductIdentity />{preview ? <span className="gmd-badge">Example account view</span> : <div className="gmd-page-actions"><Link prefetch={false} className="gmd-pill" href={VERIFY}><Icon name="check" size={15} />Transparency</Link><a className="gmd-button" href="#investment">Invest<Icon name="arrow" size={16} /></a></div>}</div>
-    <nav className="gmd-product-sections" aria-label="Product sections">{!preview && <a href="#overview">Overview</a>}{!preview && <a href="#activity">Activity</a>}{!preview && <a href="#borrow">Borrow</a>}<a href="#holdings">Holdings</a>{!preview && <Link prefetch={false} href="/pools">Pools <Icon name="arrow" size={14} /></Link>}<Link prefetch={false} href={VERIFY}>Transparency <Icon name="external" size={14} /></Link></nav>
+    <nav className="gmd-product-sections" aria-label="Product sections">{!preview && <a href="#overview">Overview</a>}{!preview && <a href="#activity">Activity</a>}{!preview && <Link prefetch={false} href="/borrow">Borrow <Icon name="arrow" size={14} /></Link>}<a href="#holdings">Holdings</a>{!preview && <Link prefetch={false} href="/pools">Pools <Icon name="arrow" size={14} /></Link>}<Link prefetch={false} href={VERIFY}>Transparency <Icon name="external" size={14} /></Link></nav>
     {!preview && <PageGuide />}{preview && <div className={`gmd-mobile-entry${holding ? " is-holding" : ""}`}><a className="gmd-button" href="#investment">View investment panel<Icon name="arrow" size={16} /></a></div>}<DataState />
-    <div className={`gmd-detail-layout${holding ? " is-holding" : ""}`}><div className="gmd-detail-content"><section className="gmd-price-surface" aria-label="Basket value"><NavValue /><MarketChart points={points} loading={loading} /></section>{!preview && <FundOverview />}{!preview && <MarketActivitySection />}{!preview && <LendingSection />}<div id="holdings" className="gmd-composition-surface">{preview ? <Holdings composition={composition} loading={loading} /> : <FundHoldings />}</div>
+    <div className={`gmd-detail-layout${holding ? " is-holding" : ""}`}><div className="gmd-detail-content"><section className="gmd-price-surface" aria-label="Basket value"><NavValue /><MarketChart points={points} loading={loading} /></section>{!preview && <FundOverview />}{!preview && <MarketActivitySection />}<div id="holdings" className="gmd-composition-surface">{preview ? <Holdings composition={composition} loading={loading} /> : <FundHoldings />}</div>
     </div><div className="gmd-detail-aside" id="investment">{orderPanel ?? <InvestPanel />}</div></div>
   </>;
   return preview ? screen : <ActivityProvider>{screen}</ActivityProvider>;
