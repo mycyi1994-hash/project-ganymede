@@ -5,7 +5,7 @@ import "./product.css";
 // The workspace's look, after the product stylesheet it restyles: a sidebar and a white panel on a grey canvas.
 import "./platform.css";
 
-export type IconName = "arrow" | "back" | "external" | "wallet" | "market" | "portfolio" | "activity" | "check" | "info" | "refresh" | "chevron" | "lock" | "download" | "close" | "pool" | "spark" | "send" | "undo" | "redo" | "book" | "shield" | "code" | "building";
+export type IconName = "arrow" | "back" | "external" | "wallet" | "market" | "portfolio" | "activity" | "check" | "info" | "refresh" | "chevron" | "lock" | "download" | "close" | "pool" | "spark" | "send" | "undo" | "redo" | "book" | "shield" | "code" | "building" | "coins";
 
 export function Icon({ name, size = 20 }: { name: IconName; size?: number }) {
   const paths: Record<string, string> = {
@@ -26,6 +26,7 @@ export function Icon({ name, size = 20 }: { name: IconName; size?: number }) {
     shield: "M12 3 19 6v5.5c0 4.2-2.9 7.9-7 9.5-4.1-1.6-7-5.3-7-9.5V6l7-3Z",
     code: "m8 8-4 4 4 4m8-8 4 4-4 4M13.5 5l-3 14",
     building: "M4 21V5.5L12 3v18M12 8h7v13M7.5 8h1M7.5 12h1M7.5 16h1M15 12h1M15 16h1M2 21h20",
+    coins: "M14 8A6 6 0 1 1 2 8a6 6 0 0 1 12 0Zm4.1 2.4A6 6 0 1 1 10.4 18.1M7 6h1v4m8.7 3.9.7.7-2.8 2.8",
   };
   return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={paths[name]} /></svg>;
 }

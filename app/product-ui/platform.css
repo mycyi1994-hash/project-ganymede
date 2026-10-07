@@ -397,3 +397,23 @@
 @media (pointer: fine) { .gmd-app .gmd-asset-open { min-height: 0; } .gmd-app .gmd-basket-table .gmd-table :is(th,td) { padding-block: 9px; } }
 /* Ask USTX's mark keeps its square where it sits in a grid rather than a row. */
 .gmd-app :is(.gmd-strategy-ask, .gmd-pool-ask) .gmd-ask-guide-mark { width: 30px; height: 30px; flex: 0 0 30px; }
+
+/* Borrow: the lending market across the panel, its figures and terms on the left and the wallet's
+   position in the right column behind a hairline, as Pools lays out its liquidity panel. On a phone
+   the position comes first, as Pools' panel does. */
+.gmd-app .gmd-main > .gmd-lending { --gmd-aside: 360px; display: grid; grid-template-columns: minmax(0,1fr) var(--gmd-aside); align-items: start; margin: 0 calc(-1 * var(--gmd-pad)); border-block: 1px solid var(--gmd-line); background: linear-gradient(var(--gmd-line), var(--gmd-line)) no-repeat calc(100% - var(--gmd-aside)) 0 / 1px 100%; }
+.gmd-app .gmd-lending-main { min-width: 0; padding: 20px var(--gmd-pad) 28px; }
+.gmd-app .gmd-lending-main > .gmd-fund-facts { margin-top: 20px; }
+.gmd-app .gmd-main > .gmd-lending > .gmd-lending-panel { position: sticky; top: 0; min-width: 0; padding: 20px 22px 24px; border: 0; border-radius: 0; background: transparent; }
+.gmd-app .gmd-lending-panel h3 { font-size: 16px; }
+@media (max-width: 1180px) { .gmd-app .gmd-main > .gmd-lending { --gmd-aside: 320px; } }
+@media (max-width: 930px) {
+  .gmd-app .gmd-main > .gmd-lending { grid-template-columns: minmax(0,1fr); background: none; }
+  .gmd-app .gmd-main > .gmd-lending > .gmd-lending-panel { position: static; order: -1; padding: 18px var(--gmd-pad) 22px; border-bottom: 1px solid var(--gmd-line); }
+}
+@media (max-width: 600px) {
+  .gmd-app .gmd-lending-main { padding: 16px var(--gmd-pad) 22px; }
+  /* Five pages share the phone's bottom bar in equal parts. */
+  .gmd-app .gmd-navigation { gap: 2px; padding-inline: 6px; justify-content: space-between; }
+  .gmd-app .gmd-navigation a { flex: 1 1 0; min-width: 0; padding-inline: 2px; }
+}
