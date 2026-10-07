@@ -1,10 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { BrandMark } from "../DesignElements";
-import { Icon } from "./Icons";
+import { Icon, type IconName } from "./Icons";
 import { AskGuide, AskProvider } from "./AskUstx";
 import { MarketProvider } from "./MarketProvider";
 import { WalletAccountProvider, useWalletAccount } from "./WalletAccount";
@@ -73,12 +73,33 @@ export function ProductHeader({ section = "markets", preview }: { section?: Prod
   return <header className="gmd-header">{!preview && <p className="gmd-testnet-bar">You are on X Layer Testnet. Balances are demo funds with no real value.</p>}<div className="gmd-header-inner"><Link href={preview ? designLink("markets") : "/"} prefetch={false} className="gmd-brand" aria-label="Ganymede markets"><BrandMark /><span>Ganymede</span></Link><nav className="gmd-navigation" aria-label="Primary navigation">{links.map(link => <Link prefetch={false} key={link.section} href={preview && link.section !== "verify" && link.section !== "pools" ? designLink(link.section) : link.href} aria-current={section === link.section ? "page" : undefined}><Icon name={link.icon} size={18} /><span>{link.label}</span></Link>)}</nav><div className="gmd-header-end">{preview ? <span className="gmd-example-account"><Icon name="wallet" size={17} />Example account</span> : ledger ? <><span className="gmd-environment"><i />Testnet ledger</span><AccountControl /></> : <><span className="gmd-network"><i aria-hidden="true" />X Layer Testnet</span><HeaderWallet /></>}</div></div></header>;
 }
 
+const SIDEBAR: { label: string; links: { href: string; label: string; icon: IconName }[] }[] = [
+  { label: "Invest", links: [{ href: "/", label: "Markets", icon: "market" }, { href: "/pools", label: "Pools", icon: "pool" }, { href: "/portfolio", label: "Portfolio", icon: "portfolio" }] },
+  { label: "Verify", links: [{ href: "/products/ustx/transparency", label: "Transparency", icon: "check" }, { href: "/methodology", label: "Methodology", icon: "book" }, { href: "/limitations", label: "Risks", icon: "shield" }] },
+  { label: "Build", links: [{ href: "/developers", label: "Integrations", icon: "code" }, { href: "/issuers", label: "For issuers", icon: "building" }] },
+];
+
+/** The workspace's sidebar on a wide screen, grouped as a console groups its pages; on a phone the bottom bar stands in. */
+function ProductSidebar({ preview }: { preview?: DesignScreen }) {
+  const path = usePathname() ?? "/";
+  const current = (href: string) => href === "/" ? path === "/" || path.startsWith("/products/ustx") && !path.endsWith("/transparency") || path.startsWith("/funds/") : path === href || path.startsWith(`${href}/`);
+  return <nav className="gmd-sidebar" aria-label="Workspace">
+    {SIDEBAR.map(group => <div key={group.label} className="gmd-sidebar-group">
+      <span className="gmd-sidebar-label">{group.label}</span>
+      {group.links.map(link => <Link prefetch={false} key={link.href} href={preview && link.href === "/" ? designLink("markets") : link.href} aria-current={current(link.href) ? "page" : undefined}><Icon name={link.icon} size={16} /><span>{link.label}</span></Link>)}
+    </div>)}
+    <p className="gmd-sidebar-note"><b>Demo funds</b>X Layer Testnet. Demo dollars and USTX have no value.</p>
+  </nav>;
+}
+
 export function ProductShell({ children, section = "markets", preview }: { children: ReactNode; section?: ProductSection; preview?: DesignScreen }) {
   return <WalletAccountProvider><MarketProvider enabled={section === "markets" || section === "verify" || section === "portfolio"}><div className="gmd-app"><AskProvider>
     <a className="gmd-skip" href="#product-main">Skip to content</a>
     {preview && <div className="gmd-design-toolbar"><span><b>Design preview</b> Example account data. No transactions.</span><nav aria-label="Design screens">{(["markets", "product", "order", "portfolio", "transaction"] as const).map(screen => <Link prefetch={false} key={screen} href={designLink(screen)} aria-current={preview === screen ? "page" : undefined}>{({ markets: "Markets", product: "Product", order: "Order", portfolio: "Portfolio", transaction: "Transaction" })[screen]}</Link>)}</nav></div>}
     <ProductHeader section={section} preview={preview} />
+    <div className="gmd-frame"><ProductSidebar preview={preview} /><div className="gmd-workspace">
     <main id="product-main" className="gmd-main">{!preview && <NavDelayNotice />}{!preview && <AskGuide />}{children}</main>
     <footer className="gmd-footer"><div><b>Ganymede</b><span>US stock baskets on X Layer · Market data by OKX · Not investment advice</span></div><nav aria-label="Resources"><Link prefetch={false} href="/products/ustx/transparency">Transparency</Link><Link prefetch={false} href="/methodology">Methodology</Link><Link prefetch={false} href="/limitations">Risks</Link><Link prefetch={false} href="/developers">Integrations</Link><Link prefetch={false} href="/issuers">For issuers</Link></nav></footer>
+    </div></div>
   </AskProvider></div></MarketProvider></WalletAccountProvider>;
 }

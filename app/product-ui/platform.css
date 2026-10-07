@@ -1,0 +1,125 @@
+/*
+ * The workspace's look, after a developer platform console: a grey canvas with the page in one white
+ * panel, a sidebar of grouped pages, a slim top bar, black pill buttons, thin borders, small system
+ * type, uppercase table headings and violet charts. It restyles product.css, loaded just before it.
+ */
+.gmd-app {
+  --gmd-bg: #f3f3f3; --gmd-surface: #fff; --gmd-ink: #0d0d0d; --gmd-copy: #5d5d5d;
+  --gmd-line: #e5e5e5; --gmd-soft: #f4f4f4; --gmd-accent: #6e4fe0; --gmd-warn: #9a5b00;
+  --gmd-ustx: #7c5cfc; --gmd-dusd: #e19a3b; --gmd-chart: #7c5cfc;
+  font: 400 14px/1.55 ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+/* One family everywhere, as the console uses; code keeps its own. */
+.gmd-app *:not(code, pre, kbd, samp) { font-family: inherit !important; }
+.gmd-app :is(h1,h2,h3) { font-weight: 600; letter-spacing: -.01em; }
+.gmd-app h1 { font-size: 22px; }
+.gmd-app h2 { font-size: 17px; }
+.gmd-app h3 { font-size: 15px; }
+.gmd-app .gmd-positive { color: #0f8a5f; }
+.gmd-app .gmd-negative { color: #d4373a; }
+.gmd-app :is(a,button,input,select,summary):focus-visible { outline: 2px solid var(--gmd-ink); outline-offset: 2px; }
+
+/* The top bar across the canvas: brand and network on the left, the wallet on the right. */
+.gmd-app .gmd-testnet-bar { background: #e9e9e9; color: #4d4d4d; font-size: 12px; padding: 5px 16px; }
+.gmd-header { background: transparent; color: var(--gmd-ink); }
+.gmd-header-inner { max-width: none; min-height: 52px; padding-inline: 18px 20px; gap: 12px; }
+.gmd-brand { font-size: 15px; gap: 8px; }
+.gmd-brand svg { width: 22px; height: 22px; }
+.gmd-header-end { gap: 10px; font-size: 13px; }
+.gmd-network { color: var(--gmd-copy); border: 1px solid var(--gmd-line); background: #fff; font-size: 12px; padding: 4px 10px; }
+.gmd-network i { background: #10a37f; }
+.gmd-environment { color: var(--gmd-copy); }
+.gmd-app .gmd-wallet-connect { background: var(--gmd-ink); color: #fff; min-height: 32px; padding: 6px 12px; border-radius: 8px; font-size: 13px; font-weight: 500; }
+.gmd-app .gmd-wallet-chip { color: var(--gmd-ink); border-color: var(--gmd-line); background: #fff; min-height: 32px; padding: 6px 12px; font-size: 13px; }
+.gmd-wallet-chip i { background: #10a37f; }
+.gmd-account summary, .gmd-example-account { color: var(--gmd-ink); border-color: var(--gmd-line); background: #fff; min-height: 32px; padding: 6px 12px; font-size: 13px; }
+.gmd-account[open] summary { background: var(--gmd-soft); }
+@media (hover:hover) and (pointer:fine) { .gmd-app .gmd-wallet-connect:hover { background: #2e2e2e; } }
+
+/* Below the bar: the sidebar on the canvas, and the page in a white panel. */
+.gmd-frame { display: grid; grid-template-columns: 212px minmax(0,1fr); align-items: start; }
+.gmd-sidebar { position: sticky; top: 0; display: flex; flex-direction: column; gap: 16px; min-height: calc(100dvh - 84px); padding: 4px 10px 18px 12px; font-size: 13px; }
+.gmd-sidebar-group { display: grid; gap: 1px; }
+.gmd-sidebar-label { padding: 4px 8px; font-size: 12px; color: #8a8a8a; }
+.gmd-app .gmd-sidebar a { display: flex; align-items: center; gap: 9px; min-height: 32px; padding: 6px 8px; border-radius: 7px; color: #303030; }
+.gmd-sidebar a svg { color: #5d5d5d; }
+.gmd-app .gmd-sidebar a[aria-current] { background: #e4e4e4; color: var(--gmd-ink); font-weight: 500; }
+.gmd-app .gmd-sidebar-note { margin-top: auto; padding: 10px 12px; border: 1px solid var(--gmd-line); border-radius: 10px; background: #fff; font-size: 12px; line-height: 1.45; color: var(--gmd-copy); }
+.gmd-sidebar-note b { display: block; margin-bottom: 2px; color: var(--gmd-ink); }
+@media (hover:hover) and (pointer:fine) { .gmd-app .gmd-sidebar a:not([aria-current]):hover { background: #eaeaea; } }
+.gmd-workspace { min-width: 0; min-height: calc(100dvh - 84px); background: #fff; border: 1px solid #e2e2e2; border-right: 0; border-bottom: 0; border-top-left-radius: 14px; }
+.gmd-main { max-width: 1320px; padding: 28px 36px 56px; min-height: 0; }
+.gmd-footer { max-width: 1320px; padding: 18px 36px; font-size: 12px; }
+/* The sidebar holds the pages on a wide screen; below that the header's own links stay. */
+@media (min-width: 931px) { .gmd-header .gmd-navigation { display: none; } }
+@media (max-width: 930px) {
+  .gmd-frame { display: block; }
+  .gmd-sidebar { display: none; }
+  .gmd-workspace { border: 0; border-radius: 0; min-height: 0; }
+  .gmd-header { background: #fff; border-bottom: 1px solid var(--gmd-line); }
+  .gmd-navigation a { color: var(--gmd-copy); }
+  .gmd-navigation a[aria-current] { color: var(--gmd-ink); border-bottom-color: var(--gmd-ink); }
+  .gmd-main { padding-inline: 24px; }
+  .gmd-footer { padding-inline: 24px; }
+}
+@media (max-width: 600px) {
+  .gmd-navigation a[aria-current] { color: var(--gmd-ink); background: #ececec; }
+  .gmd-main { padding: 22px 16px 36px; }
+  .gmd-footer { padding-inline: 16px; }
+}
+
+/* Headings and type: the page title small and black, sections at 15–17px, copy at 14px. */
+.gmd-app .gmd-page-heading { margin-bottom: 22px; }
+.gmd-app .gmd-page-heading h1 + p { font-size: 14px; margin-top: 4px; }
+.gmd-app .gmd-section-heading { margin-bottom: 16px; }
+.gmd-app p { color: var(--gmd-copy); }
+.gmd-app .gmd-caption { font-size: 12px; }
+
+/* Buttons: black pills; the secondary ones white with a thin border. */
+.gmd-app .gmd-button { gap: 8px; min-height: 34px; padding: 6px 14px; border-radius: 8px; background: var(--gmd-ink); border-color: var(--gmd-ink); color: #fff; font-size: 13px; font-weight: 500; box-shadow: none; }
+.gmd-app .gmd-button.is-secondary, .gmd-app .gmd-small-button { background: #fff; color: var(--gmd-ink); border: 1px solid var(--gmd-line); border-radius: 8px; min-height: 32px; padding: 5px 12px; font-size: 13px; }
+.gmd-feature-title > .gmd-button { min-height: 34px; padding: 6px 14px; }
+@media (hover:hover) and (pointer:fine) {
+  .gmd-app .gmd-button:hover { background: #2e2e2e; border-color: #2e2e2e; }
+  .gmd-app .gmd-button.is-secondary:hover, .gmd-app .gmd-small-button:hover { background: var(--gmd-soft); }
+}
+.gmd-inline-link { color: var(--gmd-ink) !important; text-decoration: underline; text-underline-offset: 3px; text-decoration-color: #c4c4c4; }
+.gmd-app .gmd-text-button { font-size: 13px; }
+
+/* Cards and panels: white, a thin grey border, 10–12px corners, no coloured rule on top. */
+.gmd-market-feature, .gmd-app .gmd-order-panel { border-color: var(--gmd-line); }
+.gmd-app .gmd-order-panel { border-top: 1px solid var(--gmd-line); border-radius: 12px; }
+.gmd-badge { border-radius: 999px; padding: 2px 9px; font-size: 12px; background: #fff; }
+
+/* Segmented controls: a grey track with the chosen one raised in white. */
+.gmd-segmented { background: #efefef; border-radius: 8px; }
+.gmd-segmented button { border-radius: 6px; color: var(--gmd-copy); }
+.gmd-segmented button[aria-pressed=true] { color: var(--gmd-ink); font-weight: 500; box-shadow: 0 1px 2px #0000001f; }
+
+/* Tables: small uppercase headings in grey, rows on thin dividers. */
+.gmd-table { font-size: 13px; }
+.gmd-table thead th { font-size: 11px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: #6b6b6b; }
+
+/* Charts and colour tints: violet for USTX, amber for demo dollars. */
+.gmd-grid-col.is-dollars rect.is-off { fill: color-mix(in srgb, var(--gmd-dusd) 12%, transparent); }
+.gmd-grid-col.is-shares rect.is-off { fill: color-mix(in srgb, var(--gmd-ustx) 12%, transparent); }
+.gmd-strategy-near { fill: color-mix(in srgb, var(--gmd-ustx) 5%, transparent); stroke: color-mix(in srgb, var(--gmd-ustx) 30%, transparent); }
+.gmd-strategy-near-label { fill: var(--gmd-ustx); }
+.gmd-lq-legend i.is-cp { background: linear-gradient(90deg, color-mix(in srgb, var(--gmd-dusd) 40%, transparent), color-mix(in srgb, var(--gmd-ustx) 40%, transparent)); }
+.gmd-premium { background: var(--gmd-soft); }
+.gmd-premium-band { background: color-mix(in srgb, var(--gmd-ustx) 22%, transparent); }
+
+/* Ask USTX: a neutral note box, its next step a black pill. */
+.gmd-ask-guide { border-color: var(--gmd-line); background: #fafafa; }
+.gmd-ask-guide-mark { color: #fff; }
+.gmd-ask-guide-actions button { border-color: var(--gmd-line) !important; }
+.gmd-ask-guide-actions button:hover { border-color: #bdbdbd !important; }
+.gmd-ask-guide-step { background: var(--gmd-ink); }
+
+/* The fund's mark: black, grey and violet bars. */
+.gmd-product-monogram { background: var(--gmd-soft); }
+.gmd-product-monogram i { background: var(--gmd-ink); }
+.gmd-product-monogram i:nth-child(2n) { background: #b9b9b9; }
+.gmd-product-monogram i:nth-child(3n) { background: var(--gmd-ustx); }
+.gmd-app .gmd-skip { border-color: var(--gmd-ink); }
