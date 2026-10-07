@@ -11,7 +11,8 @@ async function render(pathname = "/") {
     { waitUntil() {}, passThroughOnException() {} },
   );
 }
-const visible = html => html.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, "").replaceAll("<!-- -->", "");
+// What a reader sees: no scripts, and no script nonces, which are random and could spell a word by chance.
+const visible = html => html.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, "").replace(/\snonce="[^"]*"/g, "").replaceAll("<!-- -->", "");
 
 test("Markets renders the actual product path without fabricated values or the verification exercise", async () => {
   const response = await render();
@@ -307,7 +308,7 @@ test("Markets lists every fund, and each fund other than USTX has its own page",
     assert.match(html, new RegExp(name), id);
     assert.match(html, new RegExp(ticker), id);
     assert.match(html, /Demo fund/);
-    assert.doesNotMatch(html, /KRW|paper portfolio/i);
+    assert.doesNotMatch(html, /\bKRW\b|paper portfolio/i);
   }
   assert.equal((await render("/funds/nope")).status, 404);
   const ustx = await render("/funds/us-tech-x");
