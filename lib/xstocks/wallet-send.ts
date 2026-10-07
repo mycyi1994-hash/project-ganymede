@@ -5,7 +5,7 @@
  * explorer ever saw. So the app names the fee itself, twice the network's gas price, with the gas
  * limit and the nonce the chain has confirmed. It first asks the wallet only to sign, and sends the
  * signed transaction to the public RPC itself, the way the relayer and the keeper do; a wallet that
- * cannot sign without sending is asked to send, with the same fee.
+ * cannot sign without sending is asked to send, with the same fee and nonce.
  */
 import { keccak256, type Hex } from "viem";
 import { FUND_WALLET_CHAIN, fundRpc, quantity, type Rpc, type TransactionCall } from "./fund";
@@ -63,7 +63,9 @@ export async function sendWalletTransaction(provider: WalletProvider, from: stri
       return hash;
     }
   }
-  const hash = await provider.request({ method: "eth_sendTransaction", params: [{ from, to: request.to, data: request.data, ...(fee ? { gasPrice: fee.gasPrice } : {}), ...(fee?.gas ? { gas: fee.gas } : {}) }] });
+  // The confirmed nonce too: a wallet that still counts a transaction its node dropped would otherwise
+  // number this one after it, and no node takes a transaction behind a gap (7 October, OKX Wallet).
+  const hash = await provider.request({ method: "eth_sendTransaction", params: [{ from, to: request.to, data: request.data, ...(fee ? { gasPrice: fee.gasPrice, nonce: fee.nonce } : {}), ...(fee?.gas ? { gas: fee.gas } : {}) }] });
   if (typeof hash !== "string") throw new Error("The wallet did not return a transaction.");
   return hash;
 }

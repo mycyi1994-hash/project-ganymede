@@ -67,7 +67,7 @@ test("a wallet that cannot only sign is asked to send, with the app's fee", asyn
   const { provider, requests } = wallet({ eth_sendTransaction: `0x${"cd".repeat(32)}` });
   assert.equal(await sendWalletTransaction(provider, FROM, CALL, publicRpc().rpc), `0x${"cd".repeat(32)}`);
   assert.deepEqual(requests.map(request => request.method), ["eth_signTransaction", "eth_sendTransaction"]);
-  assert.deepEqual(requests[1].params[0], { from: FROM, to: CALL.to, data: CALL.data, gasPrice: "0x2625a00", gas: "0x11170" });
+  assert.deepEqual(requests[1].params[0], { from: FROM, to: CALL.to, data: CALL.data, gasPrice: "0x2625a00", nonce: "0x2", gas: "0x11170" });
   // A wallet that returns something other than a signed transaction is asked to send too.
   const odd = wallet({ eth_signTransaction: "0x1234", eth_sendTransaction: `0x${"cd".repeat(32)}` });
   await sendWalletTransaction(odd.provider, FROM, CALL, publicRpc().rpc);
