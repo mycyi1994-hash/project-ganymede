@@ -92,10 +92,9 @@ EN: Two OnchainOS APIs: market prices every five minutes for the NAV, and the DE
 메인넷의 xStocks 9종 가격과 풀을 직접 읽어 NAV를 만들고, 그 NAV를 테스트넷 레지스트리·펀드·대출·풀 3개가 씁니다. 실제 돈이 없는 단계라 메인넷 배포는 의도적으로 하지 않았고, 다음 단계가 메인넷에 NAV를 가격 피드로만 기록하는 것입니다. X Layer의 xStocks는 9월 12일 기준 시가총액 약 9,150만 달러, 토큰화 주식 시장의 약 3.1%입니다(Crypto Briefing).
 EN: It prices the nine xStocks from X Layer mainnet and records a NAV others can verify; mainnet comes as a price feed only, before any money.
 
-**A3. 오늘 테스트넷이 멈췄을 때 서비스가 몇 시간 멈췄다. 메인넷이면?**
-10월 6일 14:23 UTC에 X Layer Testnet이 블록 생성을 멈췄고, 재개 뒤에도 정지 중 보낸 릴레이어·키퍼 거래가 처리되지 않아 기록이 14:20에서 멈췄습니다. 설계대로 펀드·대출·두 NAV 풀이 멈췄고 손실은 없습니다. 고칠 점은 막힌 논스를 자동으로 다시 보내는 복구이고, 지금은 사람이 판단해 처리합니다. 메인넷에서는 발행 키를 여러 개 두고 상태를 공개 경보로 냅니다.
-EN: The testnet stalled; our contracts stopped trading on the old NAV as designed, and automatic nonce recovery is the fix we are adding.
-※ 그 전에 릴레이어가 풀려 재개됐으면 "멈췄다가 다시 이어졌다"로 말한다.
+**A3. 어제 테스트넷이 멈췄을 때 서비스가 몇 시간 멈췄다. 메인넷이면?**
+10월 6일 14:23 UTC에 X Layer Testnet이 87분간 블록 생성을 멈췄고, 그동안 보낸 릴레이어·키퍼 거래가 재개 뒤에도 체인에 들어가지 못했습니다(일부 노드는 그 거래를 계속 세고 있었다). 설계대로 펀드·대출·두 NAV 풀이 오래된 가격으로 체결하지 않고 멈췄고, 손실은 없었으며 화면은 모두 "기록 지연"을 알렸습니다. 원인을 고쳐 릴레이어와 키퍼가 이제 사라진 거래를 스스로 찾아 체인의 확정 논스부터 노드의 사본보다 높은 수수료로 다시 보내고, 10월 7일 00:15 UTC부터 기록이 다시 이어졌습니다. 메인넷에서는 발행자를 여럿 두고 상태를 공개 경보로 냅니다.
+EN: The testnet stalled for 87 minutes and its dropped transactions blocked our relayer; contracts stopped trading on the old NAV as designed, and the relayer now finds dropped transactions and re-sends them itself, records resumed.
 
 **A4. OKX Wallet 앱(모바일)에서 실제로 써 봤나?**
 휴대폰에서 지갑이 없으면 OKX 앱으로 여는 링크가 뜨고, 주입형 지갑으로 청구·승인·투자·환매 전체 흐름을 브라우저에서 돌렸습니다. 실제 OKX Wallet 확장 프로그램을 자동 시험으로 몰지는 못했고, 공개 한계에 그렇게 적었습니다.
@@ -220,6 +219,7 @@ EN: The MCP server is open to OKX.AI's A2MCP clients; the listing is awaiting ap
 | --- | --- |
 | 6종목 | 9종목(10월 4일에 3종 추가) |
 | "5분마다 기록되고 있다"(멈춰 있을 때) | "평소 5분마다, 지금은 테스트넷 정지 뒤 HH:MM 기록이 마지막" |
+| "정지는 사람이 풀었다" | 원인(사라진 거래 뒤에 줄 선 논스)을 고친 코드가 배포 직후 스스로 복구했다. 결정과 배포는 사람이, 복구는 코드가 |
 | OKX.AI에 등록했다 | 등록 신청, 승인 전 |
 | 사용자가 있다, 견인력 | 팀 밖 지갑 2개, 공개 집계 |
 | 직접 사는 것보다 훨씬 싸다 | 비용 차이는 0.09%로 작고, 가치는 한 번의 주문·검증·리밸런싱·조합성 |
