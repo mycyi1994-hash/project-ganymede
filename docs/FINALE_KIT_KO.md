@@ -19,7 +19,7 @@
 | 시험 | 앱 284개, 릴레이어 34개, 컨트랙트 117개(10월 6일). 불변식 퍼즈: v4 훅 1,000단계, 범위 훅 1,000단계, 대출 시장 2,000단계 | `docs/STATIC_ANALYSIS.md` |
 | 정적 분석 | Slither: 10월 2일 전 컨트랙트 135건, 10월 6일 범위 풀 컨트랙트 2개 31건. High·Medium은 모두 분류했고 코드 변경이 필요한 것은 없었다 | `docs/STATIC_ANALYSIS.md` |
 | 부하 시험 | 10월 4일 3,000개 지갑으로 51,854건, 실패 0. 100개 지갑 전체 흐름 2,386건 중 7건은 컨트랙트가 의도대로 거절 | `docs/LOAD_TEST.md` |
-| 공급자 성과 | 10월 1일 15:57 UTC 이후 NAV 기록 1,411회 동안 상수곱 풀은 차익거래 17건으로 공급자가 $153.95 손실, v4 훅 풀은 0건·$0(재조정 1,409회). 팀의 시험 거래도 들어 있다 | `/api/v1/ustx/pools`의 `lpResult` |
+| 공급자 성과 | 10월 1일 15:57 UTC 이후 NAV 기록 1,400회 넘게(10월 7일 02:30 UTC 1,434회) 상수곱 풀은 차익거래 17건으로 공급자가 $153.95 손실, v4 훅 풀은 0건·$0(재조정 1,425회). 팀의 시험 거래도 들어 있다 | `/api/v1/ustx/pools`의 `lpResult` |
 | 사용량 | 9월 25일 이후 팀 밖 지갑 2개(71건), 팀·시험 지갑 3,005개(33,811건, 부하 시험 포함), Ask USTX 질문 16개(10월 3일 이후) | `/api/v1/ustx/usage` |
 | 직접 사기 | $1,000을 9종목에 나눠 OKX DEX 집계기로 사면 스왑 9번(처음엔 승인 1번 더), 집계기 가격 기준 비용 $0.93(0.09%), 네트워크 수수료 $0.013, 최대 가격 영향 0.21%(10월 6일 17:29 UTC 견적). USTX는 승인과 투자 2번 | `/api/v1/ustx/dex-quotes` |
 | 대출 | USTX 담보(NAV 평가)의 50%까지 dUSD를 빌린다. 65%를 넘으면 누구나 절반까지 갚고 8% 더 얹은 USTX를 가져간다 | `/api/v1/ustx`의 `lending` |
@@ -43,11 +43,11 @@
 **0:25 검증** *(Transparency, "NAV verified"와 "Prices agree"를 가리킨다)*
 > 5분마다 OKX OnchainOS 가격으로 NAV를 계산해 X Layer에 기록합니다. 이 화면은 저희 서버를 믿으라고 하지 않습니다. 여러분 브라우저가 체인을 직접 읽어 지문을 확인하고 NAV를 한 줄씩 다시 계산합니다. X Layer Uniswap 풀 9개 가격과 1% 넘게 다르면 기록 자체를 막습니다.
 
-**0:55 투자** *(USTX, 지갑 연결 상태에서 견적 → 주문)*
-> OKX Wallet으로 투자하면 펀드와 두 풀의 견적을 동시에 받아 가장 유리한 곳으로 보냅니다. 펀드는 기록된 NAV로만 발행하고, 1시간 지난 NAV는 거부합니다. USTX는 담보로 대출도 되고, 다른 컨트랙트는 체인링크 형식 피드로 같은 NAV를 읽습니다.
+**0:55 투자** *(USTX, 지갑 연결 상태에서 견적 → 주문, Fund overview의 게이지를 가리킨다)*
+> OKX Wallet으로 투자하면 펀드와 세 풀의 견적을 동시에 받아 가장 유리한 곳으로 보냅니다. 세 풀이 NAV에서 얼마나 떨어져 있는지는 게이지 한 줄에 보입니다. 펀드는 기록된 NAV로만 발행하고, 1시간 지난 NAV는 거부합니다. USTX는 담보로 대출도 되고, 다른 컨트랙트는 체인링크 형식 피드로 같은 NAV를 읽습니다.
 
 **1:30 유동성** *(Pools, "Liquidity providers against arbitrage"를 가리킨 뒤 Custom 격자에 블록 몇 개를 칠한다)*
-> NAV를 따르는 자산을 일반 풀에 두면, NAV가 바뀌는 순간 차익거래자가 옛 가격으로 공급자 돈을 가져갑니다. 그래서 NAV가 기록될 때마다 풀을 먼저 NAV로 옮기는 Uniswap v4 훅을 만들었습니다. 10월 1일부터 기록 1,411번 동안 일반 풀 공급자는 차익거래로 154달러를 잃었고, 훅 풀은 0달러였습니다. Meteora DLMM처럼 가격 칸마다 블록을 쌓아 내 모양대로 공급하는 범위 풀도 있습니다.
+> NAV를 따르는 자산을 일반 풀에 두면, NAV가 바뀌는 순간 차익거래자가 옛 가격으로 공급자 돈을 가져갑니다. 그래서 NAV가 기록될 때마다 풀을 먼저 NAV로 옮기는 Uniswap v4 훅을 만들었습니다. 10월 1일부터 기록이 1,400번 넘게 쌓이는 동안 일반 풀 공급자는 차익거래로 154달러를 잃었고, 훅 풀은 0달러였습니다. Meteora DLMM처럼 가격 칸마다 블록을 쌓아 내 모양대로 공급하는 범위 풀도 있습니다.
 
 **2:15 AI** *(Ask USTX: "What is USTX's NAV right now, and is it verified?")*
 > Ask USTX는 체인을 읽는 도구 8개로만 답하고, 무엇을 읽었는지 보여 줍니다. 같은 도구가 MCP 서버로 열려 있어 어떤 AI 에이전트든 검증된 NAV를 읽고 주문 견적을 낼 수 있습니다.
@@ -61,9 +61,9 @@
 >
 > Every five minutes we price the nine through OKX OnchainOS and record the NAV and a SHA-256 fingerprint of the full price document on X Layer. This page doesn't ask you to trust our server: your browser reads the chain, checks the fingerprint and recomputes the NAV line by line. If the prices differ from nine X Layer Uniswap pools by more than 1%, nothing is recorded.
 >
-> With OKX Wallet, an order is quoted at the fund and two pools at once and goes to the best. The fund only issues at the recorded NAV and refuses one older than an hour. USTX is collateral for loans, and other contracts read the same NAV through a Chainlink-style feed.
+> With OKX Wallet, an order is quoted at the fund and three pools at once and goes to the best; one gauge shows how far each pool trades from the NAV. The fund only issues at the recorded NAV and refuses one older than an hour. USTX is collateral for loans, and other contracts read the same NAV through a Chainlink-style feed.
 >
-> A pool of a NAV-tracked asset leaks value: when the NAV moves, arbitrageurs trade the old price against the providers. Our Uniswap v4 hook moves its pool to every NAV record first. Over 1,411 records since October 1, arbitrage took $154 from the constant-product pool's providers, and nothing from the hook's. A second pool lets providers draw their own shape, block by block, like Meteora's DLMM.
+> A pool of a NAV-tracked asset leaks value: when the NAV moves, arbitrageurs trade the old price against the providers. Our Uniswap v4 hook moves its pool to every NAV record first. Over more than 1,400 records since October 1, arbitrage took $154 from the constant-product pool's providers, and nothing from the hook's. A second pool lets providers draw their own shape, block by block, like Meteora's DLMM.
 >
 > Ask USTX answers only through eight tools that read the chain, and shows which it used. The same tools are an MCP server, so any AI agent can read the verified NAV and quote an order.
 >
@@ -235,6 +235,7 @@ EN: The MCP server is open to OKX.AI's A2MCP clients; the listing is awaiting ap
 | 레지스트리가 NAV 급변을 막는다 | 체인 상한은 없음, 브라우저가 불일치로 표시, 상한은 메인넷 전 |
 | 컨트랙트 통제 표가 Transparency에 있다 | 개발자 페이지(`/developers#proof-controls`) |
 | 외부 지갑 30개로 부하 시험 | 팀이 만든 시험 지갑(3,000개)이다 |
+| NAV가 5분마다 빠짐없이 기록된다 | 보통 5분마다다. 10월 7일 01:30·02:00 UTC 두 번은 정지 때의 거래 사본을 가진 RPC 노드가 기록 거래를 거절해 빠졌고, 같은 논스로 2배를 내고 다시 보내도록 고쳤다(PR #154). 펀드는 1시간 안의 기록까지 받는다 |
 
 ## 5. 당일 점검 (명령)
 
@@ -249,6 +250,7 @@ npx wrangler deployments list --name ganymede-xlayer | tail -5         # 운영 
 ```
 
 - 키퍼 지갑 `0xccf372068496d9bef0f7cf83d697183d358dec1b`의 테스트 OKB가 0.05 이상인지(OKX 탐색기).
+- 릴레이어 지갑 `0x1d779c2337036b4e9ecb8a5533e456b14b799108`(10월 7일 02:30 UTC 0.486 OKB)과 faucet `0xdc73d6c2ec5cb619a19dc6b66de39a85d9f04145`(0.128 OKB, 새 지갑당 0.0005). 일부 RPC 노드가 정지 때의 사본을 아직 가져 릴레이어 논스 10715·키퍼 1521까지는 거래마다 2배 수수료를 낸다(거래당 0.00001 OKB 이하).
 - 데모 지갑에 테스트 OKB와 dUSD가 있는지.
 - OpenAI 사용량과 결제 한도. Ask USTX는 사이트 전체 하루 400질문이다.
 - 되돌리기: `npx wrangler rollback <직전 버전 ID> --name ganymede-xlayer` (버전 목록은 `docs/PRODUCT_RELEASE.md`).
