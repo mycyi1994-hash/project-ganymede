@@ -3,8 +3,8 @@ import { PROOF_DEPLOYMENT } from "@/lib/xstocks/proof";
 import { XSTOCKS_PRODUCT_KEY } from "@/lib/xstocks/onchain";
 import { FUND_DEPLOYMENT } from "@/lib/xstocks/fund";
 import { V4_POOL_DEPLOYMENT } from "@/lib/xstocks/v4-liquidity";
-import { ProductShell } from "./ProductShell";
-import { DocumentMenu } from "./DocumentMenu";
+import { PageGuide, ProductShell } from "./ProductShell";
+import { DocumentBar, DocumentMenu } from "./DocumentMenu";
 import { Icon } from "./Icons";
 import VerifyYourself from "./VerifyYourself";
 import BasketCheckPanel from "./BasketCheck";
@@ -177,7 +177,7 @@ function Code({ label, children }: { label: string; children: string }) {
 }
 
 export function DevelopersPage() {
-  return <ProductShell><Link className="gmd-breadcrumb" prefetch={false} href="/"><Icon name="back" size={16} />Markets</Link>
+  return <ProductShell><DocumentBar current="developers" parent={{ href: "/", label: "Markets" }} /><PageGuide />
     <div className="gmd-document-layout"><DocumentMenu current="developers" />
       <article className="gmd-document"><header><h1>Build with a NAV anyone can verify.</h1><p>Every USTX NAV is priced with OKX OnchainOS and recorded on X Layer with a fingerprint of its composition. Read it from our API, read it straight from the chain, or embed a badge that checks it in your visitor’s browser.</p></header>
         <section id="api"><h2>Public NAV API</h2><p>The latest USTX record, read from the registry on X Layer within the last 90 seconds (<code>readAt</code> says when). No key, no cookies, CORS open to every origin, cacheable for 30 seconds.</p>
@@ -253,7 +253,7 @@ const issuerServices = [
 ] as const;
 
 export function IssuersPage() {
-  return <ProductShell><Link className="gmd-breadcrumb" prefetch={false} href="/"><Icon name="back" size={16} />Markets</Link>
+  return <ProductShell><DocumentBar current="issuers" parent={{ href: "/", label: "Markets" }} /><PageGuide />
     <div className="gmd-document-layout"><DocumentMenu current="issuers" />
       <article className="gmd-document"><header><h1>Give your basket a clear price.</h1><p>Explore pricing and verification for a stock basket on X Layer. Start with a testnet evaluation before discussing a wider launch.</p></header>
         <section><h2>Built around your customers</h2><ul className="gmd-stack-list">{issuerServices.map(([title, copy]) => <li key={title}><b>{title}</b><span>{copy}</span></li>)}</ul></section>
